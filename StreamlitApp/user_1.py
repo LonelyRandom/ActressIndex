@@ -791,7 +791,7 @@ def complex_actress(conn):
             cancel_new = st.button("❌ Cancel", use_container_width=True)
         
         if submit_new:
-            if not new_name and not new_kanji:
+            if new_name and new_kanji:
                 if new_picture:
                     join_name = new_name
                     clean_name = re.sub(r'[^\w]', '', join_name)
