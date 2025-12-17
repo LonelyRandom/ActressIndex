@@ -750,6 +750,7 @@ def complex_actress(conn):
             new_name = st.text_input("Name (Alphabet)*", placeholder="Enter name in alphabet", key='new_name')
             new_kanji = st.text_input("Name (Kanji)*", placeholder="Enter name in kanji", key='new_kanji')
             new_birthdate = st.date_input("Birthdate", min_value=date(1980,1,1), key='new_birthdate')
+            st.write(new_birthdate)
             if st.checkbox('No Info', key='New Birthdate', value=(new_birthdate == None)):
                 new_birthdate = '?'
                 new_age = '?'
