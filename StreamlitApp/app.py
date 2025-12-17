@@ -55,9 +55,13 @@ elif st.session_state.page == 'film':
         page_icon='🎬'
     )
     if st.session_state.usn == user_1:
-        complex_film(conn)
+        page = complex_film(conn)
     elif st.session_state.usn == user_2:
-        simple_film(conn)
+        page = simple_film(conn)
+
+    if not page is None:
+        st.session_state.page = page
+        st.rerun()
 
 elif st.session_state.page == 'actress':
     st.set_page_config(

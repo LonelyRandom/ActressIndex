@@ -119,28 +119,32 @@ def simple_actress(conn):
     # Fungsi untuk refresh data dari Google Sheets
     def refresh_data():
         """Refresh data dari Google Sheets ke session state"""
-        df = load_data_actress(conn)
-        if not df.empty:
-           if not df.empty:
-            # Clear session state terlebih dahulu
-            if "actress_df" in st.session_state:
-                del st.session_state.actress_df
-            if "data_loaded" in st.session_state:
-                del st.session_state.data_loaded
-            
-            # Update session state dengan data baru
-            st.session_state.actress_df = df
-            st.session_state.data_loaded = True
-            
-            # Force reset editing/viewing states
-            st.session_state.editing_index = None
-            st.session_state.viewing_index = None
-            st.session_state.adding_new = False
-            
-            st.success("✅ Data refreshed successfully from Google Sheets!")
-            st.rerun()  # Penting: trigger rerun untuk update UI
-        else:
-            st.warning("No data found in Google Sheets")
+        try:
+            with st.spinner("🔄 Refreshing data from Google Sheets..."):
+                # Load data baru
+                st.cache_data.clear()
+                df = load_data_actress(conn)
+    
+                if not df.empty:
+                    # Clear dan update session state
+                    st.session_state.actress_df = df
+                    st.session_state.data_loaded = True
+                    
+                    # Clear editing/viewing states
+                    if "editing_index" in st.session_state:
+                        st.session_state.editing_index = None
+                    if "viewing_index" in st.session_state:
+                        st.session_state.viewing_index = None
+                    if "adding_new" in st.session_state:
+                        st.session_state.adding_new = False
+                    
+                    st.rerun()
+                else:
+                    st.warning("⚠️ No data found in Google Sheets")
+                    st.stop()
+        except Exception as e:
+            st.error(f"❌ Error refreshing data: {e}")
+            st.stop()
 
     # Inisialisasi DataFrame
     if st.session_state.initial == False:
@@ -282,75 +286,76 @@ def simple_actress(conn):
                 
             if st.button("🗑️ Delete Actress", use_container_width=True, type="secondary", key=f"delete_{index}"):
                 delete_actress(index)
+
         # Save changes
         if st.button("💾 Save Changes", use_container_width=True, type="primary", key=f"save_{index}"):
-            if df['Name (Kanji)'] not in edited_kanji:
+            if edited_name not in df['Name (Alphabet)'].values:
+                # Generate clean name untuk public_id
+                join_name = edited_name
+                clean_name = re.sub(r'[^\w]', '', join_name)
+                clean_name = "V" + clean_name
+
                 if new_pic:
-                    # Generate clean name untuk public_id
-                    join_name = edited_name
-                    clean_name = re.sub(r'[^\w]', '', join_name)
-                    clean_name = "N" + clean_name
+                    # Hapus gambar lama jika bukan placeholder
+                    if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture'].iloc[0]).lower():
+                        try:
+                            old_filename = str(actress['Picture']).split('/')[-1]
+                            old_public_id = old_filename.split('.')[0]
+                            delete_cloudinary_image(old_public_id)
+                        except Exception as e:
+                            st.warning(f"Could not delete old image: {e}")
                     
-                    # Jika ada gambar baru yang diupload
-                    if new_pic is not None:
-                        # Hapus gambar lama jika bukan placeholder
-                        if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
-                            try:
-                                old_filename = str(actress['Picture']).split('/')[-1]
-                                old_public_id = old_filename.split('.')[0]
-                                delete_cloudinary_image(old_public_id)
-                            except Exception as e:
-                                st.warning(f"Could not delete old image: {e}")
-                        
-                        # Upload gambar baru
-                        final_picture_url = upload_to_database(new_pic, clean_name)
-                        if not final_picture_url:
-                            st.error("Failed to upload new image")
-                            return
+                    # Upload gambar baru
+                    final_picture_url = upload_to_database(new_pic, clean_name)
+                    if not final_picture_url:
+                        st.error("Failed to upload new image")
+                        return
+                elif actress['Name (Alphabet)'] != edited_name:
+                    try:
+                        old_filename = str(actress['Picture']).split('/')[-1]
+                        old_public_id = old_filename.split('.')[0]
+
+                        final_picture_url = rename_cloudinary_image(old_public_id, clean_name)
+                    except Exception as e:
+                        st.warning(f'Could not rename old image: {e}')
+                        st.stop()
+
                     
-                    # Update data di DataFrame
-                    df.at[index, 'Name (Alphabet)'] = edited_name
-                    df.at[index, 'Picture'] = final_picture_url
-                    df.at[index, 'Status'] = edited_status
-                    df.at[index, 'Name (Kanji)'] = edited_kanji
-                    
-                    # Update ke Google Sheets
-                    if update_google_sheets(df,conn):
-                        st.success("✅ Data updated successfully in Google Sheets!")
-                        st.session_state.actress_df = df  # Update session state
-                    else:
-                        st.error("❌ Failed to update Google Sheets")
-                    
-                    st.session_state.editing_index = None
-                    st.rerun()
+                # Update data di DataFrame
+                df.at[index, 'Name (Alphabet)'] = edited_name
+                df.at[index, 'Picture'] = final_picture_url
+                df.at[index, 'Status'] = edited_status
+                df.at[index, 'Name (Kanji)'] = edited_kanji
+                
+                # Update ke Google Sheets
+                if update_google_sheets(df,conn):
+                    st.success("✅ Data updated successfully in Google Sheets!")
+                    st.session_state.actress_df = df  # Update session state
                 else:
-                    # Update data di DataFrame
-                    df.at[index, 'Name (Alphabet)'] = edited_name
-                    df.at[index, 'Status'] = edited_status
-                    df.at[index, 'Name (Kanji)'] = edited_kanji
-                    
-                    # Update ke Google Sheets
-                    if update_google_sheets(df, conn):
-                        st.success("✅ Data updated successfully in Google Sheets!")
-                        st.session_state.actress_df = df  # Update session state
-                    else:
-                        st.error("❌ Failed to update Google Sheets")
-                    
-                    st.session_state.editing_index = None
-                    st.rerun()
+                    st.error("❌ Failed to update Google Sheets")
+                
+                st.session_state.editing_index = None
+                st.rerun()
             else:
                 st.warning(f"⚠️ Aktris '{edited_kanji}' sudah ada di database!")
                 st.stop()
 
     def delete_actress(index):
         # Hapus data dari DataFrame
+        actress = df.loc[index]
+        pic_filename = str(actress['Picture']).split('/')[-1]
+        pic_id = pic_filename.split('.')[0]
+
+        if 'placeholder' not in pic_id:
+            delete_cloudinary_image(pic_id)
+
         df.drop(index, inplace=True)
         df.reset_index(drop=True, inplace=True)
         
         # Update ke Google Sheets
         if update_google_sheets(df,conn):
             st.success("✅ Actress deleted successfully from Google Sheets!")
-            st.session_state.actress_df = df  # Update session state
+            st.session_state.actress_df = df
         else:
             st.error("❌ Failed to delete actress from Google Sheets")
         

@@ -35,37 +35,45 @@ SIZE_OPTS = [
     "J"
 ]
 
-INFO = [
-    "Not Checked",
-    "Pass",
-    "Drop"
+INFO_OPTS = [
+    "Not Watched",
+    "Watched",
+    "Goat"
 ]
 
-# Fungsi untuk membaca data dari Google Sheets ke DataFrame
 def load_data_actress(conn):
     try:
         df = conn.read(worksheet="NList", usecols=list(range(14)))
-        df = values_handling(df)
+        df = values_handling(df,'actress')
         df = initial_load(df)
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
-# Fungsi untuk update data ke Google Sheets dari DataFrame
-def update_google_sheets(df, conn):
+def load_data_film(conn):
     try:
-        # Pastikan DataFrame benar-benar fresh
+        df = conn.read(worksheet="NCode", usecols=list(range(6)))
+        df = values_handling(df, 'film')
+        return df
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return pd.DataFrame()
+    
+def update_google_sheets(df,conn,type):
+    try:
         if not isinstance(df, pd.DataFrame):
             st.error("Data must be a pandas DataFrame")
             return False
         
-        # Buat copy untuk menghindari reference issues
         df_to_update = df.copy()
-        
-        # Update ke Google Sheets dengan parameter yang lebih spesifik
+        if type == 'actress':
+            sheet = 'NList'
+        else:
+            sheet = 'NCode'
+            
         conn.update(
-            worksheet="NList", 
+            worksheet=sheet, 
             data=df_to_update
         )
         
@@ -73,17 +81,14 @@ def update_google_sheets(df, conn):
         return True
     except Exception as e:
         st.error(f"❌ Error updating Google Sheets: {e}")
-        st.exception(e)  # Tampilkan traceback lengkap
+        st.exception(e) 
         return False
 
-# Fungsi untuk inisialisasi/maintain DataFrame di session state
-def init_dataframe(conn):
+def init_dataframe_actress(conn):
     """Inisialisasi DataFrame di session state"""
     if "actress_df" not in st.session_state:
-        # Load data dari Google Sheets
         df = load_data_actress(conn)
         if df.empty:
-            # Jika kosong, buat DataFrame dengan struktur yang benar
             df = pd.DataFrame(columns=[
                 'Review', 'Picture', 'Name (Alphabet)', 'Name (Kanji)',
                 'Birthdate', 'Debut Date', 'Size', 'Measurement',
@@ -91,32 +96,235 @@ def init_dataframe(conn):
                 'Retire Date', 'Status'
             ])
         
-        # Simpan di session state
         st.session_state.actress_df = df
         st.session_state.data_loaded = True
         return df
     else:
         return st.session_state.actress_df
 
+def init_dataframe_film(conn):
+    """Inisialisasi DataFrame di session state"""
+    if "film_df" not in st.session_state:
+        df = load_data_film(conn)
+        if df.empty:
+            df = pd.DataFrame(columns=[
+                'Actress', 'Code', 'Release Date', 'Picture', 'Playlist', 'Info'
+            ])
+        
+        st.session_state.film_df = df
+        st.session_state.data_loaded = True
+        return df
+    else:
+        return st.session_state.film_df
+
+# --- FUNGSI UNTUK DISPLAY CARD ---
+def display_actress_cards(df):
+    """
+    Menampilkan DataFrame aktris dalam bentuk card yang menarik
+    
+    Args:
+        df: DataFrame dengan kolom: Actress Name, Code, Release Date, Picture, Playlist, Status
+    """
+    if df.empty:
+        st.warning("📭 Tidak ada data aktris yang tersedia")
+        return
+    
+    # Header dengan statistik
+    st.subheader(f"🎬 Koleksi Aktris ({len(df)} aktris)")
+    
+    # Filter options
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        search_name = st.text_input("🔍 Cari nama aktris:", placeholder="Nama atau kode...")
+    with col2:
+        status_filter = st.multiselect(
+            "📊 Filter Status:",
+            options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
+            default=df['Info'].unique().tolist() if 'Info' in df.columns else []
+        )
+    with col3:
+        items_per_row = st.selectbox("🎴 Card per baris:", [3, 4, 5], index=1)
+    
+    # Filter data
+    filtered_df = df.copy()
+    
+    if search_name:
+        mask = (filtered_df['Actress Name'].str.contains(search_name, case=False, na=False) | 
+                filtered_df['Code'].str.contains(search_name, case=False, na=False))
+        filtered_df = filtered_df[mask]
+    
+    if status_filter and 'Status' in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df['Status'].isin(status_filter)]
+    
+    # Tampilkan statistik filter
+    active_count = len(filtered_df[filtered_df['Status'] == 'Active']) if 'Status' in filtered_df.columns else 0
+    retired_count = len(filtered_df[filtered_df['Status'] == 'Retired']) if 'Status' in filtered_df.columns else 0
+    
+    col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+    with col_stat1:
+        st.metric("Total Aktris", len(filtered_df))
+    with col_stat2:
+        st.metric("Aktif", active_count, delta=f"{active_count - retired_count}" if active_count > retired_count else None)
+    with col_stat3:
+        st.metric("Pensiun", retired_count)
+    with col_stat4:
+        st.metric("Kode Unik", filtered_df['Code'].nunique())
+    
+    st.markdown("---")
+    
+    # Jika tidak ada hasil filter
+    if filtered_df.empty:
+        st.info("🤔 Tidak ada aktris yang sesuai dengan filter")
+        return
+    
+    # Pagination
+    items_per_page = items_per_row * 2  # 2 baris per halaman
+    
+    total_pages = max(1, (len(filtered_df) + items_per_page - 1) // items_per_page)
+    if total_pages > 1:
+        page = st.number_input("📖 Halaman", min_value=1, max_value=total_pages, value=1)
+    else:
+        page = 1
+    
+    start_idx = (page - 1) * items_per_page
+    end_idx = min(start_idx + items_per_page, len(filtered_df))
+    
+    st.caption(f"Menampilkan {start_idx+1}-{end_idx} dari {len(filtered_df)} aktris")
+    
+    # Display cards
+    rows_to_display = filtered_df.iloc[start_idx:end_idx]
+    
+    for i in range(0, len(rows_to_display), items_per_row):
+        cols = st.columns(items_per_row)
+        
+        for col_idx, col in enumerate(cols):
+            idx = i + col_idx
+            if idx < len(rows_to_display):
+                actress = rows_to_display.iloc[idx]
+                display_single_card(col, actress, idx)
+
+def display_single_card(col, actress, card_id):
+    """
+    Menampilkan single card untuk satu aktris
+    """
+    with col:
+        # Warna berdasarkan status
+        status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E"
+        
+        # Format tanggal
+        release_date = pd.to_datetime(actress['Release Date']).strftime('%d %b %Y') if pd.notna(actress['Release Date']) else "Unknown"
+        
+        # HTML untuk card dengan styling yang menarik
+        card_html = f"""<div class="actress-card" id="card_{card_id}" 
+            style="border: 2px solid {status_color}; border-radius: 15px; padding: 15px; 
+            margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
+            height: 480px; display: flex; flex-direction: column;">
+            <!-- Status Badge -->
+            <div style="position: absolute; top: 15px; right: 10px;">
+                <span style="background: {status_color}; color: white; padding: 4px 10px; 
+                      border-radius: 20px; font-size: 11px; font-weight: bold;">
+                    {actress['Info']}
+                </span>
+            </div>
+            <!-- Image Container -->
+            <div style="height:350px; width:245px;background:black; border-radius: 10px; margin: 0 auto 15px auto;border: 2px solid {status_color};">
+                <img src="{actress['Picture']}" 
+                     style="width: 100%; height: 100%; border-radius:10px"
+                     onerror="this.src='https://via.placeholder.com/300x250/CCCCCC/666666?text=No+Image'"
+                     alt="{actress['Actress Name']}">
+            </div>
+            <!-- Separator -->
+            <div style="width: 50px; height: 3px; background: linear-gradient(90deg, {status_color}, #FFD166); 
+                 margin: 0 auto 15px auto; border-radius: 2px;"></div>
+            <!-- Code and Date -->
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: bold; color: #555;">🎬 Kode:</span>
+                    <span style="color: #e74c3c; font-weight: bold;">{actress['Code']}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="font-weight: bold; color: #555;">📅 Rilis:</span>
+                    <span style="color: #3498db;">{release_date}</span>
+                </div>
+            </div>
+        </div>"""
+        
+        # Render HTML card
+        st.markdown(card_html, unsafe_allow_html=True)
+        
+        # Streamlit buttons (alternatif jika butuh interactivity)
+        if st.button("View Details",key=f'view_film_{card_id}',use_container_width=True):
+            st.session_state.viewing_film_index = card_id
+            st.session_state.editing_film_index = None
+            st.rerun()
+
+# --- FUNGSI ALTERNATIF: Grid Layout tanpa Pagination ---
+def display_film_grid(df, cards_per_row=4):
+    """
+    Menampilkan semua card sekaligus dalam grid
+    """
+    # Hitung berapa baris yang dibutuhkan
+    n_rows = (len(df) + cards_per_row - 1) // cards_per_row
+    
+    for row in range(n_rows):
+        cols = st.columns(cards_per_row)
+        
+        for col_idx in range(cards_per_row):
+            idx = row * cards_per_row + col_idx
+            if idx < len(df):
+                actress = df.iloc[idx]
+                with cols[col_idx]:
+                    # Versi sederhana tanpa HTML
+                    st.image(
+                        actress['Picture'],
+                        caption=actress['Actress Name'],
+                        use_container_width=True
+                    )
+                    st.markdown(f"**🎬 {actress['Code']}**")
+                    st.caption(f"📅 {actress['Release Date']}")
+                    
+                    # Info badge
+                    Info_text = actress['Info']
+                    if Info_text == 'Watched':
+                        st.success(f"🟢 {Info_text}")
+                    elif Info_text == 'Not Watched':
+                        st.error(f"🔴 {Info_text}")
+                    else:
+                        st.warning(f"⚪ {Info_text}")
+                    
+                    st.caption(f"🎵 {actress['Playlist']}")
+
+
+        
 def complex_home(conn):
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
-    df_actress = init_dataframe(conn)
+    df_actress = init_dataframe_actress(conn)
+    df_film = init_dataframe_film(conn)
 
     left, right = st.columns(2)
     with left:
         with st.container(key='ActressList'):
             st.header('🌟 Actress List')
-            with st.container(key='Actress Info 1', horizontal=True):
-                st.metric('Actress Count' , len(df_actress))
-                st.metric('Watched',len(df_actress[df_actress['Review'] == 'Watched']))
-            with st.container(key='Actress Info 2', horizontal=True ):
-                st.metric('Not Watched', len(df_actress[df_actress['Review'] == 'Not Watched']))
-                st.metric('Goat', len(df_actress[df_actress['Review'] == 'Goat']))
+            with st.container(horizontal=True):
+                with st.container(key='Actress Info 1', horizontal=False):
+                    st.metric('Actress Count' , len(df_actress))
+                    st.metric('Watched',len(df_actress[df_actress['Review'] == 'Watched']))
+                with st.container(key='Actress Info 2', horizontal=False):
+                    st.metric('Not Watched', len(df_actress[df_actress['Review'] == 'Not Watched']))
+                    st.metric('Goat', len(df_actress[df_actress['Review'] == 'Goat']))
             if st.button('Go To Actress →'):
                 return 'actress'
     with right:
         with st.container(key='FilmList'):
             st.header('🎬 Film List')
+            with st.container(horizontal=True):
+                with st.container(key='Film Info 1', horizontal=False):
+                    st.metric('Film Count', len(df_film))
+                    st.metric('Watched', len(df_film[df_film['Info'] == 'Watched']))
+                with st.container(key='Film Info 2', horizontal=False):
+                    st.metric('Not Watched', len(df_film[df_film['Info'] == 'Not Watched']))
+                    st.metric('Goat', len(df_film[df_film['Info'] == 'Goat']))
             if st.button('Go To Film →'):
                 return 'film'
     
@@ -151,7 +359,319 @@ def complex_home(conn):
 
 
 def complex_film(conn):
-    st.write('Later')
+
+    # Inisialisasi variabel kontrol
+    if "editing_film_index" not in st.session_state:
+        st.session_state.editing_film_index = None
+    if "viewing_film_index" not in st.session_state:
+        st.session_state.viewing_film_index = None
+
+    df = init_dataframe_film(conn)
+    PLAYLIST_OPTS = ['All'] + list(set(df['Playlist'].dropna().unique()))
+
+    @st.dialog("🎬 Film Details", width='small')
+    def show_film_details():
+        index = st.session_state.viewing_film_index
+
+        if index is None or index >= len(df):
+            st.warning("No film selected")
+            st.stop()
+        
+        if st.session_state.editing_film_index == index:
+            show_edit_film(index)
+        else:
+            show_view_film(index)
+        
+    
+    def show_view_film(index):
+        film = df.iloc[index]
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(film['Picture'], width=200)
+            st.header(film['Code'])
+            with st.container(key='view_film_edit_container_button', horizontal=True):
+                if st.button('✏️ Edit', use_container_width=True):
+                    st.session_state.editing_film_index = index
+                    st.rerun()
+                if st.button('❌ Close', use_container_width=True):
+                    st.session_state.viewing_film_index = None
+                    st.session_state.editing_film_index = None
+                    st.rerun()
+        with col2:
+            st.markdown('### Actress')
+            st.write(film['Actress Name'])
+            st.markdown('### Release Date')
+            st.write(film['Release Date'])
+            st.markdown('### Status')
+            st.write(film['Info'])
+
+    def show_edit_film(index):
+        st.write('Later')
+
+    @st.dialog("➕ Add New Film", width='small')
+    def add_new_film():
+        if st.session_state.get('film_reset', False):
+            st.session_state.film_reset = False
+            st.session_state.new_actresses = ''
+            st.session_state.new_code = ''
+            st.session_state.new_release = date.today()
+            st.session_state.new_playlist = PLAYLIST_OPTS[0]
+            st.session_state.new_info = INFO_OPTS[0]
+
+        if 'new_film_reset' not in st.session_state:
+            st.session_state.new_film_reset = 0
+        
+        reset_film = st.session_state.new_film_reset
+
+        new_picture = st.file_uploader('Image', type=['png', 'jpg', 'jpeg'], key=f'new_film_picture_{reset_film}')
+        
+        if not new_picture is None:
+            st.image(new_picture, width=200)
+        else:
+            new_picture = st.secrets.indicators.PLACEHOLDER_IMG
+
+        new_actress = st.text_input('Actresses', key='new_actresses', placeholder='Rena Miyashita, AIKA, Hinano Iori, ...') 
+        new_code = st.text_input('Code*', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
+        new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
+        new_playlist = st.selectbox('Playlist', key='new_playlist', options=PLAYLIST_OPTS)
+        new_info = st.selectbox('Info', key='new_info', options=INFO_OPTS)
+
+        with st.container(key='film_new_button', horizontal=True):
+            if st.button('💾 Add Film', use_container_width=True):
+                if new_code:
+                    if new_picture:
+                        join_name = new_code.upper()
+                        clean_name = re.sub(r'[^\w]', '', join_name)
+                        clean_name = "N" + clean_name
+                        picture_url = upload_to_database(new_picture, clean_name)
+                    else:
+                        picture_url = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
+                    
+                    new_row = pd.DataFrame([{
+                        'Actress': new_actress,
+                        'Code': new_code,
+                        'Release Date': new_release,
+                        'Picture': picture_url,
+                        'Playlist': new_playlist,
+                        'Info': new_info
+                    }])
+
+                    df = st.session_state.film_df
+                    new_film_code = new_row['Code'].iloc[0]
+
+                    if new_film_code in df['Code'].values:
+                        st.warning(f'⚠️ Code {new_film_code} already exist in database')
+                        st.stop()
+                    else:
+                        df = pd.concat([df,new_row], ignore_index=True)
+                        if update_google_sheets(df,conn,'film'):
+                            st.session_state.film_df = values_handling(df,'film')
+
+
+
+    with st.sidebar:
+        if st.button('⬅️ Back', use_container_width=True):
+            return 'home'
+        st.markdown('---')
+        st.header("⚙️ Display Settings")
+        display_mode = st.radio(
+            "Tampilan Mode:",
+            ["Cards with HTML", "Simple Grid", "Table View"]
+        )
+        
+        st.markdown('---')
+        if st.button('➕ Add New Film', use_container_width=True):
+            add_new_film()
+    
+    # Main
+    st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Film List</h1>", unsafe_allow_html=True)
+    
+    if st.session_state.viewing_film_index is not None:
+        show_film_details()
+
+
+    if display_mode == "Cards with HTML":
+        display_actress_cards(df)
+    elif display_mode == "Simple Grid":
+        display_film_grid(df, cards_per_row=4)
+    else:  # Table View
+        st.dataframe(
+            df,
+            use_container_width=True,
+            column_config={
+                "Picture": st.column_config.ImageColumn("Photo", width="small"),
+                "Actress Name": st.column_config.TextColumn("Name", width="medium"),
+                "Code": st.column_config.TextColumn("Code", width="small"),
+                "Release Date": st.column_config.DateColumn("Release"),
+                "Info": st.column_config.SelectboxColumn(
+                    "Info",
+                    options=["Not Watched", "Watched", "Goat"]
+                )
+            }
+        )
+
+    st.markdown("""
+    <style>
+    /* Hover effect untuk card */
+    .actress-card:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+        border-color: #004cff !important;
+    }
+    
+    /* Smooth transition */
+    .actress-card {
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .actress-card {
+            height: 420px !important;
+        }
+    }
+    
+    /* Custom scrollbar untuk container */
+    .st-emotion-cache-1jicfl2 {
+        scrollbar-width: thin;
+        scrollbar-color: #888 #f1f1f1;
+    }
+    
+    /* Better button styling */
+    .stButton > button {
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: scale(1.05);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <style>
+    /* ================= DESKTOP ================= */
+    @media (min-width: 768px) {
+        section[data-testid="stSidebar"] {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            height: 100% !important;
+            width: 300px !important;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 999999 !important;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.2) !important;
+        }
+
+        section[data-testid="stSidebar"][aria-expanded="true"] {
+            transform: translateX(0) !important;
+        }
+
+        .main .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            max-width: 100% !important;
+        }
+    }
+
+    /* ================= MOBILE ================= */
+    @media (max-width: 767px) {
+        section[data-testid="stSidebar"] {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            height: 100vh !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 999999 !important;
+        }
+
+        section[data-testid="stSidebar"][aria-expanded="true"] {
+            transform: translateX(0) !important;
+        }
+
+        .stSidebarCollapseButton button {
+            position: fixed !important;
+            top: 10px !important;
+            right: 10px !important;
+            z-index: 1000000 !important;
+            font-size: 24px !important;
+            padding: 14px !important;
+            background: rgba(0,0,0,0.1) !important;
+            border-radius: 50% !important;
+        }
+
+        .main .block-container {
+            padding: 1rem !important;
+        }
+    }
+
+    /* ================= OVERLAY ================= */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 999998;
+        backdrop-filter: blur(2px);
+    }
+
+    /* Hide default arrow */
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+    </style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const waitForSidebar = setInterval(() => {
+            const sidebar = document.querySelector('section[data-testid="stSidebar"]');
+            const closeBtn = sidebar?.querySelector('button[kind="header"]');
+
+            if (sidebar && closeBtn) {
+                clearInterval(waitForSidebar);
+
+                /* ===== AUTO CLOSE ON FIRST LOAD ===== */
+                if (sidebar.getAttribute('aria-expanded') === 'true') {
+                    closeBtn.click();
+                }
+
+                /* ===== CREATE OVERLAY ===== */
+                const overlay = document.createElement('div');
+                overlay.className = 'sidebar-overlay';
+                document.body.appendChild(overlay);
+
+                /* ===== OBSERVE SIDEBAR STATE ===== */
+                const observer = new MutationObserver(() => {
+                    const expanded = sidebar.getAttribute('aria-expanded') === 'true';
+                    overlay.style.display = expanded ? 'block' : 'none';
+                    document.body.style.overflow = expanded ? 'hidden' : 'auto';
+                });
+
+                observer.observe(sidebar, { attributes: true });
+
+                /* ===== CLICK OVERLAY TO CLOSE ===== */
+                overlay.addEventListener('click', () => closeBtn.click());
+
+                /* ===== ESC KEY TO CLOSE ===== */
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && overlay.style.display === 'block') {
+                        closeBtn.click();
+                    }
+                });
+            }
+        }, 100);
+    });
+    </script>
+    """, unsafe_allow_html=True)
+
+
+
 
 def complex_actress(conn):
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Actress List</h1>", unsafe_allow_html=True)
@@ -168,7 +688,6 @@ def complex_actress(conn):
                 st.cache_data.clear()
                 df = load_data_actress(conn)
 
-                
                 if not df.empty:
                     # Clear dan update session state
                     st.session_state.actress_df = df
@@ -182,19 +701,17 @@ def complex_actress(conn):
                     if "adding_new" in st.session_state:
                         st.session_state.adding_new = False
                     
-                    # Force rerun
-                    st.success("✅ Data refreshed successfully!")
                     st.rerun()
                 else:
                     st.warning("⚠️ No data found in Google Sheets")
-                    return pd.DataFrame()
+                    st.stop()
         except Exception as e:
             st.error(f"❌ Error refreshing data: {e}")
-            return pd.DataFrame()
+            st.stop()
 
     # Inisialisasi DataFrame
     if st.session_state.initial == False:
-        df = init_dataframe(conn)
+        df = init_dataframe_actress(conn)
 
     # Inisialisasi variabel kontrol
     if "editing_index" not in st.session_state:
@@ -373,6 +890,13 @@ def complex_actress(conn):
         # Personal Notes Section
         st.write("### 📖 Your Personal Notes")
 
+        if st.session_state.get('reset_notes', False):
+            st.session_state.reset_notes = False
+            key = f'personal_notes_{index}'
+            if key in st.session_state:
+                st.session_state[key] = None
+
+
         personal_notes = st.text_input(
             "Add your own notes about this actress...", 
             placeholder="Write your thoughts, reviews, or observations about this actress...",
@@ -382,6 +906,7 @@ def complex_actress(conn):
         button_container = st.container(horizontal=True, horizontal_alignment='center', key='view_editNotes')
         with button_container:
             if st.button("💾 Save Notes", use_container_width=True, key=f"save_{index}"):
+                st.session_state.reset_notes = True
                 if personal_notes:
                     current_notes = df['Notes'].iloc[index]
                     if current_notes == '' or current_notes == '--':
@@ -390,12 +915,16 @@ def complex_actress(conn):
                         edited_notes = f'{current_notes}\n - {personal_notes}'
                     df.at[index, 'Notes'] = edited_notes
                 
-                if update_google_sheets(df,conn):
-                    st.session_state.actress_df = values_handling(df)  # Update session state
+                    if update_google_sheets(df,conn,'actress'):
+                        st.session_state.actress_df = values_handling(df,'actress')  # Update session state
+                    else:
+                        st.error("❌ Failed to update Google Sheets")
+                        st.stop()
+                    st.rerun()
                 else:
-                    st.error("❌ Failed to update Google Sheets")
+                    st.warning('Note empty!')
+                    st.stop()
                 
-                st.rerun()
 
             if st.button("Close", use_container_width=True, key=f'cancel_{index}', type='primary'):
                 st.session_state.viewing_index = None
@@ -615,95 +1144,84 @@ def complex_actress(conn):
             if edited_kanji not in df['Name (Kanji)'].values:
                 if edited_measurement != '?':
                     edited_measurement = f"B{b} / W{w} / H{h}"
+                
+                # Generate clean name untuk public_id
+                join_name = edited_name
+                clean_name = re.sub(r'[^\w]', '', join_name)
+                clean_name = "N" + clean_name
+
                 if new_pic:
-                    # Handle measurement
+                    # Hapus gambar lama jika bukan placeholder
+                    if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture'].iloc[0]).lower():
+                        try:
+                            old_filename = str(actress['Picture']).split('/')[-1]
+                            old_public_id = old_filename.split('.')[0]
+                            delete_cloudinary_image(old_public_id)
+                        except Exception as e:
+                            st.warning(f"Could not delete old image: {e}")
+                            st.stop()
+                    
+                    # Upload gambar baru
+                    final_picture_url = upload_to_database(new_pic, clean_name)
+                    if not final_picture_url:
+                        st.error("Failed to upload new image")
+                        st.stop()
+                        return
+                elif actress['Name (Alphabet)'] != edited_name:
+                    try:
+                        old_filename = str(actress['Picture']).split('/')[-1]
+                        old_public_id = old_filename.split('.')[0]
 
-                    
-                    # Generate clean name untuk public_id
-                    join_name = edited_name
-                    clean_name = re.sub(r'[^\w]', '', join_name)
-                    clean_name = "N" + clean_name
-                    
-                    # Jika ada gambar baru yang diupload
-                    if new_pic is not None:
-                        # Hapus gambar lama jika bukan placeholder
-                        if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
-                            try:
-                                old_filename = str(actress['Picture']).split('/')[-1]
-                                old_public_id = old_filename.split('.')[0]
-                                delete_cloudinary_image(old_public_id)
-                            except Exception as e:
-                                st.warning(f"Could not delete old image: {e}")
-                        
-                        # Upload gambar baru
-                        final_picture_url = upload_to_database(new_pic, clean_name)
-                        if not final_picture_url:
-                            st.error("Failed to upload new image")
-                            return
-                    
-                    # Update data di DataFrame
-                    df.at[index, 'Review'] = edited_review
-                    df.at[index, 'Name (Alphabet)'] = edited_name
-                    df.at[index, 'Name (Kanji)'] = edited_kanji
-                    df.at[index, 'Picture'] = final_picture_url
-                    df.at[index, 'Birthdate'] = edited_birthdate
-                    df.at[index, 'Debut Date'] = edited_debut_date
-                    df.at[index, 'Size'] = edited_size
-                    df.at[index, 'Measurement'] = edited_measurement
-                    df.at[index, 'Height (cm)'] = edited_height
-                    df.at[index, 'Notes'] = edited_notes
-                    df.at[index, 'Age'] = age
-                    df.at[index, 'Debut Period'] = debut
-                    df.at[index, 'Retire Date'] = edited_retire_date
-                    df.at[index, 'Status'] = edited_status
-                    
-                    # Update ke Google Sheets
-                    if update_google_sheets(df,conn):
-                        st.success("✅ Data updated successfully in Google Sheets!")
-                        st.session_state.actress_df = values_handling(df)  # Update session state
-                    else:
-                        st.error("❌ Failed to update Google Sheets")
-                    
-                    st.session_state.editing_index = None
-                    st.rerun()
+                        final_picture_url = rename_cloudinary_image(old_public_id, clean_name)
+                    except Exception as e:
+                        st.warning(f'Could not rename old image: {e}')
+                        st.stop()
+
+                # Update data di DataFrame
+                df.at[index, 'Review'] = edited_review
+                df.at[index, 'Name (Alphabet)'] = edited_name
+                df.at[index, 'Name (Kanji)'] = edited_kanji
+                df.at[index, 'Picture'] = final_picture_url
+                df.at[index, 'Birthdate'] = edited_birthdate
+                df.at[index, 'Debut Date'] = edited_debut_date
+                df.at[index, 'Size'] = edited_size
+                df.at[index, 'Measurement'] = edited_measurement
+                df.at[index, 'Height (cm)'] = edited_height
+                df.at[index, 'Notes'] = edited_notes
+                df.at[index, 'Age'] = age
+                df.at[index, 'Debut Period'] = debut
+                df.at[index, 'Retire Date'] = edited_retire_date
+                df.at[index, 'Status'] = edited_status
+                
+                # Update ke Google Sheets
+                if update_google_sheets(df,conn,'actress'):
+                    st.success("✅ Data updated successfully in Google Sheets!")
+                    st.session_state.actress_df = values_handling(df,'actress')  # Update session state
                 else:
-                    # Update data di DataFrame
-                    df.at[index, 'Review'] = edited_review
-                    df.at[index, 'Name (Alphabet)'] = edited_name
-                    df.at[index, 'Name (Kanji)'] = edited_kanji
-                    df.at[index, 'Birthdate'] = edited_birthdate
-                    df.at[index, 'Debut Date'] = edited_debut_date
-                    df.at[index, 'Size'] = edited_size
-                    df.at[index, 'Measurement'] = edited_measurement
-                    df.at[index, 'Height (cm)'] = edited_height
-                    df.at[index, 'Notes'] = edited_notes
-                    df.at[index, 'Age'] = age
-                    df.at[index, 'Debut Period'] = debut
-                    df.at[index, 'Retire Date'] = edited_retire_date
-                    df.at[index, 'Status'] = edited_status
-
-                    # Update ke Google Sheets
-                    if update_google_sheets(df, conn):
-                        st.success("✅ Data updated successfully in Google Sheets!")
-                        st.session_state.actress_df = values_handling(df)  # Update session state
-                    else:
-                        st.error("❌ Failed to update Google Sheets")
-                    
-                    st.session_state.editing_index = None
-                    st.rerun()
+                    st.error("❌ Failed to update Google Sheets")
+                
+                st.session_state.editing_index = None
+                st.rerun()
             else:
                 st.warning(f"⚠️ Aktris '{edited_kanji}' sudah ada di database!")
                 st.stop()
 
     def delete_actress(index):
         # Hapus data dari DataFrame
+        actress = df.loc[index]
+        pic_filename = str(actress['Picture']).split('/')[-1]
+        pic_id = pic_filename.split('.')[0]
+
+        if 'placeholder' not in pic_id:
+            delete_cloudinary_image(pic_id)
+
         df.drop(index, inplace=True)
         df.reset_index(drop=True, inplace=True)
         
         # Update ke Google Sheets
-        if update_google_sheets(df,conn):
+        if update_google_sheets(df,conn,'actress'):
             st.success("✅ Actress deleted successfully from Google Sheets!")
-            st.session_state.actress_df = values_handling(df)  # Update session state
+            st.session_state.actress_df = values_handling(df,'actress')  # Update session state
         else:
             st.error("❌ Failed to delete actress from Google Sheets")
         
@@ -861,9 +1379,9 @@ def complex_actress(conn):
                 else:
                     df = pd.concat([df, new_row], ignore_index=True)       
                     # Update ke Google Sheets
-                    if update_google_sheets(df, conn):
+                    if update_google_sheets(df,conn,'actress'):
                         st.success("✅ New actress added successfully to Google Sheets!")
-                        st.session_state.actress_df = values_handling(df)  # Update session state
+                        st.session_state.actress_df = values_handling(df,'actress')  # Update session state
                     else:
                         st.error("❌ Failed to add new actress to Google Sheets")
                         st.stop()
@@ -1167,7 +1685,6 @@ def complex_actress(conn):
     </style>
     """, unsafe_allow_html=True)
 
-    # Sidebar akan muncul sebagai overlay tanpa menggeser content
     st.markdown("""
     <style>
     /* ================= DESKTOP ================= */

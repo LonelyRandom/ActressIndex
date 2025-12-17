@@ -3,13 +3,16 @@ from dateutil.relativedelta import relativedelta
 from datetime import date,datetime
 import streamlit as st
 
-def values_handling(df):
-    df['Height (cm)'] = df['Height (cm)'].astype(str)
-    df['Age'] = df['Age'].astype(str)
-    df['Birthdate'] = df['Birthdate'].astype(str)
-    df['Debut Date'] = df['Debut Date'].astype(str)
-    df['Retire Date'] = df['Retire Date'].astype(str)
-
+def values_handling(df, type):
+    if type == 'actress':
+        df['Height (cm)'] = df['Height (cm)'].astype(str)
+        df['Age'] = df['Age'].astype(str)
+        df['Birthdate'] = df['Birthdate'].astype(str)
+        df['Debut Date'] = df['Debut Date'].astype(str)
+        df['Retire Date'] = df['Retire Date'].astype(str)
+    else:
+        df['Release Date'] = df['Release Date'].astype(str)
+        
     return df
 
 def initial_load(df):
