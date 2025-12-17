@@ -21,6 +21,7 @@ if 'check_login' not in st.session_state:
     st.session_state.check_login = None
 
 if st.session_state.page == 'login':
+    st.cache_data.clear()
     check_login, usn, page = log_in(conn)
     st.session_state.check_login = check_login
     st.session_state.usn = usn

@@ -55,16 +55,25 @@ def load_data_actress(conn):
 # Fungsi untuk update data ke Google Sheets dari DataFrame
 def update_google_sheets(df, conn):
     try:
-        # Pastikan data adalah DataFrame
+        # Pastikan DataFrame benar-benar fresh
         if not isinstance(df, pd.DataFrame):
             st.error("Data must be a pandas DataFrame")
             return False
         
-        # Update ke Google Sheets
-        conn.update(worksheet="NList", data=df)
+        # Buat copy untuk menghindari reference issues
+        df_to_update = df.copy()
+        
+        # Update ke Google Sheets dengan parameter yang lebih spesifik
+        conn.update(
+            worksheet="NList", 
+            data=df_to_update
+        )
+        
+        st.toast("✅ Google Sheets updated successfully!", icon="✅")
         return True
     except Exception as e:
-        st.error(f"Error updating Google Sheets: {e}")
+        st.error(f"❌ Error updating Google Sheets: {e}")
+        st.exception(e)  # Tampilkan traceback lengkap
         return False
 
 # Fungsi untuk inisialisasi/maintain DataFrame di session state
@@ -151,30 +160,37 @@ def complex_actress(conn):
         st.session_state.initial = False
 
     # Fungsi untuk refresh data dari Google Sheets
-    def refresh_data():
+    def refresh_data(conn):
         """Refresh data dari Google Sheets ke session state"""
-        df = load_data_actress(conn)
-        if not df.empty:
-           if not df.empty:
-            # Clear session state terlebih dahulu
-            if "actress_df" in st.session_state:
-                del st.session_state.actress_df
-            if "data_loaded" in st.session_state:
-                del st.session_state.data_loaded
-            
-            # Update session state dengan data baru
-            st.session_state.actress_df = df
-            st.session_state.data_loaded = True
-            
-            # Force reset editing/viewing states
-            st.session_state.editing_index = None
-            st.session_state.viewing_index = None
-            st.session_state.adding_new = False
-            
-            st.success("✅ Data refreshed successfully from Google Sheets!")
-            st.rerun()  # Penting: trigger rerun untuk update UI
-        else:
-            st.warning("No data found in Google Sheets")
+        try:
+            with st.spinner("🔄 Refreshing data from Google Sheets..."):
+                # Load data baru
+                st.cache_data.clear()
+                df = load_data_actress(conn)
+
+                
+                if not df.empty:
+                    # Clear dan update session state
+                    st.session_state.actress_df = df
+                    st.session_state.data_loaded = True
+                    
+                    # Clear editing/viewing states
+                    if "editing_index" in st.session_state:
+                        st.session_state.editing_index = None
+                    if "viewing_index" in st.session_state:
+                        st.session_state.viewing_index = None
+                    if "adding_new" in st.session_state:
+                        st.session_state.adding_new = False
+                    
+                    # Force rerun
+                    st.success("✅ Data refreshed successfully!")
+                    st.rerun()
+                else:
+                    st.warning("⚠️ No data found in Google Sheets")
+                    return pd.DataFrame()
+        except Exception as e:
+            st.error(f"❌ Error refreshing data: {e}")
+            return pd.DataFrame()
 
     # Inisialisasi DataFrame
     if st.session_state.initial == False:
@@ -232,12 +248,12 @@ def complex_actress(conn):
             st.markdown(f"# {actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ''}")
             
             # Tombol Edit dan Close
-            col_edit, col_close = st.columns(2)
-            with col_edit:
+            button_container = st.container(key='view_edit_close', horizontal=True)
+            with button_container:
                 if st.button("✏️ Edit", use_container_width=True, key=f"edit_btn_{index}"):
                     st.session_state.editing_index = index
                     st.rerun()
-            with col_close:
+
                 if st.button("❌ Close", use_container_width=True, key=f"close_{index}"):
                     st.session_state.viewing_index = None
                     st.session_state.editing_index = None
@@ -303,7 +319,6 @@ def complex_actress(conn):
                 st.info(actress['Measurement'])
         
         with col4:
-            # Additional physical info
             if pd.notna(actress['Size']) and actress['Size']:
                 st.markdown("#### 📐 Size")
                 st.info(f"**{actress['Size']}**")
@@ -314,7 +329,6 @@ def complex_actress(conn):
         st.markdown("### Career Timeline")
         
         timeline_col1, timeline_col2, timeline_col3 = st.columns(3)
-        
         with timeline_col1:
             if actress['Debut Date'] != '?':
                 debut_date_text = datetime.strptime(actress['Debut Date'], '%d/%m/%Y').strftime("%b, %d %Y")
@@ -322,33 +336,37 @@ def complex_actress(conn):
                 debut_date_text = '?'
 
             if pd.notna(actress['Debut Date']) and actress['Debut Date']:
-                st.markdown("#### 🎭 Debut")
-                st.write(debut_date_text)
+                with st.container():
+                    st.markdown("#### 🎭 Debut")
+                    st.write(debut_date_text)
             
-
-        
         with timeline_col2:
             if pd.notna(actress['Debut Period']) and actress['Debut Period']:
-                st.markdown("#### ⏳ Experience")
-                st.write(str(actress['Debut Period']))
+                with st.container():
+                    st.markdown("#### ⏳ Experience")
+                    st.write(str(actress['Debut Period']))
         
         with timeline_col3:
             if pd.notna(actress['Retire Date']) and actress['Retire Date']:
-                st.markdown("#### 🏁 Retire Date")
-                if actress['Retire Date'] == '?':
-                    st.write('?')
-                else:
-                    st.write(datetime.strptime(actress['Retire Date'], '%d/%m/%Y').strftime("%b, %d %Y"))
+                with st.container():
+                    st.markdown("#### 🏁 Retire Date")
+                    if actress['Retire Date'] == '?':
+                        st.write('Still Active')
+                    else:
+                        st.write(datetime.strptime(actress['Retire Date'], '%d/%m/%Y').strftime("%b, %d %Y"))
             else:
-                st.markdown("#### 🏁 Retire Date")
-                st.write("Still Active")
+                with st.container():
+                    st.markdown("#### 🏁 Retire Date")
+                    st.write("Still Active")
         
         st.markdown("---")
         
         # Notes/Review
+        st.markdown("### 📝 Notes")
         if pd.notna(actress['Notes']) and actress['Notes']:
-            st.markdown("### 📝 Notes")
             st.warning(actress['Notes'])
+        else:
+            st.warning('--')
         
         st.markdown("---")
         
@@ -361,12 +379,15 @@ def complex_actress(conn):
             key=f"personal_notes_{index}"
         )
         
-        col7, col8 = st.columns(2)
-        with col7:
+        button_container = st.container(horizontal=True, horizontal_alignment='center', key='view_editNotes')
+        with button_container:
             if st.button("💾 Save Notes", use_container_width=True, key=f"save_{index}"):
                 if personal_notes:
                     current_notes = df['Notes'].iloc[index]
-                    edited_notes = f'{current_notes}\n - {personal_notes}'
+                    if current_notes == '' or current_notes == '--':
+                        edited_notes = f'- {personal_notes}'
+                    else:
+                        edited_notes = f'{current_notes}\n - {personal_notes}'
                     df.at[index, 'Notes'] = edited_notes
                 
                 if update_google_sheets(df,conn):
@@ -375,8 +396,7 @@ def complex_actress(conn):
                     st.error("❌ Failed to update Google Sheets")
                 
                 st.rerun()
-        
-        with col8:
+
             if st.button("Close", use_container_width=True, key=f'cancel_{index}', type='primary'):
                 st.session_state.viewing_index = None
                 st.session_state.editing_index = None
@@ -730,24 +750,32 @@ def complex_actress(conn):
             new_name = st.text_input("Name (Alphabet)*", placeholder="Enter name in alphabet", key='new_name')
             new_kanji = st.text_input("Name (Kanji)*", placeholder="Enter name in kanji", key='new_kanji')
             new_birthdate = st.date_input("Birthdate", min_value=date(1980,1,1), key='new_birthdate')
-            if st.checkbox('No Info', key='New Birthdate', value=(new_birthdate is None)):
+            if st.checkbox('No Info', key='New Birthdate', value=(new_birthdate == None)):
                 new_birthdate = '?'
                 new_age = '?'
-            else:
+            elif new_birthdate != None:
                 new_age = relativedelta(date.today(), new_birthdate).years        
                 new_birthdate = new_birthdate.strftime('%d/%m/%Y')
+            else:
+                new_birthdate = '?'
+                new_age = '?'
 
         with col2:
             # Career Information
             st.subheader("Career Information")
             new_debut_date = st.date_input("Debut Date", min_value=date(1980,1,1), key='new_debut_date')
-            if st.checkbox('No Info', key='New Debut Date'):
+            if st.checkbox('No Info', key='New Debut Date', value=(new_debut_date == None)):
                 new_debut_date= '?'
+            elif new_debut_date == None:
+                new_debut_date = '?'
 
             new_status = st.selectbox("Status", options=STATUS_OPTS, key='new_status')
             if new_status == 'Retired':
-                new_retire_date = st.date_input("Retire Date", min_value=date(1980,1,1), key='new_retire_date')
-                new_retire_date = new_retire_date.strftime('%d/%m/%Y')
+                new_retire_date = st.date_input("Retire Date*", min_value=date(1980,1,1), key='new_retire_date')
+                if new_retire_date != None:
+                    new_retire_date = new_retire_date.strftime('%d/%m/%Y')
+                else:
+                    st.error('Please input the Retire Date')
             else:
                 new_retire_date = '?'
             
@@ -758,9 +786,11 @@ def complex_actress(conn):
             new_measurement = st.text_input("Measurement", placeholder="e.g., 75-56-80", key='new_measurement')
             if st.checkbox('No Info',  key='New Measurement') or new_measurement == '':
                 new_measurement = '?'
-            else:
+            elif new_measurement != '?':
                 b,w,h = new_measurement.split('-')
                 new_measurement = f'B{b} / W{w} / H{h}'
+            else:
+                new_measurement = '?'
 
             new_height = st.number_input("Height (cm)", min_value=130, key='new_height')
             if st.checkbox('No Info', key='New Height'):
@@ -784,6 +814,9 @@ def complex_actress(conn):
         # Notes
         st.subheader("Additional Notes")
         new_notes = st.text_area("Notes", placeholder="Enter any additional notes...", key='new_notes')
+
+        if not new_notes:
+            new_notes = '--'
         
         # Tombol submit
         with st.container(horizontal=True):
@@ -791,7 +824,7 @@ def complex_actress(conn):
             cancel_new = st.button("❌ Cancel", use_container_width=True)
         
         if submit_new:
-            if new_name and new_kanji:
+            if new_name and new_kanji and new_retire_date:
                 if new_picture:
                     join_name = new_name
                     clean_name = re.sub(r'[^\w]', '', join_name)
@@ -833,11 +866,12 @@ def complex_actress(conn):
                         st.session_state.actress_df = values_handling(df)  # Update session state
                     else:
                         st.error("❌ Failed to add new actress to Google Sheets")
+                        st.stop()
                     
                     st.session_state.adding_new = False
                     st.rerun()
             else:
-                st.error('Fill mandatory fields first!') # Error disini
+                st.error('Fill mandatory fields first! (*)') # Error disini
                 st.stop()
         
         if cancel_new:
