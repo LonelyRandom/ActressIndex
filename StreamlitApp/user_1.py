@@ -198,7 +198,7 @@ def display_actress_cards(df):
             idx = i + col_idx
             if idx < len(rows_to_display):
                 actress = rows_to_display.iloc[idx]
-                display_single_card(col, actress, idx)
+                display_single_card(col, actress, idx + start_idx)
 
 def display_single_card(col, actress, card_id):
     """
