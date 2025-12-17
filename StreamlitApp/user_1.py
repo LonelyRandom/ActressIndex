@@ -137,7 +137,7 @@ def display_actress_cards(df):
     with col1:
         search_name = st.text_input("🔍 Cari nama aktris:", placeholder="Nama atau kode...")
     with col2:
-        status_filter = st.multiselect(
+        info_filter = st.multiselect(
             "📊 Filter Status:",
             options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
             default=df['Info'].unique().tolist() if 'Info' in df.columns else []
@@ -153,22 +153,19 @@ def display_actress_cards(df):
                 filtered_df['Code'].str.contains(search_name, case=False, na=False))
         filtered_df = filtered_df[mask]
     
-    if status_filter and 'Status' in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df['Status'].isin(status_filter)]
+    if info_filter and 'Info' in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df['Info'].isin(info_filter)]
     
     # Tampilkan statistik filter
-    active_count = len(filtered_df[filtered_df['Status'] == 'Active']) if 'Status' in filtered_df.columns else 0
-    retired_count = len(filtered_df[filtered_df['Status'] == 'Retired']) if 'Status' in filtered_df.columns else 0
+    not_watched_count = len(filtered_df[filtered_df['Info'] == 'Not Watched']) if 'Info' in filtered_df.columns else 0
+    watched_count = len(filtered_df[filtered_df['Info'] == 'Watched']) if 'Info' in filtered_df.columns else 0
+    goat_count = len(filtered_df[filtered_df['Info'] == 'Goat']) if 'Info' in filtered_df.columns else 0
     
-    col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-    with col_stat1:
-        st.metric("Total Aktris", len(filtered_df))
-    with col_stat2:
-        st.metric("Aktif", active_count, delta=f"{active_count - retired_count}" if active_count > retired_count else None)
-    with col_stat3:
-        st.metric("Pensiun", retired_count)
-    with col_stat4:
-        st.metric("Kode Unik", filtered_df['Code'].nunique())
+    with st.container(horizontal=True):
+        st.metric("Total Film", len(filtered_df))
+        st.metric("Watched", watched_count, delta=f"{watched_count - not_watched_count}" if watched_count > not_watched_count else None)
+        st.metric("Not Watched", not_watched_count)
+        st.metric("Goat", goat_count)
     
     st.markdown("---")
     
@@ -219,7 +216,7 @@ def display_single_card(col, actress, card_id):
             style="border: 2px solid {status_color}; border-radius: 15px; padding: 15px; 
             margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
-            height: 480px; display: flex; flex-direction: column;">
+            height: 450px; display: flex; flex-direction: column;">
             <!-- Status Badge -->
             <div style="position: absolute; top: 15px; right: 10px;">
                 <span style="background: {status_color}; color: white; padding: 4px 10px; 
@@ -228,10 +225,9 @@ def display_single_card(col, actress, card_id):
                 </span>
             </div>
             <!-- Image Container -->
-            <div style="height:350px; width:245px;background:black; border-radius: 10px; margin: 0 auto 15px auto;border: 2px solid {status_color};">
+            <div style="height:300px; width:213px;background:black; border-radius: 10px; margin: 0 auto 15px auto;border: 2px solid {status_color};">
                 <img src="{actress['Picture']}" 
                      style="width: 100%; height: 100%; border-radius:10px"
-                     onerror="this.src='https://via.placeholder.com/300x250/CCCCCC/666666?text=No+Image'"
                      alt="{actress['Actress Name']}">
             </div>
             <!-- Separator -->
@@ -278,25 +274,21 @@ def display_film_grid(df, cards_per_row=4):
                     # Versi sederhana tanpa HTML
                     st.image(
                         actress['Picture'],
-                        caption=actress['Actress Name'],
-                        use_container_width=True
+                        caption=actress['Code']
                     )
-                    st.markdown(f"**🎬 {actress['Code']}**")
-                    st.caption(f"📅 {actress['Release Date']}")
-                    
-                    # Info badge
-                    Info_text = actress['Info']
-                    if Info_text == 'Watched':
-                        st.success(f"🟢 {Info_text}")
-                    elif Info_text == 'Not Watched':
-                        st.error(f"🔴 {Info_text}")
-                    else:
-                        st.warning(f"⚪ {Info_text}")
-                    
-                    st.caption(f"🎵 {actress['Playlist']}")
+                    with st.expander('📋 Vied Details', expanded=False):
+                        st.markdown(f"**🎬 {actress['Actress Name']}**")
+                        st.caption(f"📅 {actress['Release Date']}")
+                        
+                        # Info badge
+                        Info_text = actress['Info']
+                        if Info_text == 'Watched':
+                            st.success(f"🟢 {Info_text}")
+                        elif Info_text == 'Not Watched':
+                            st.error(f"🔴 {Info_text}")
+                        else:
+                            st.warning(f"⚪ {Info_text}")
 
-
-        
 def complex_home(conn):
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
     df_actress = init_dataframe_actress(conn)
@@ -382,7 +374,6 @@ def complex_film(conn):
         else:
             show_view_film(index)
         
-    
     def show_view_film(index):
         film = df.iloc[index]
 
@@ -439,7 +430,7 @@ def complex_film(conn):
 
         with st.container(key='film_new_button', horizontal=True):
             if st.button('💾 Add Film', use_container_width=True):
-                if new_code:
+                if not new_code:
                     if new_picture:
                         join_name = new_code.upper()
                         clean_name = re.sub(r'[^\w]', '', join_name)
@@ -449,7 +440,7 @@ def complex_film(conn):
                         picture_url = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
                     
                     new_row = pd.DataFrame([{
-                        'Actress': new_actress,
+                        'Actress Name': new_actress,
                         'Code': new_code,
                         'Release Date': new_release,
                         'Picture': picture_url,
@@ -467,8 +458,11 @@ def complex_film(conn):
                         df = pd.concat([df,new_row], ignore_index=True)
                         if update_google_sheets(df,conn,'film'):
                             st.session_state.film_df = values_handling(df,'film')
-
-
+                    
+                    st.rerun()
+                else:
+                    st.error('Fill mandatory fields first! (*)')
+                    st.stop()
 
     with st.sidebar:
         if st.button('⬅️ Back', use_container_width=True):
@@ -483,13 +477,15 @@ def complex_film(conn):
         st.markdown('---')
         if st.button('➕ Add New Film', use_container_width=True):
             add_new_film()
+        if st.button('🔐 Logout', use_container_width=True):
+            st.session_state.clear()
+            return 'login'
     
     # Main
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Film List</h1>", unsafe_allow_html=True)
     
     if st.session_state.viewing_film_index is not None:
         show_film_details()
-
 
     if display_mode == "Cards with HTML":
         display_actress_cards(df)
