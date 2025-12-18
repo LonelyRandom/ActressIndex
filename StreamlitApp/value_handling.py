@@ -53,8 +53,8 @@ def initial_load(df, type):
 
                     # Bandingkan dengan tanggal hari ini
                     if release_date < today:
-                        df.at[idx, 'Release Status'] = True  # Sudah rilis
+                        df.at[idx, 'Release Status'] = 1.0  # Sudah rilis
                     else:
-                        df.at[idx, 'Release Status'] = False  # Belum rilis
+                        df.at[idx, 'Release Status'] = 0.0  # Belum rilis
         
         return df

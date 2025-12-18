@@ -711,7 +711,8 @@ def complex_film(conn):
         new_picture = st.file_uploader('Image', type=['png', 'jpg', 'jpeg'], key=f'new_film_picture_{reset_film}')
         
         if not new_picture is None:
-            st.image(new_picture, width=200)
+            with st.container(horizontal_alignment='center'):
+                st.image(new_picture, width=200)
         else:
             new_picture = st.secrets.indicators.PLACEHOLDER_IMG
 
@@ -723,7 +724,7 @@ def complex_film(conn):
 
         with st.container(key='film_new_button', horizontal=True):
             if st.button('💾 Add Film', use_container_width=True):
-                if not new_code:
+                if new_code:
                     if new_picture:
                         join_name = new_code.upper()
                         clean_name = re.sub(r'[^\w]', '', join_name)
