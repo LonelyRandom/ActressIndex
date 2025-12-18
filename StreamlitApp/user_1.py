@@ -701,6 +701,11 @@ def complex_film(conn):
         new_actress = st.text_input('Actresses', key='new_actresses', placeholder='Rena Miyashita, AIKA, Hinano Iori, ...') 
         new_code = st.text_input('Code*', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
         new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
+        
+        if st.checkbox('No Info', key='film_code_check'):
+            new_release = '?'
+        else:
+            new_release = new_release.strftime('%d/%m/%Y')
         new_playlist = st.selectbox('Playlist', key='new_playlist', options=PLAYLIST_OPTS)
 
         if st.checkbox('New Playlist', key='add_new_playlist'):
