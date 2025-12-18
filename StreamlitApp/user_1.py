@@ -191,13 +191,11 @@ def display_film_card(df):
     
     st.markdown("---")
     
-    # Jika tidak ada hasil filter
     if filtered_df.empty:
         st.info("🤔 Tidak ada aktris yang sesuai dengan filter")
         return
     
-    # Pagination
-    items_per_page = 4 * 2  # 2 baris per halaman
+    items_per_page = 4 * 2  
     
     total_pages = max(1, (len(filtered_df) + items_per_page - 1) // items_per_page)
 
@@ -220,17 +218,13 @@ def display_film_card(df):
                 )
     else:
         with st.container(key='page_button_top', horizontal=True, horizontal_alignment='center'):
-            # Tombol Previous
             st.button('⬅️',key='previous_top', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(st.session_state.film_page-1,))
             
-            # Tentukan range halaman yang akan ditampilkan
             start_page = max(1, st.session_state.film_page - 1)  # Minimal 1 halaman sebelum
             end_page = min(total_pages, st.session_state.film_page + 2)  # Maksimal 2 halaman setelah
             
-            # Tampilkan 4 halaman sekaligus
             pages_to_show = range(start_page, end_page + 1)
             
-            # Sesuaikan jika kurang dari 4 halaman
             if len(pages_to_show) < 4:
                 if start_page == 1:
                     pages_to_show = range(1, min(5, total_pages + 1))
@@ -246,7 +240,6 @@ def display_film_card(df):
                     args=(i,)
                 )
             
-            # Tombol Next
             st.button('➡️',key='next_top', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,))
             
     
@@ -257,7 +250,6 @@ def display_film_card(df):
     
     st.caption(f"Menampilkan {start_idx+1}-{end_idx} dari {len(filtered_df)} aktris")
     
-    # Display cards
     rows_to_display = filtered_df.iloc[start_idx:end_idx]
     
     for i in range(0, len(rows_to_display), 4):
@@ -281,17 +273,13 @@ def display_film_card(df):
                 )
     else:
         with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
-            # Tombol Previous
             st.button('⬅️',key='previous_bottom', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(st.session_state.film_page-1,))
             
-            # Tentukan range halaman yang akan ditampilkan
             start_page = max(1, st.session_state.film_page - 1)  # Minimal 1 halaman sebelum
             end_page = min(total_pages, st.session_state.film_page + 2)  # Maksimal 2 halaman setelah
             
-            # Tampilkan 4 halaman sekaligus
             pages_to_show = range(start_page, end_page + 1)
             
-            # Sesuaikan jika kurang dari 4 halaman
             if len(pages_to_show) < 4:
                 if start_page == 1:
                     pages_to_show = range(1, min(5, total_pages + 1))
@@ -307,7 +295,6 @@ def display_film_card(df):
                     args=(i,)
                 )
             
-            # Tombol Next
             st.button('➡️', key='next_bottom', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,))
             
     st.markdown('---')
@@ -318,16 +305,13 @@ def display_single_card(col, actress, card_id):
     Menampilkan single card untuk satu aktris
     """
     with col:
-        # Warna berdasarkan status
         status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E"
         
-        # Format tanggal
         release_date = pd.to_datetime(actress['Release Date']).strftime('%d %b %Y') if pd.notna(actress['Release Date']) else "Unknown"
         
-        # HTML untuk card dengan styling yang menarik
         card_html = f"""<div class="actress-card" id="card_{card_id}" 
             style="border: 2px solid {status_color}; border-radius: 15px; padding: 15px; 
-            margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); 
+            margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
             height: 450px; display: flex; flex-direction: column;">
             <!-- Status Badge -->
@@ -359,11 +343,9 @@ def display_single_card(col, actress, card_id):
             </div>
         </div>"""
         
-        # Render HTML card
         st.markdown(card_html, unsafe_allow_html=True)
         
-        # Streamlit buttons (alternatif jika butuh interactivity)
-        if st.button("View Details",key=f'view_film_{card_id}',use_container_width=True):
+        if st.button("View Details",key=f'view_film_{card_id}',use_container_width=True, type='primary'):
             st.session_state.viewing_film_index = card_id
             st.session_state.editing_film_index = None
             st.rerun()
@@ -725,7 +707,7 @@ def complex_film(conn):
             new_new_playlist = st.text_input('New Playlist', placeholder='Enter new playlist...', key='add_film_new_playlist')
             if new_new_playlist != '' or new_new_playlist != None:
                 new_playlist = new_new_playlist
-                
+
         new_info = st.selectbox('Info', key='new_info', options=INFO_OPTS)
 
         with st.container(key='film_new_button', horizontal=True):
@@ -965,9 +947,6 @@ def complex_film(conn):
     });
     </script>
     """, unsafe_allow_html=True)
-
-
-
 
 def complex_actress(conn):
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Actress List</h1>", unsafe_allow_html=True)
