@@ -720,6 +720,12 @@ def complex_film(conn):
         new_code = st.text_input('Code*', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
         new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
         new_playlist = st.selectbox('Playlist', key='new_playlist', options=PLAYLIST_OPTS)
+
+        if st.checkbox('New Playlist', key='add_new_playlist'):
+            new_new_playlist = st.text_input('New Playlist', placeholder='Enter new playlist...', key='add_film_new_playlist')
+            if new_new_playlist != '' or new_new_playlist != None:
+                new_playlist = new_new_playlist
+                
         new_info = st.selectbox('Info', key='new_info', options=INFO_OPTS)
 
         with st.container(key='film_new_button', horizontal=True):
