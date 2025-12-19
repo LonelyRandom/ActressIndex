@@ -1,6 +1,7 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from datetime import datetime, date
+import time
 import re
 from upload_image import upload_to_database, delete_cloudinary_image, rename_cloudinary_image
 import pandas as pd
@@ -56,7 +57,6 @@ def load_data_actress(conn):
         df = initial_load(df, 'actress')
         return df
     except Exception as e:
-        st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
 def load_data_film(conn):
@@ -66,7 +66,6 @@ def load_data_film(conn):
         df = initial_load(df, 'film')
         return df
     except Exception as e:
-        st.error(f"Error loadingg data: {e}")
         return pd.DataFrame()
     
 def update_google_sheets(df,conn,type):
@@ -86,11 +85,10 @@ def update_google_sheets(df,conn,type):
             data=df_to_update
         )
         
-        st.toast("✅ Google Sheets updated successfully!", icon="✅")
+        st.toast("✅ Google Sheets updated successfully!")
+        time.sleep(5)
         return True
-    except Exception as e:
-        st.error(f"❌ Error updating Google Sheets: {e}")
-        st.exception(e) 
+    except:
         return False
 
 def init_dataframe_actress(conn):
@@ -145,19 +143,16 @@ def display_film_card(df):
         st.session_state.film_page = 1
 
     if df.empty:
-        st.warning("📭 Tidak ada data aktris yang tersedia")
+        st.warning("📭 No film data available!")
         return
-    
-    # Header dengan statistik
-    st.subheader(f"🎬 Koleksi Aktris ({len(df)} aktris)")
     
     # Filter options
     col1, col2, col3 = st.columns(3)
     with col1:
-        search_name = st.text_input("🔍 Cari nama aktris:", placeholder="Nama atau kode...")
+        search_name = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...")
     with col2:
         info_filter = st.multiselect(
-            "📊 Filter Status:",
+            "📊 Status Filter:",
             options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
             default=df['Info'].unique().tolist() if 'Info' in df.columns else []
         )
@@ -185,14 +180,14 @@ def display_film_card(df):
     
     with st.container(horizontal=True):
         st.metric("Total Film", len(filtered_df))
-        st.metric("Watched", watched_count, delta=f"{watched_count - not_watched_count}" if watched_count > not_watched_count else None)
+        st.metric("Watched", watched_count)
         st.metric("Not Watched", not_watched_count)
         st.metric("Goat", goat_count)
     
     st.markdown("---")
     
     if filtered_df.empty:
-        st.info("🤔 Tidak ada aktris yang sesuai dengan filter")
+        st.info("🤔 No results found.")
         return
     
     items_per_page = 4 * 2  
@@ -220,8 +215,8 @@ def display_film_card(df):
         with st.container(key='page_button_top', horizontal=True, horizontal_alignment='center'):
             st.button('⬅️',key='previous_top', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(st.session_state.film_page-1,))
             
-            start_page = max(1, st.session_state.film_page - 1)  # Minimal 1 halaman sebelum
-            end_page = min(total_pages, st.session_state.film_page + 2)  # Maksimal 2 halaman setelah
+            start_page = max(1, st.session_state.film_page - 1)  
+            end_page = min(total_pages, st.session_state.film_page + 2)  
             
             pages_to_show = range(start_page, end_page + 1)
             
@@ -248,7 +243,7 @@ def display_film_card(df):
     start_idx = (page - 1) * items_per_page
     end_idx = min(start_idx + items_per_page, len(filtered_df))
     
-    st.caption(f"Menampilkan {start_idx+1}-{end_idx} dari {len(filtered_df)} aktris")
+    st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} actress")
     
     rows_to_display = filtered_df.iloc[start_idx:end_idx]
     
@@ -275,8 +270,8 @@ def display_film_card(df):
         with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
             st.button('⬅️',key='previous_bottom', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(st.session_state.film_page-1,))
             
-            start_page = max(1, st.session_state.film_page - 1)  # Minimal 1 halaman sebelum
-            end_page = min(total_pages, st.session_state.film_page + 2)  # Maksimal 2 halaman setelah
+            start_page = max(1, st.session_state.film_page - 1)  
+            end_page = min(total_pages, st.session_state.film_page + 2)  
             
             pages_to_show = range(start_page, end_page + 1)
             
@@ -294,9 +289,7 @@ def display_film_card(df):
                     on_click=set_page,
                     args=(i,)
                 )
-            
             st.button('➡️', key='next_bottom', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,))
-            
     st.markdown('---')
     
 
@@ -305,9 +298,9 @@ def display_single_card(col, actress, card_id):
     Menampilkan single card untuk satu aktris
     """
     with col:
-        status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E"
+        status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E" if actress['Info'] == 'Drop' else "#9b59b6"
         
-        release_date = pd.to_datetime(actress['Release Date']).strftime('%d %b %Y') if pd.notna(actress['Release Date']) else "Unknown"
+        release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y') if pd.notna(actress['Release Date']) else "Unknown"
         
         card_html = f"""<div class="actress-card" id="card_{card_id}" 
             style="border: 2px solid {status_color}; border-radius: 15px; padding: 15px; 
@@ -333,11 +326,11 @@ def display_single_card(col, actress, card_id):
             <!-- Code and Date -->
             <div style="margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="font-weight: bold; color: #555;">🎬 Kode:</span>
+                    <span style="font-weight: bold; color: #555;">🎬 Code</span>
                     <span style="color: #e74c3c; font-weight: bold;">{actress['Code']}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
-                    <span style="font-weight: bold; color: #555;">📅 Rilis:</span>
+                    <span style="font-weight: bold; color: #555;">📅 Release Date</span>
                     <span style="color: #3498db;">{release_date}</span>
                 </div>
             </div>
@@ -371,7 +364,7 @@ def display_film_grid(df, cards_per_row=4):
             st.session_state.search_reset = False
             st.session_state.search_bar = ''
     with st.container(horizontal=True, vertical_alignment='bottom'):
-        search_name = st.text_input("🔍 Cari nama aktris:", placeholder="Nama atau kode...", key='search_bar')
+        search_name = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
         if st.button('Clear'):
             st.session_state.search_reset = True
             st.rerun()
@@ -393,17 +386,20 @@ def display_film_grid(df, cards_per_row=4):
             if idx < len(filtered_df):
                 actress = filtered_df.iloc[idx]
                 with cols[col_idx]:
-                    # Versi sederhana tanpa HTML
                     st.image(
                         actress['Picture'],
                         caption=actress['Code']
                     )
-                    with st.expander('📋 Vied Details', expanded=False):
+                
+                    with st.expander('📋 View Details', expanded=False):
                         st.markdown(f"**🎬 {actress['Actress Name']}**")
-                        st.caption(f"📅 {actress['Release Date']}")
+                        if actress['Release Date'] != '?':
+                            release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y')
+                        else:
+                            release_date = '?'
+                        st.caption(f"📅 {release_date}")
                         st.caption(f"📁 {'-' if actress['Playlist'] == 'All' else actress['Playlist']}")
                         
-                        # Info badge
                         Info_text = actress['Info']
                         if Info_text == 'Watched':
                             st.success(f"🟢 {Info_text}")
@@ -416,7 +412,7 @@ def display_film_grid(df, cards_per_row=4):
                                 st.session_state.viewing_film_index = idx
                                 st.session_state.editing_film_index = idx
                                 st.rerun()
-                        
+                    st.space('small')                      
 
 
 def complex_home(conn):
@@ -481,7 +477,6 @@ def complex_home(conn):
 
 
 def complex_film(conn):
-
     # Inisialisasi variabel kontrol
     if "editing_film_index" not in st.session_state:
         st.session_state.editing_film_index = None
@@ -757,7 +752,7 @@ def complex_film(conn):
         st.markdown('---')
         st.header("⚙️ Display Settings")
         display_mode = st.radio(
-            "Tampilan Mode:",
+            "View Mode",
             ["Cards with HTML", "Simple Grid", "Table View"]
         )
         
@@ -779,6 +774,9 @@ def complex_film(conn):
     elif display_mode == "Simple Grid":
         display_film_grid(df, cards_per_row=4)
     else:  # Table View
+        df = values_handling(df, 'film')
+        df = initial_load(df, 'film')
+
         st.dataframe(
             df,
             use_container_width=True,
@@ -1703,10 +1701,10 @@ def complex_actress(conn):
                 show_problem = st.checkbox("Problem", value=True)
             with st.container(key='review_filter'):
                 st.header("Review Filters")
+                show_review_not_checked = st.checkbox("Not Checked",value=True)
                 show_review_pass = st.checkbox("Pass",value=True)
                 show_review_goat = st.checkbox("Goat",value=True)
                 show_review_drop = st.checkbox("Drop",value=False)
-                show_review_not_checked = st.checkbox("Not Checked",value=False)
         
         st.markdown("---")
         st.subheader("Management")
@@ -1920,7 +1918,7 @@ def complex_actress(conn):
                         st.markdown(card_html, unsafe_allow_html=True)
                         
                         # Button container untuk View Details
-                        if st.button("View Details", key=f"view_{idx}", use_container_width=True):
+                        if st.button("View Details", key=f"view_{idx}", use_container_width=True, type='primary'):
                             st.session_state.viewing_index = idx
                             st.session_state.editing_index = None
                             st.rerun()

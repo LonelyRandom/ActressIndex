@@ -21,6 +21,13 @@ def load_data_actress(conn):
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
+def load_data_film(conn):
+    try:
+        df = conn.read(worksheet="VCode", usecols=list(range(2)))
+        return df
+    except Exception as e:
+        return pd.DataFrame()
+
 # Fungsi untuk update data ke Google Sheets dari DataFrame
 def update_google_sheets(df, conn):
     try:
@@ -55,9 +62,73 @@ def init_dataframe(conn):
     else:
         return st.session_state.actress_df
 
+def init_dataframe_film(conn):
+    """Inisialisasi DataFrame di session state"""
+    if "film_df" not in st.session_state:
+        df = load_data_film(conn)
+        if df.empty:
+            df = pd.DataFrame(columns=[
+                'Code', 'Picture'
+            ])
+        
+        st.session_state.film_df = df
+        st.session_state.data_loaded = True
+        return df
+    else:
+        return st.session_state.film_df
+
+# --- FUNGSI ALTERNATIF: Grid Layout tanpa Pagination ---
+def display_film_grid(df, cards_per_row=4):
+    """
+    Menampilkan semua card sekaligus dalam grid
+    """
+
+    # Hitung berapa baris yang dibutuhkan
+    n_rows = (len(df) + cards_per_row - 1) // cards_per_row
+    # Filter data
+    filtered_df = df.copy()
+    if st.session_state.get('search_reset', False):
+            st.session_state.search_reset = False
+            st.session_state.search_bar = ''
+    with st.container(horizontal=True, vertical_alignment='bottom'):
+        search_name = st.text_input("🔍 Cari nama aktris:", placeholder="Nama atau kode...", key='search_bar')
+        if st.button('Clear'):
+            st.session_state.search_reset = True
+            st.rerun()
+
+    if search_name:
+        mask = (filtered_df['Actress Name'].str.contains(search_name, case=False, na=False) | 
+                filtered_df['Code'].str.contains(search_name, case=False, na=False))
+        filtered_df = filtered_df[mask]
+          
+    for row in range(n_rows):
+        cols = st.columns(cards_per_row)
+        
+        for col_idx in range(cards_per_row):
+            idx = row * cards_per_row + col_idx
+            if idx < len(filtered_df):
+                actress = filtered_df.iloc[idx]
+                with cols[col_idx]:
+                    # Versi sederhana tanpa HTML
+                    st.image(
+                        actress['Picture'],
+                        caption=actress['Code']
+                    )
+
+                    with st.container(horizontal=True):
+                        if st.button('✏️ Edit', key=f'film_edit_{idx}', use_container_width=True):
+                            st.session_state.viewing_film_index = idx
+                            st.session_state.editing_film_index = idx
+                            st.rerun()
+                        if st.button('🗑️ Delete', key=f'film_delete_{idx}', use_container_width=True):
+                            delete_film()
+                            st.rerun()
+                    st.space('small')
+
 def simple_home(conn):
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
     df_actress = init_dataframe(conn)
+    df_film = init_dataframe_film(conn)
 
     left, right = st.columns(2)
     with left:
@@ -74,6 +145,9 @@ def simple_home(conn):
     with right:
         with st.container(key='FilmList'):
             st.header('🎬 Film List')
+            with st.container(horizontal=True):
+                with st.container(key='Film Info 1', horizontal=False):
+                    st.metric('Film Count', len(df_film))
             if st.button('Go To Film →'):
                 return 'film'
     
@@ -106,9 +180,391 @@ def simple_home(conn):
     </style>
     """, unsafe_allow_html=True)
 
-
 def simple_film(conn):
-    st.write('Later')
+    # Inisialisasi variabel kontrol
+    if "editing_film_index" not in st.session_state:
+        st.session_state.editing_film_index = None
+    if "viewing_film_index" not in st.session_state:
+        st.session_state.viewing_film_index = None
+
+    df = init_dataframe_film(conn)
+
+    @st.dialog("🎬 Film Details", width='small')
+    def show_film_details():
+        index = st.session_state.viewing_film_index
+
+        if index is None or index >= len(df):
+            st.warning("No film selected")
+            st.stop()
+        
+        if st.session_state.editing_film_index == index:
+            show_edit_film(index)
+
+    def show_edit_film(index):
+        film = df.iloc[index]
+
+        with st.container(horizontal_alignment='center'): 
+            st.markdown(f"### ✏️ Editing: {film['Code']}")
+            st.image(film['Picture'], width=250)
+            new_pic = st.file_uploader('Change Image', type=['png', 'jpg', 'jpeg'], key=f'film_picture_{index}')
+            if new_pic is not None:
+                st.image(new_pic, width=250)
+    
+        edited_code = st.text_input('Code', placeholder='Enter film code (e.g. MIDV-791)', value=film['Code'], key=f'film_code_{index}')
+        
+        # Tombol aksi
+        if st.button("🗑️ Delete Actress", use_container_width=True, type="secondary", key=f"delete_{index}"):
+            delete_film(index)
+
+        with st.container(horizontal=True):
+            if st.button("💾 Save", use_container_width=True, type="primary", key=f"save_{index}"):
+                join_code = edited_code.upper()
+                clean_code = re.sub(r'[^\w]', '', join_code)
+                clean_code = "V" + clean_code
+
+                old_filename = str(film['Picture']).split('/')[-1]
+                old_public_id = old_filename.split('.')[0]
+                # kalau cuma ganti foto
+                if new_pic and (edited_code.upper() == film['Code']):
+                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower():
+                        try:
+                            delete_cloudinary_image(old_public_id)
+                        except Exception as e:
+                            st.warning(f"Could not delete old image: {e}")
+                            st.stop()
+                    final_picture_url = upload_to_database(new_pic, clean_code)
+                    if not final_picture_url:
+                        st.error("Failed to upload new image")
+                        st.stop()
+                # kalau ganti foto dan code
+                elif new_pic and (film['Code'] != edited_code.upper()):
+                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower():
+                        try:
+                            delete_cloudinary_image(old_public_id)
+                        except Exception as e:
+                            st.warning(f"Could not delete old image: {e}")
+                            st.stop()
+                        final_picture_url = upload_to_database(new_pic, clean_code)
+                        if not final_picture_url:
+                            st.error("Failed to upload new image")
+                            st.stop()
+                # kalau cuma ganti code
+                elif not new_pic and (film['Code'] != edited_code.upper()):
+                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower():
+                        try:
+                            final_picture_url = rename_cloudinary_image(old_public_id, clean_code)
+                        except Exception as e:
+                            st.warning(f'Could not rename old image: {e}')
+                            st.stop()
+                else:
+                    final_picture_url = film['Picture']
+                    
+                # Update data di DataFrame
+                df.at[index, 'Picture'] = final_picture_url
+                df.at[index, 'Code'] = edited_code
+                
+                # Update ke Google Sheets
+                if update_google_sheets(df,conn,'film'):
+                    st.session_state.film_df = df  # Update session state
+                else:
+                    st.error("❌ Failed to update Google Sheets")
+                    st.stop()
+                
+                st.session_state.editing_film_index = None
+                st.rerun()
+                
+            if st.button('❌ Close', use_container_width=True):
+                st.session_state.editing_film_index = None
+                st.rerun()
+    
+    def delete_film(index):
+        film = df.loc[index]
+        pic_filename = str(film['Picture']).split('/')[-1]
+        pic_id = pic_filename.split('.')[0]
+
+        if 'placeholder' not in pic_id:
+            delete_cloudinary_image(pic_id)
+
+        df.drop(index, inplace=True)
+        df.reset_index(drop=True, inplace=True)
+        
+        # Update ke Google Sheets
+        if update_google_sheets(df,conn,'film'):
+            st.session_state.film_df = df
+        else:
+            st.error("❌ Failed to delete actress from Google Sheets")
+            st.stop()
+        
+        st.session_state.editing_film_index = None
+        st.rerun()
+    
+    @st.dialog("➕ Add New Film", width='small')
+    def add_new_film():
+        if st.session_state.get('film_reset', False):
+            st.session_state.film_reset = False
+            st.session_state.new_code = ''
+
+        if 'new_film_reset' not in st.session_state:
+            st.session_state.new_film_reset = 0
+        
+        reset_film = st.session_state.new_film_reset
+
+        new_picture = st.file_uploader('Image', type=['png', 'jpg', 'jpeg'], key=f'new_film_picture_{reset_film}')
+        
+        if not new_picture is None:
+            with st.container(horizontal_alignment='center'):
+                st.image(new_picture, width=200)
+        else:
+            new_picture = st.secrets.indicators.PLACEHOLDER_IMG
+
+        new_code = st.text_input('Code*', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
+        
+        with st.container(key='film_new_button', horizontal=True):
+            if st.button('💾 Add Film', use_container_width=True):
+                if new_code:
+                    if new_picture:
+                        join_name = new_code.upper()
+                        clean_name = re.sub(r'[^\w]', '', join_name)
+                        clean_name = "V" + clean_name
+                        picture_url = upload_to_database(new_picture, clean_name)
+                    else:
+                        picture_url = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
+                    
+                    new_row = pd.DataFrame([{
+                        'Code': new_code,
+                        'Picture': picture_url
+                    }])
+
+                    df = st.session_state.film_df
+                    new_film_code = new_row['Code'].iloc[0]
+
+                    if new_film_code in df['Code'].values:
+                        st.warning(f'⚠️ Code {new_film_code} already exist in database')
+                        st.stop()
+                    else:
+                        df = pd.concat([df,new_row], ignore_index=True)
+                        if update_google_sheets(df,conn,'film'):
+                            st.session_state.film_df = df
+                    
+                    st.rerun()
+                else:
+                    st.error('Fill mandatory fields first! (*)')
+                    st.stop()
+    with st.sidebar:
+        if st.button('⬅️ Back', use_container_width=True):
+            return 'home'
+        st.markdown('---')
+        if st.button('➕ Add New Film', use_container_width=True):
+            add_new_film()
+        if st.button('🔐 Logout', use_container_width=True):
+            st.session_state.clear()
+            return 'login'
+    
+    st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Film List</h1>", unsafe_allow_html=True)
+
+    if st.session_state.viewing_film_index is not None:
+        show_film_details()
+    
+    cards_per_row=4
+    # Hitung berapa baris yang dibutuhkan
+    n_rows = (len(df) + cards_per_row - 1) // cards_per_row
+    # Filter data
+    filtered_df = df.copy()
+    if st.session_state.get('search_reset', False):
+            st.session_state.search_reset = False
+            st.session_state.search_bar = ''
+    with st.container(horizontal=True, vertical_alignment='bottom'):
+        search_name = st.text_input("🔍 Cari nama aktris:", placeholder="Nama atau kode...", key='search_bar')
+        if st.button('Clear'):
+            st.session_state.search_reset = True
+            st.rerun()
+
+    if search_name:
+        mask = (filtered_df['Actress Name'].str.contains(search_name, case=False, na=False) | 
+                filtered_df['Code'].str.contains(search_name, case=False, na=False))
+        filtered_df = filtered_df[mask]
+          
+    for row in range(n_rows):
+        cols = st.columns(cards_per_row)
+        
+        for col_idx in range(cards_per_row):
+            idx = row * cards_per_row + col_idx
+            if idx < len(filtered_df):
+                actress = filtered_df.iloc[idx]
+                with cols[col_idx]:
+                    # Versi sederhana tanpa HTML
+                    st.image(
+                        actress['Picture'],
+                        caption=actress['Code']
+                    )
+
+                    with st.container(horizontal=True):
+                        if st.button('✏️ Edit', key=f'film_edit_{idx}', use_container_width=True):
+                            st.session_state.viewing_film_index = idx
+                            st.session_state.editing_film_index = idx
+                            st.rerun()
+                        if st.button('🗑️ Delete', key=f'film_delete_{idx}', use_container_width=True):
+                            delete_film(idx)
+                            st.rerun()
+                    st.space('small')
+    st.markdown("""
+    <style>
+    /* Hover effect untuk card */
+    .actress-card:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+        border-color: #004cff !important;
+    }
+    
+    /* Smooth transition */
+    .actress-card {
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .actress-card {
+            height: 420px !important;
+        }
+    }
+    
+    /* Custom scrollbar untuk container */
+    .st-emotion-cache-1jicfl2 {
+        scrollbar-width: thin;
+        scrollbar-color: #888 #f1f1f1;
+    }
+    
+    /* Better button styling */
+    .stButton > button {
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: scale(1.05);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <style>
+    /* ================= DESKTOP ================= */
+    @media (min-width: 768px) {
+        section[data-testid="stSidebar"] {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            height: 100% !important;
+            width: 300px !important;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 999999 !important;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.2) !important;
+        }
+
+        section[data-testid="stSidebar"][aria-expanded="true"] {
+            transform: translateX(0) !important;
+        }
+
+        .main .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            max-width: 100% !important;
+        }
+    }
+
+    /* ================= MOBILE ================= */
+    @media (max-width: 767px) {
+        section[data-testid="stSidebar"] {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            height: 100vh !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 999999 !important;
+        }
+
+        section[data-testid="stSidebar"][aria-expanded="true"] {
+            transform: translateX(0) !important;
+        }
+
+        .stSidebarCollapseButton button {
+            position: fixed !important;
+            top: 10px !important;
+            right: 10px !important;
+            z-index: 1000000 !important;
+            font-size: 24px !important;
+            padding: 14px !important;
+            background: rgba(0,0,0,0.1) !important;
+            border-radius: 50% !important;
+        }
+
+        .main .block-container {
+            padding: 1rem !important;
+        }
+    }
+
+    /* ================= OVERLAY ================= */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 999998;
+        backdrop-filter: blur(2px);
+    }
+
+    /* Hide default arrow */
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+    </style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const waitForSidebar = setInterval(() => {
+            const sidebar = document.querySelector('section[data-testid="stSidebar"]');
+            const closeBtn = sidebar?.querySelector('button[kind="header"]');
+
+            if (sidebar && closeBtn) {
+                clearInterval(waitForSidebar);
+
+                /* ===== AUTO CLOSE ON FIRST LOAD ===== */
+                if (sidebar.getAttribute('aria-expanded') === 'true') {
+                    closeBtn.click();
+                }
+
+                /* ===== CREATE OVERLAY ===== */
+                const overlay = document.createElement('div');
+                overlay.className = 'sidebar-overlay';
+                document.body.appendChild(overlay);
+
+                /* ===== OBSERVE SIDEBAR STATE ===== */
+                const observer = new MutationObserver(() => {
+                    const expanded = sidebar.getAttribute('aria-expanded') === 'true';
+                    overlay.style.display = expanded ? 'block' : 'none';
+                    document.body.style.overflow = expanded ? 'hidden' : 'auto';
+                });
+
+                observer.observe(sidebar, { attributes: true });
+
+                /* ===== CLICK OVERLAY TO CLOSE ===== */
+                overlay.addEventListener('click', () => closeBtn.click());
+
+                /* ===== ESC KEY TO CLOSE ===== */
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && overlay.style.display === 'block') {
+                        closeBtn.click();
+                    }
+                });
+            }
+        }, 100);
+    });
+    </script>
+    """, unsafe_allow_html=True)
 
 def simple_actress(conn):
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Actress List</h1>", unsafe_allow_html=True)
