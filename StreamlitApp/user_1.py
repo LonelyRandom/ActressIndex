@@ -240,21 +240,21 @@ def display_film_card(df):
     
     page = st.session_state.film_page
     
-    start_idx = (page - 1) * items_per_page
-    end_idx = min(start_idx + items_per_page, len(filtered_df))
+    start_idx = (page - 1) * items_per_page # page = 2 / Start idx = 8
+    end_idx = min(start_idx + items_per_page, len(filtered_df)) # end idx = 16
     
     st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} actress")
     
-    rows_to_display = filtered_df.iloc[start_idx:end_idx]
+    rows_to_display = filtered_df.iloc[start_idx:end_idx] #[8,15]
     
-    for i in range(0, len(rows_to_display), 4):
+    for i in range(0, len(rows_to_display), 4): # len = 8 // i = [0,8]
         cols = st.columns(4)
         
         for col_idx, col in enumerate(cols):
-            idx = i + col_idx
-            if idx < len(rows_to_display):
-                actress = rows_to_display.iloc[idx]
-                display_single_card(col, actress, idx + start_idx)
+            if i + col_idx < len(rows_to_display):
+                actress = rows_to_display.iloc[i + col_idx]
+                real_index = rows_to_display.index[i + col_idx]  # ⬅️ INI KUNCI
+                display_single_card(col, actress, real_index)
     st.markdown('---')
     if total_pages <= 6:
         with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
@@ -484,8 +484,16 @@ def complex_film(conn):
         st.session_state.viewing_film_index = None
 
     df = init_dataframe_film(conn)
+    actress_df = init_dataframe_actress(conn)
     PLAYLIST_OPTS = ['All'] + sorted(
         df.loc[df['Playlist'] != 'All', 'Playlist']
+        .dropna()
+        .unique()
+        .tolist()
+    )
+
+    ACTRESS_OPTS = ['Many'] + sorted(
+        actress_df.loc[actress_df['Name (Alphabet)'] != 'Many', 'Name (Alphabet)']
         .dropna()
         .unique()
         .tolist()
@@ -554,8 +562,22 @@ def complex_film(conn):
     
         
         st.subheader("Basic Information")
-        edited_name = st.text_input('Actress', placeholder='Enter actress name... (e.g. Miyashita Rena)', value=film['Actress Name'], key=f'film_name_{index}')
+        selected_actress = st.multiselect(
+            'Actress', 
+            options = ACTRESS_OPTS, 
+            default = [
+                j.strip() for j in film['Actress Name'].split(',')
+                if j.strip() in ACTRESS_OPTS
+            ]
+        )
+
+        edited_actresss = ", ".join(selected_actress)
+
+        # if st.checkbox('New Actress', key='new_actress', value=(film['Actress Name'] != 'Many' or film['Actress Name'] not in actress_df['Name (Alphabet)'].values)):
+        #     st.text_input('New Actress Name', placeholder='Enter new actress...', value=film['Actress Name'])
+
         edited_code = st.text_input('Code', placeholder='Enter film code (e.g. MIDV-791)', value=film['Code'], key=f'film_code_{index}')
+        edited_code = edited_code.upper().replace(' ','-')
         
         if film['Release Date'] == '?':
             release_date = date.today()
@@ -626,7 +648,7 @@ def complex_film(conn):
                     final_picture_url = film['Picture']
                     
                 # Update data di DataFrame
-                df.at[index, 'Actress Name'] = edited_name
+                df.at[index, 'Actress Name'] = edited_actresss
                 df.at[index, 'Picture'] = final_picture_url
                 df.at[index, 'Release Date'] = edited_release_date
                 df.at[index, 'Playlist'] = edited_playlist
@@ -693,8 +715,12 @@ def complex_film(conn):
         else:
             new_picture = st.secrets.indicators.PLACEHOLDER_IMG
 
-        new_actress = st.text_input('Actresses', key='new_actresses', placeholder='Rena Miyashita, AIKA, Hinano Iori, ...') 
+        selected_actress = st.multiselect('Actress*', key='new_actresses', options=ACTRESS_OPTS)
+        new_actress = ", ".join(selected_actress)
+
         new_code = st.text_input('Code*', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
+        new_code = new_code.upper().replace(' ','-')
+
         new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
         
         if st.checkbox('No Info', key='film_code_check'):
@@ -1400,7 +1426,7 @@ def complex_actress(conn):
                 key=f"height_{index}"
             )
 
-            if st.checkbox('No Info', value=(actress['Measurement'] == '?'), key='Height Check'):
+            if st.checkbox('No Info', value=(actress['Height (cm)'] == '?'), key='Height Check'):
                 edited_height = '?'
             else:
                 edited_height = str(edited_height) + ' cm'
