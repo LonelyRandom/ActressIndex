@@ -34,10 +34,10 @@ def delete_cloudinary_image(public_id):
         if result.get('result') == 'ok':
             return True
         else:
-            st.warning(f"⚠️ Gagal hapus gambar: {result.get('result')}")
+            st.warning(f"⚠️ Failed to remove the image: {result.get('result')}")
             return True
     except Exception as e:
-        st.error(f"❌ Error hapus gambar: {e}")
+        st.error(f"❌ Error to remove the image: {e}")
         return False
 
 def rename_cloudinary_image(old_public_id, new_public_id):

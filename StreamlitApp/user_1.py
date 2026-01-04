@@ -1064,10 +1064,20 @@ def complex_actress(conn):
         col1, col2 = st.columns([1, 2])
         
         with col1:
-            st.image(actress['Picture'] if pd.notna(actress['Picture']) else "", width=200)
-            st.markdown(f"### {actress['Name (Alphabet)']}")
-            st.markdown(f"# {actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ''}")
+            with st.container(horizontal_alignment='center'):
+                st.image(actress['Picture'] if pd.notna(actress['Picture']) else "", width=200)
+                # st.markdown(f"### {actress['Name (Alphabet)']}")
+                # st.markdown(f"# {actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ''}")
             
+            st.markdown(
+                f"""
+                <div style="text-align: center;">
+                    <h2>{actress['Name (Alphabet)']}</h2>
+                    <h2>{actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ''}</h1>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
             # Tombol Edit dan Close
             button_container = st.container(key='view_edit_close', horizontal=True)
             with button_container:
@@ -1245,15 +1255,18 @@ def complex_actress(conn):
         
         with col1:
             # Display current image
-            if pd.notna(actress['Picture']) and actress['Picture']:
-                st.image(actress['Picture'], width=200)
-            else:
-                st.write("No picture available")
+            with st.container(horizontal_alignment='center'):
+                if pd.notna(actress['Picture']) and actress['Picture']:
+                    st.image(actress['Picture'], width=200)
+                else:
+                    st.write("No picture available")
             
             # Image uploader
             new_pic = st.file_uploader("Change Image", type=['png', 'jpg', 'jpeg'], key=f"uploader_{index}")
             if new_pic is not None:
-                st.image(new_pic, width=200)
+                with st.container(horizontal_alignment='center'):
+                    st.subheader('New Image')
+                    st.image(new_pic, width=200)
             
             # Tombol aksi
             if st.button("← Back to View", use_container_width=True, key=f"back_{index}"):
@@ -1527,7 +1540,7 @@ def complex_actress(conn):
         pic_filename = str(actress['Picture']).split('/')[-1]
         pic_id = pic_filename.split('.')[0]
 
-        if 'placeholder' not in pic_id:
+        if 'placeholder' not in pic_id.lower():
             delete_cloudinary_image(pic_id)
 
         df.drop(index, inplace=True)
@@ -1576,8 +1589,6 @@ def complex_actress(conn):
 
             if not new_picture is None:
                 st.image(new_picture, width=200)    
-            else:
-                new_picture = st.secrets.indicators.PLACEHOLDER_IMG
 
             new_review = st.selectbox("Review", options=REVIEW_OPTS, key='new_review')
             new_name = st.text_input("Name (Alphabet)*", placeholder="Enter name in alphabet", key='new_name')
@@ -1659,6 +1670,8 @@ def complex_actress(conn):
         if submit_new:
             if new_name and new_kanji and new_retire_date:
                 if new_picture:
+                    st.write(new_picture)
+                    st.stop()
                     join_name = new_name
                     clean_name = re.sub(r'[^\w]', '', join_name)
                     clean_name = "N" + clean_name
@@ -1692,7 +1705,8 @@ def complex_actress(conn):
                     st.warning(f"⚠️ Aktris '{new_name_kanji}' sudah ada di database!")
                     st.stop()
                 else:
-                    df = pd.concat([df, new_row], ignore_index=True)       
+                    df = pd.concat([df, new_row], ignore_index=True)   
+                    df = df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
                     # Update ke Google Sheets
                     if update_google_sheets(df,conn,'actress'):
                         st.success("✅ New actress added successfully to Google Sheets!")
@@ -1774,7 +1788,6 @@ def complex_actress(conn):
 
         # Filter DataFrame berdasarkan status
         filtered_df = df.copy()
-        filtered_df = filtered_df.sort_values(by='Name (Alphabet)', ascending=True)
 
         # Buat kondisi filter
         status_conditions = []
@@ -1816,66 +1829,63 @@ def complex_actress(conn):
         
         final_mask = status_mask & review_mask
         filtered_df = filtered_df[final_mask]
+        df = df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
 
 
         if not search_query and not search_query.isspace() and not filtered_df.empty:
-            n_rows = (len(filtered_df) + 5 - 1) // 5
-            rows = [st.columns(5) for _ in range(n_rows)]
-            cols = [column for row in rows for column in row]
-            
-            for i, (col, idx) in enumerate(zip(cols, filtered_df.index)):
-                actress = df.iloc[idx]
-                
-                try:
-                    with col:
-                        cat_url = actress['Picture'] if pd.notna(actress['Picture']) else ""
-                        name_text = actress['Name (Alphabet)'] if pd.notna(actress['Name (Alphabet)']) else ""
-                        kanji_text = actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ""
-                        
-                        status_class = actress["Status"].lower().strip().replace(" ", "-")
-                        review_class = actress["Review"].lower().strip().replace(" ", "-")
-
-                        # Buat card dengan HTML lengkap
-                        card_html = f"""
-                        <div class="card-wrapper">
-                            <div class="cat-card">
-                                <div class="badge-stack">
-                                    <div class="status-badge status-{status_class}">
-                                        {actress["Status"]}
-                                    </div>
-                                    <div class="review-badge review-{review_class}">
-                                        {actress["Review"]}
-                                    </div>
-                                </div>
-                                <div class="cat-image-container">
-                                    <img src="{cat_url}" class="cat-image" width="150" height="150">
-                                </div>
-                                <div class="card-divider"></div>"""
-                        
-                        if name_text and kanji_text:
-                            card_html += f"""<div class="cat-name">{name_text}</div>
-                                <div class="cat-kanji">{kanji_text}</div>
-                            """
-                        elif name_text:
-                            card_html += f'<div class="cat-name">{name_text}</div>'
-                        elif kanji_text:
-                            card_html += f'<div class="cat-kanji">{kanji_text}</div>'
-                        
-                        card_html += """</div>
-                        </div>
-                        """
-                        
-                        st.markdown(card_html, unsafe_allow_html=True)
-                        
-                        # Button container untuk View Details
-                        if st.button("View Details", key=f"view_{idx}", use_container_width=True):
-                            st.session_state.viewing_index = idx
-                            st.session_state.editing_index = None
-                            show_actress_details()
-                            st.rerun()
+            with st.container(horizontal=True, horizontal_alignment='center'):
+                for idx in filtered_df.index:
+                    actress = df.iloc[idx]    
+                    try:
+                        with st.container(width='content'):
+                            cat_url = actress['Picture'] if pd.notna(actress['Picture']) else ""
+                            name_text = actress['Name (Alphabet)'] if pd.notna(actress['Name (Alphabet)']) else ""
+                            kanji_text = actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ""
                             
-                except Exception as e:
-                    with col:
+                            status_class = actress["Status"].lower().strip().replace(" ", "-")
+                            review_class = actress["Review"].lower().strip().replace(" ", "-")
+
+                            # Buat card dengan HTML lengkap
+                            card_html = f"""
+                            <div class="card-wrapper">
+                                <div class="cat-card">
+                                    <div class="badge-stack">
+                                        <div class="status-badge status-{status_class}">
+                                            {actress["Status"]}
+                                        </div>
+                                        <div class="review-badge review-{review_class}">
+                                            {actress["Review"]}
+                                        </div>
+                                    </div>
+                                    <div class="cat-image-container">
+                                        <img src="{cat_url}" class="cat-image" width="150" height="150">
+                                    </div>
+                                    <div class="card-divider"></div>"""
+                            
+                            if name_text and kanji_text:
+                                card_html += f"""<div class="cat-name">{name_text}</div>
+                                    <div class="cat-kanji">{kanji_text}</div>
+                                """
+                            elif name_text:
+                                card_html += f'<div class="cat-name">{name_text}</div>'
+                            elif kanji_text:
+                                card_html += f'<div class="cat-kanji">{kanji_text}</div>'
+                            
+                            card_html += """</div>
+                            </div>
+                            """
+                            
+                            st.markdown(card_html, unsafe_allow_html=True)
+                            
+                        # Button container untuk View Details
+                            if st.button("View Details", key=f"view_{idx}", type='primary', use_container_width=True):
+                                st.session_state.viewing_index = idx
+                                st.session_state.editing_index = None
+                                show_actress_details()
+                                st.rerun()
+                                    
+                    except Exception as e:
+                        # with col:
                         error_html = """
                         <div class="card-wrapper">
                             <div class="cat-card">
@@ -1894,74 +1904,74 @@ def complex_actress(conn):
                 filtered_df['Name (Kanji)'].fillna('').str.contains(search_query.strip(), na=False)
             )
             filtered_df = filtered_df[search_mask]
+            df = df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
+
             st.info(f'Showing {len(filtered_df)} results')
-            n_rows = (len(filtered_df) + 5 - 1) // 5
-            rows = [st.columns(5) for _ in range(n_rows)]
-            cols = [column for row in rows for column in row]
-            
-            for i, (col, idx) in enumerate(zip(cols, filtered_df.index)):
-                actress = df.iloc[idx]
-                
-                try:
-                    with col:
-                        cat_url = actress['Picture'] if pd.notna(actress['Picture']) else ""
-                        name_text = actress['Name (Alphabet)'] if pd.notna(actress['Name (Alphabet)']) else ""
-                        kanji_text = actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ""
-                        
-                        status_class = actress["Status"].lower().strip().replace(" ", "-")
-                        review_class = actress["Review"].lower().strip().replace(" ", "-")
-                        
-                        # Buat card dengan HTML lengkap
-                        card_html = f"""
-                        <div class="card-wrapper">
-                            <div class="cat-card">
-                                <div class="badge-stack">
-                                    <div class="status-badge status-{status_class}">
-                                        {actress["Status"]}
-                                    </div>
-                                    <div class="review-badge review-{review_class}">
-                                        {actress["Review"]}
-                                    </div>
-                                </div>
-                                <div class="cat-image-container">
-                                    <img src="{cat_url}" class="cat-image" width="150" height="150">
-                                </div>
-                                <div class="card-divider"></div>"""
-                        
-                        if name_text and kanji_text:
-                            card_html += f"""<div class="cat-name">{name_text}</div>
-                                <div class="cat-kanji">{kanji_text}</div>
-                            """
-                        elif name_text:
-                            card_html += f'<div class="cat-name">{name_text}</div>'
-                        elif kanji_text:
-                            card_html += f'<div class="cat-kanji">{kanji_text}</div>'
-                        
-                        card_html += """</div>
-                        </div>
-                        """
-                        
-                        st.markdown(card_html, unsafe_allow_html=True)
-                        
-                        # Button container untuk View Details
-                        if st.button("View Details", key=f"view_{idx}", use_container_width=True, type='primary'):
-                            st.session_state.viewing_index = idx
-                            st.session_state.editing_index = None
-                            st.rerun()
+            with st.container(horizontal=True, horizontal_alignment='center'):            
+                for idx in filtered_df.index:
+                    actress = df.iloc[idx]
+                    
+                    try:
+                        with st.container(width='content'):
+                            cat_url = actress['Picture'] if pd.notna(actress['Picture']) else ""
+                            name_text = actress['Name (Alphabet)'] if pd.notna(actress['Name (Alphabet)']) else ""
+                            kanji_text = actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ""
                             
-                except Exception as e:
-                    with col:
-                        error_html = """
-                        <div class="card-wrapper">
-                            <div class="cat-card">
-                                <div style="text-align: center; color: #e74c3c;">
-                                    <div style="font-size: 24px; margin-bottom: 10px;">😿</div>
-                                    <div style="font-size: 14px;">Failed to load image</div>
+                            status_class = actress["Status"].lower().strip().replace(" ", "-")
+                            review_class = actress["Review"].lower().strip().replace(" ", "-")
+                            
+                            # Buat card dengan HTML lengkap
+                            card_html = f"""
+                            <div class="card-wrapper">
+                                <div class="cat-card">
+                                    <div class="badge-stack">
+                                        <div class="status-badge status-{status_class}">
+                                            {actress["Status"]}
+                                        </div>
+                                        <div class="review-badge review-{review_class}">
+                                            {actress["Review"]}
+                                        </div>
+                                    </div>
+                                    <div class="cat-image-container">
+                                        <img src="{cat_url}" class="cat-image" width="150" height="150">
+                                    </div>
+                                    <div class="card-divider"></div>"""
+                            
+                            if name_text and kanji_text:
+                                card_html += f"""<div class="cat-name">{name_text}</div>
+                                    <div class="cat-kanji">{kanji_text}</div>
+                                """
+                            elif name_text:
+                                card_html += f'<div class="cat-name">{name_text}</div>'
+                            elif kanji_text:
+                                card_html += f'<div class="cat-kanji">{kanji_text}</div>'
+                            
+                            card_html += """</div>
+                            </div>
+                            """
+                            
+                            st.markdown(card_html, unsafe_allow_html=True)
+                            
+                            # Button container untuk View Details
+                            with st.container(horizontal_alignment='center'):
+                                if st.button("View Details", key=f"view_{idx}", type='primary', use_container_width=True):
+                                    st.session_state.viewing_index = idx
+                                    st.session_state.editing_index = None
+                                    show_actress_details()
+                                    st.rerun()
+                                    
+                    except Exception as e:
+                            error_html = """
+                            <div class="card-wrapper">
+                                <div class="cat-card">
+                                    <div style="text-align: center; color: #e74c3c;">
+                                        <div style="font-size: 24px; margin-bottom: 10px;">😿</div>
+                                        <div style="font-size: 14px;">Failed to load image</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        """
-                        st.markdown(error_html, unsafe_allow_html=True)
+                            """
+                            st.markdown(error_html, unsafe_allow_html=True)
         else:
             st.warning("No actresses match the selected filters.")
     else:
@@ -1986,7 +1996,7 @@ def complex_actress(conn):
         .status-badge {
             padding: 4px 9px;
             border-radius: 20px;
-            font-size: 10px;
+            font-size: 8px;
             font-weight: 600;
             text-transform: uppercase;
             color: white;
@@ -1998,7 +2008,7 @@ def complex_actress(conn):
         .review-badge {
             padding: 4px 9px;
             border-radius: 20px;
-            font-size: 10px;
+            font-size: 8px;
             font-weight: 600;
             text-transform: uppercase;
             text-align: center;
@@ -2046,15 +2056,15 @@ def complex_actress(conn):
             justify-content: center;
             text-align: center;
             padding: 20px 15px;
-            margin: 10px;
+            margin-bottom: 15px;
             border-radius: 15px;
             border: 2px solid #e0e0e0;
             background: linear-gradient(135deg, #F5E5E1 0%, #f8f9fa 100%);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
-            min-height: 280px;
+            min-height: 250px;
             width: 100%;
-            max-width: 220px;
+            max-width: 140px;
             cursor: pointer;
         }
         .cat-card:hover {
@@ -2067,8 +2077,8 @@ def complex_actress(conn):
             justify-content: center;
             align-items: center;
             margin-bottom: 15px;
-            width: 130px;
-            height: 130px;
+            width: 115px;
+            height: 115px;
             overflow: hidden;
             border-radius: 10px;
             background: linear-gradient(135deg, #F5E5E1 0%, #f8f9fa 100%);
@@ -2076,19 +2086,19 @@ def complex_actress(conn):
         .cat-image {
             border-radius: 10px;
             object-fit: cover;
-            max-width: 130px;
-            max-height: 130px;
+            max-width: 115px;
+            max-height: 115px;
             border: 2px solid #ff6b6b;
         }
         .cat-name {
             font-weight: 700;
-            font-size: 16px;
+            font-size: 13px;
             color: #2c3e50;
             margin: 5px 0;
             line-height: 1.3;
         }
         .cat-kanji {
-            font-size: 18px;
+            font-size: 15px;
             color: #e74c3c;
             margin: 5px 0;
             font-weight: 500;
