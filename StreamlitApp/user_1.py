@@ -802,21 +802,36 @@ def complex_film(conn):
     else:  # Table View
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
+        filtered_df = df.copy()
+        filtered_df = filtered_df[filtered_df['Info'] == 'Not Watched']
+        filtered_df = filtered_df[['Code', 'Actress Name','Release Date', 'Info']]
+        
 
-        st.dataframe(
-            df,
+        selected = st.dataframe(
+            filtered_df,
             use_container_width=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            hide_index=True,
             column_config={
-                "Picture": st.column_config.ImageColumn("Photo", width="small"),
-                "Actress Name": st.column_config.TextColumn("Name", width="medium"),
-                "Code": st.column_config.TextColumn("Code", width="small"),
-                "Release Date": st.column_config.DateColumn("Release"),
-                "Info": st.column_config.SelectboxColumn(
-                    "Info",
-                    options=["Not Watched", "Watched", "Goat"]
+                "Release Date": st.column_config.DatetimeColumn(
+                    "Release Date",
+                    format="MMM DD, YYYY"
                 )
             }
         )
+
+        if st.button('Edit'):
+            if selected.selection.rows:
+                row_index = selected.selection.rows[0]
+                data_index = filtered_df.index[row_index]
+                st.session_state.viewing_film_index = data_index
+                st.session_state.editing_film_index = None
+                show_film_details()
+                st.rerun()
+            else:
+                st.error('No rows is selected on the dataframe!')
+                st.stop()
 
     st.markdown("""
     <style>
@@ -1468,10 +1483,18 @@ def complex_actress(conn):
 
             old_filename = str(actress['Picture']).split('/')[-1]
             old_public_id = old_filename.split('.')[0]
-
+            # if not new_pic and (edited_kanji == actress['Name (Kanji)']):
+            #     st.write('ganti data selain pic and kanji') 
+            #     st.stop()
+            # elif not new_pic and (edited_kanji != actress['Name (Kanji)']):
+            #     st.write('ganti kanji')
+            #     st.stop()
+            # else:
+            #     st.write('ganti pic')
+            #     st.stop()
             # kalau cuma ganti foto
-            if new_pic and (edited_kanji == actress['Name (Kanji)'].iloc[0]):
-                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture'].iloc[0]).lower():
+            if new_pic and (edited_kanji == actress['Name (Kanji)']):
+                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
                     try:
                         delete_cloudinary_image(old_public_id)
                     except Exception as e:
@@ -1484,9 +1507,9 @@ def complex_actress(conn):
                     st.stop()
                     return
             # kalau ganti foto dan code
-            elif new_pic and (edited_kanji != actress['Name (Kanji)'].iloc[0]):
-                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture'].iloc[0]).lower():
-                    if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture'].iloc[0]).lower():
+            elif new_pic and (edited_kanji != actress['Name (Kanji)']):
+                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
+                    if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
                         try:
                             delete_cloudinary_image(old_public_id)
                         except Exception as e:
@@ -1499,10 +1522,18 @@ def complex_actress(conn):
                         st.stop()
                         return
             # kalau cuma ganti code
-            elif not new_pic and (edited_kanji != actress['Name (Kanji)'].iloc[0]):
-                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture'].iloc[0]).lower():
+            elif not new_pic and (edited_kanji != actress['Name (Kanji)']):
+                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
                     try:
                         final_picture_url = rename_cloudinary_image(old_public_id, clean_name)
+                    except Exception as e:
+                        st.warning(f'Could not rename old image: {e}')
+                        st.stop()
+            
+            elif not new_pic and (edited_kanji == actress['Name (Kanji)']):
+                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
+                    try:
+                        final_picture_url = actress['Picture']
                     except Exception as e:
                         st.warning(f'Could not rename old image: {e}')
                         st.stop()
