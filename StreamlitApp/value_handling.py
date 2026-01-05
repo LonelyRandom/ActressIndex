@@ -22,6 +22,10 @@ def initial_load(df, type):
                 if isinstance(df.at[idx,'Birthdate'], str):
                     birthdate = datetime.strptime(df.at[idx,'Birthdate'], '%d/%m/%Y').date()
                     age = relativedelta(date.today(), birthdate).years
+                    df.at[idx,'Age'] = age
+            else:
+                df.at[idx,'Age'] = '?'
+                
             
             if df.at[idx,'Debut Date'] != '?' and df.at[idx,'Retire Date'] == '?':
                 if isinstance(df.at[idx,'Debut Date'], str):
@@ -36,13 +40,15 @@ def initial_load(df, type):
 
                 period = relativedelta(retire_date, debut_date)
 
-            if period.months == 0:
-                debut_period = f'{period.years} Year'
+            if df.at[idx, 'Debut Date'] != '?':
+                if period.months == 0:
+                    debut_period = f'{period.years} Year'
+                else:
+                    debut_period = f'{period.years}  Year {period.months} Months'
+
+                df.at[idx,'Debut Period'] =debut_period
             else:
-                debut_period = f'{period.years}  Year {period.months} Months'
-            
-            df.at[idx,'Age'] = age
-            df.at[idx,'Debut Period'] =debut_period
+                df.at[idx,'Debut Period'] = '?'
         return df
     else:
         for idx in df.index:

@@ -54,10 +54,11 @@ def load_data_actress(conn):
     try:
         df = conn.read(worksheet="NList", usecols=list(range(14)))
         df = values_handling(df,'actress')
-        df = initial_load(df, 'actress')
+        df = initial_load(df,'actress')
         return df
     except Exception as e:
-        return pd.DataFrame()
+        st.write(f'Error load data: {e}', e)
+        st.stop()
 
 def load_data_film(conn):
     try:
@@ -86,7 +87,7 @@ def update_google_sheets(df,conn,type):
         )
         
         st.toast("✅ Google Sheets updated successfully!")
-        time.sleep(5)
+        time.sleep(1)
         return True
     except:
         return False
@@ -154,7 +155,7 @@ def display_film_card(df):
         info_filter = st.multiselect(
             "📊 Status Filter:",
             options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
-            default=df['Info'].unique().tolist() if 'Info' in df.columns else []
+            default=['Watched', 'Goat']
         )
     with col3:
         playlist_filter = st.selectbox("Playlist:", options=PLAYLIST_OPTS)
@@ -174,14 +175,12 @@ def display_film_card(df):
         filtered_df = filtered_df[filtered_df['Playlist'] == playlist_filter]      
     
     # Tampilkan statistik filter
-    not_watched_count = len(filtered_df[filtered_df['Info'] == 'Not Watched']) if 'Info' in filtered_df.columns else 0
     watched_count = len(filtered_df[filtered_df['Info'] == 'Watched']) if 'Info' in filtered_df.columns else 0
     goat_count = len(filtered_df[filtered_df['Info'] == 'Goat']) if 'Info' in filtered_df.columns else 0
     
     with st.container(horizontal=True):
         st.metric("Total Film", len(filtered_df))
         st.metric("Watched", watched_count)
-        st.metric("Not Watched", not_watched_count)
         st.metric("Goat", goat_count)
     
     st.markdown("---")
@@ -300,7 +299,10 @@ def display_single_card(col, actress, card_id):
     with col:
         status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E" if actress['Info'] == 'Drop' else "#9b59b6"
         
-        release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y') if pd.notna(actress['Release Date']) else "Unknown"
+        if actress['Release Date'] == '?':
+            release_date = '?'
+        else:
+            release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y') if pd.notna(actress['Release Date']) else "Unknown"
         
         card_html = f"""<div class="actress-card" id="card_{card_id}" 
             style="border: 2px solid {status_color}; border-radius: 15px; padding: 15px; 
@@ -356,18 +358,26 @@ def display_film_grid(df, cards_per_row=4):
         .tolist()
     )
 
-    # Hitung berapa baris yang dibutuhkan
-    n_rows = (len(df) + cards_per_row - 1) // cards_per_row
-    # Filter data
-    filtered_df = df.copy()
+    # Filter data dan simpan index asli
+    filtered_df = df[df['Info'] != 'Not Watched'].copy()
+    
+    # Reset index dan simpan index asli dalam kolom baru
+    filtered_df = filtered_df.reset_index(drop=False)  # ini akan membuat kolom 'index' dengan index asli
+    # Rename kolom index agar tidak bentrok
+    filtered_df = filtered_df.rename(columns={'index': 'original_index'})
+    
     if st.session_state.get('search_reset', False):
-            st.session_state.search_reset = False
-            st.session_state.search_bar = ''
+        st.session_state.search_reset = False
+        st.session_state.search_bar = ''
+    
     with st.container(horizontal=True, vertical_alignment='bottom'):
-        search_name = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
+        search_name = st.text_input("🔍 Search (Actress Name / Code):", 
+                                  placeholder="Name or Code...", 
+                                  key='search_bar')
         if st.button('Clear'):
             st.session_state.search_reset = True
             st.rerun()
+    
     playlist_filter = st.selectbox("Playlist:", options=PLAYLIST_OPTS)
 
     if search_name:
@@ -376,7 +386,10 @@ def display_film_grid(df, cards_per_row=4):
         filtered_df = filtered_df[mask]
 
     if playlist_filter != 'All':
-        filtered_df = filtered_df[filtered_df['Playlist'] == playlist_filter]    
+        filtered_df = filtered_df[filtered_df['Playlist'] == playlist_filter]
+    
+    # Hitung berapa baris yang dibutuhkan SETELAH semua filter
+    n_rows = (len(filtered_df) + cards_per_row - 1) // cards_per_row
           
     for row in range(n_rows):
         cols = st.columns(cards_per_row)
@@ -385,10 +398,13 @@ def display_film_grid(df, cards_per_row=4):
             idx = row * cards_per_row + col_idx
             if idx < len(filtered_df):
                 actress = filtered_df.iloc[idx]
+                original_index = actress['original_index']  # Ambil index asli
+                
                 with cols[col_idx]:
                     st.image(
                         actress['Picture'],
-                        caption=actress['Code']
+                        caption=actress['Code'],
+                        width=380
                     )
                 
                     with st.expander('📋 View Details', expanded=False):
@@ -407,10 +423,12 @@ def display_film_grid(df, cards_per_row=4):
                             st.error(f"🔴 {Info_text}")
                         else:
                             st.warning(f"⚪ {Info_text}")
+                        
                         with st.container(horizontal=True):
-                            if st.button('✏️ Edit', key=f'film_edit_{idx}', use_container_width=True):
-                                st.session_state.viewing_film_index = idx
-                                st.session_state.editing_film_index = idx
+                            # Gunakan original_index untuk edit
+                            if st.button('✏️ Edit', key=f'film_edit_{original_index}', use_container_width=True):
+                                st.session_state.viewing_film_index = original_index
+                                st.session_state.editing_film_index = original_index
                                 st.rerun()
                     st.space('small')                      
 
@@ -485,6 +503,7 @@ def complex_film(conn):
 
     df = init_dataframe_film(conn)
     actress_df = init_dataframe_actress(conn)
+
     PLAYLIST_OPTS = ['All'] + sorted(
         df.loc[df['Playlist'] != 'All', 'Playlist']
         .dropna()
@@ -544,7 +563,7 @@ def complex_film(conn):
                 st.session_state.viewing_film_index = None
                 st.session_state.editing_film_index = None
                 st.rerun()
-            if st.button("🗑️ Delete Actress", use_container_width=True, type="secondary", key=f"delete_{index}"):
+            if st.button("🗑️ Delete Film", use_container_width=True, type="secondary", key=f"delete_{index}"):
                 delete_film(index)
 
     def show_edit_film(index):
@@ -601,7 +620,7 @@ def complex_film(conn):
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
             
         # Tombol aksi
-        if st.button("🗑️ Delete Actress", use_container_width=True, type="secondary", key=f"delete_{index}"):
+        if st.button("🗑️ Delete Film", use_container_width=True, type="secondary", key=f"delete_{index}"):
             delete_film(index)
 
         with st.container(horizontal=True):
@@ -694,6 +713,7 @@ def complex_film(conn):
 
     @st.dialog("➕ Add New Film", width='small')
     def add_new_film():
+        new_actress_input = '?'
         if st.session_state.get('film_reset', False):
             st.session_state.film_reset = False
             st.session_state.new_actresses = ''
@@ -712,11 +732,22 @@ def complex_film(conn):
         if not new_picture is None:
             with st.container(horizontal_alignment='center'):
                 st.image(new_picture, width=200)
-        else:
-            new_picture = st.secrets.indicators.PLACEHOLDER_IMG
 
         selected_actress = st.multiselect('Actress*', key='new_actresses', options=ACTRESS_OPTS)
-        new_actress = ", ".join(selected_actress)
+
+        if st.checkbox('New Actress', key='new_actress_check'):
+            new_actress = '?'
+            new_actress_input = st.text_input('New Actress Name*', placeholder='Alphabet, Kanji')
+            if new_actress_input:
+                new_actress_name, new_actress_kanji = new_actress_input.split(', ')
+                st.write('Name: ', new_actress_name)
+                st.write('Kanji: ', new_actress_kanji)
+        elif selected_actress:
+            new_actress = ", ".join(selected_actress)
+            new_actress_input = '?'
+        else:
+            new_actress = '?'
+            new_actress_input = '?'
 
         new_code = st.text_input('Code*', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
         new_code = new_code.upper().replace(' ','-')
@@ -736,9 +767,48 @@ def complex_film(conn):
 
         new_info = st.selectbox('Info', key='new_info', options=INFO_OPTS)
 
-        with st.container(key='film_new_button', horizontal=True):
+        with st.container(key='film_new_button'):
             if st.button('💾 Add Film', use_container_width=True):
-                if new_code:
+                if new_code and ((new_actress!='?')or(new_actress_input!='?')):
+                    if new_actress_input!='?':
+                        # Create new row data
+                        new_row = pd.DataFrame([{
+                            'Review': 'Not Checked',
+                            'Name (Alphabet)': new_actress_name,
+                            'Name (Kanji)': new_actress_kanji,
+                            'Picture': st.secrets.indicators.PLACEHOLDER_IMG,
+                            'Birthdate': '?',
+                            'Debut Date': '?',
+                            'Size': '?',
+                            'Measurement': '?',
+                            'Height (cm)': '? cm',
+                            'Notes': '--',
+                            'Age': '?',
+                            'Debut Period': '?',
+                            'Retire Date': '?',
+                            'Status': 'Active'
+                        }])
+
+
+                        # Add to DataFrame
+                        new_name_kanji = new_row['Name (Kanji)'].iloc[0]
+                        df_actress = st.session_state.actress_df
+
+                        if new_name_kanji in df_actress['Name (Kanji)'].values:
+                            st.warning(f"⚠️ Actress '{new_name_kanji}' already exist in database with name!")
+                            st.stop()
+                        else:
+                            df_actress = pd.concat([df_actress, new_row], ignore_index=True)   
+                            df_actress = df_actress.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
+                            # Update ke Google Sheets
+                            if update_google_sheets(df_actress,conn,'actress'):
+                                st.success("✅ New actress added successfully to Google Sheets!")
+                                st.session_state.actress_df = values_handling(df_actress,'actress')  # Update session state
+                            else:
+                                st.error("❌ Failed to add new actress to Google Sheets")
+                                st.stop()
+                        new_actress = new_actress_name
+                        
                     if new_picture:
                         join_name = new_code.upper()
                         clean_name = re.sub(r'[^\w]', '', join_name)
@@ -772,6 +842,9 @@ def complex_film(conn):
                     st.error('Fill mandatory fields first! (*)')
                     st.stop()
 
+            if st.button('Close', type='primary', use_container_width=True):
+                st.rerun()
+
     with st.sidebar:
         if st.button('⬅️ Back', use_container_width=True):
             return 'home'
@@ -779,7 +852,7 @@ def complex_film(conn):
         st.header("⚙️ Display Settings")
         display_mode = st.radio(
             "View Mode",
-            ["Cards with HTML", "Simple Grid", "Table View"]
+            ["Detailed", "Simple", "Not Watched"]
         )
         
         st.markdown('---')
@@ -795,15 +868,34 @@ def complex_film(conn):
     if st.session_state.viewing_film_index is not None:
         show_film_details()
 
-    if display_mode == "Cards with HTML":
+    if display_mode == "Detailed":
         display_film_card(df)
-    elif display_mode == "Simple Grid":
+    elif display_mode == "Simple":
         display_film_grid(df, cards_per_row=4)
     else:  # Table View
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
         filtered_df = df.copy()
         filtered_df = filtered_df[filtered_df['Info'] == 'Not Watched']
+
+        # Tambahkan search box
+        if st.session_state.get('search_reset', False):
+            st.session_state.search_reset = False
+            st.session_state.search_bar = ''
+        with st.container(horizontal=True, vertical_alignment='bottom'):
+            search_term = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
+            if st.button('Clear'):
+                st.session_state.search_reset = True
+                st.rerun()
+
+        # Terapkan filter search jika ada input
+        if search_term:
+            mask = (
+                filtered_df['Actress Name'].str.contains(search_term, case=False, na=False) |
+                filtered_df['Code'].astype(str).str.contains(search_term, case=False, na=False)
+            )
+            filtered_df = filtered_df[mask]
+
         filtered_df = filtered_df[['Code', 'Actress Name','Release Date', 'Info']]
         
 
@@ -1447,6 +1539,9 @@ def complex_actress(conn):
         
         with physical_col2:
             height = actress['Height (cm)'].replace(' cm','')
+
+            if height == '?':
+                height = '130'
             
             edited_height = st.number_input(
                 "Height (cm)",
@@ -1483,16 +1578,6 @@ def complex_actress(conn):
 
             old_filename = str(actress['Picture']).split('/')[-1]
             old_public_id = old_filename.split('.')[0]
-            # if not new_pic and (edited_kanji == actress['Name (Kanji)']):
-            #     st.write('ganti data selain pic and kanji') 
-            #     st.stop()
-            # elif not new_pic and (edited_kanji != actress['Name (Kanji)']):
-            #     st.write('ganti kanji')
-            #     st.stop()
-            # else:
-            #     st.write('ganti pic')
-            #     st.stop()
-            # kalau cuma ganti foto
             if new_pic and (edited_kanji == actress['Name (Kanji)']):
                 if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
                     try:
@@ -1701,8 +1786,6 @@ def complex_actress(conn):
         if submit_new:
             if new_name and new_kanji and new_retire_date:
                 if new_picture:
-                    st.write(new_picture)
-                    st.stop()
                     join_name = new_name
                     clean_name = re.sub(r'[^\w]', '', join_name)
                     clean_name = "N" + clean_name
