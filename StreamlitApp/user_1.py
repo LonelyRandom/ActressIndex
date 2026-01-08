@@ -831,7 +831,7 @@ def complex_film(conn):
         new_code = new_code.upper().replace(' ','-')
 
         new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
-        if new_release <= date.today():
+        if new_release < date.today():
             new_status = 0
         else:
             new_status = 1
