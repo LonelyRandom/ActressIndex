@@ -62,7 +62,7 @@ def load_data_actress(conn):
 
 def load_data_film(conn):
     try:
-        df = conn.read(worksheet="NCode", usecols=list(range(7)))
+        df = conn.read(worksheet="NCode", usecols=list(range(8)))
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
         return df
@@ -618,6 +618,11 @@ def complex_film(conn):
                 edited_playlist = new_playlist
         
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
+
+        if edited_info == 'Not Watched':
+            edited_link = st.text_input('Link Page', key='film_link', placeholder='https://...')
+        else:
+            edited_link = None
             
         # Tombol aksi
         if st.button("🗑️ Delete Film", use_container_width=True, type="secondary", key=f"delete_{index}"):
@@ -665,7 +670,12 @@ def complex_film(conn):
                             st.stop()
                 else:
                     final_picture_url = film['Picture']
-                    
+                
+                if edited_release_date <= date.today():
+                    edited_status = 0
+                else:
+                    edited_status = 1
+
                 # Update data di DataFrame
                 df.at[index, 'Actress Name'] = edited_actresss
                 df.at[index, 'Picture'] = final_picture_url
@@ -673,6 +683,8 @@ def complex_film(conn):
                 df.at[index, 'Playlist'] = edited_playlist
                 df.at[index, 'Code'] = edited_code
                 df.at[index, 'Info'] = edited_info
+                df.at[index, 'Release Status'] = edited_status
+                df.at[index, 'Link'] = edited_link
                 
                 # Update ke Google Sheets
                 if update_google_sheets(df,conn,'film'):
@@ -732,6 +744,8 @@ def complex_film(conn):
         if not new_picture is None:
             with st.container(horizontal_alignment='center'):
                 st.image(new_picture, width=200)
+        
+        new_link = st.text_input('Link Page', key='new_link', placeholder='https://...')
 
         selected_actress = st.multiselect('Actress*', key='new_actresses', options=ACTRESS_OPTS)
 
@@ -753,11 +767,17 @@ def complex_film(conn):
         new_code = new_code.upper().replace(' ','-')
 
         new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
-        
+        if new_release <= date.today():
+            new_status = 0
+        else:
+            new_status = 1
+
         if st.checkbox('No Info', key='film_code_check'):
             new_release = '?'
         else:
             new_release = new_release.strftime('%d/%m/%Y')
+        st.write(new_release)
+
         new_playlist = st.selectbox('Playlist', key='new_playlist', options=PLAYLIST_OPTS)
 
         if st.checkbox('New Playlist', key='add_new_playlist'):
@@ -816,14 +836,16 @@ def complex_film(conn):
                         picture_url = upload_to_database(new_picture, clean_name)
                     else:
                         picture_url = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
-                    
+
                     new_row = pd.DataFrame([{
                         'Actress Name': new_actress,
                         'Code': new_code,
                         'Release Date': new_release,
                         'Picture': picture_url,
                         'Playlist': new_playlist,
-                        'Info': new_info
+                        'Info': new_info,
+                        'Release Status': new_status,
+                        'Link': new_link
                     }])
 
                     df = st.session_state.film_df
@@ -896,7 +918,7 @@ def complex_film(conn):
             )
             filtered_df = filtered_df[mask]
 
-        filtered_df = filtered_df[['Code', 'Actress Name','Release Date', 'Info']]
+        filtered_df = filtered_df[['Code', 'Actress Name','Release Date','Link', 'Release Status']]
         
 
         selected = st.dataframe(
@@ -904,27 +926,32 @@ def complex_film(conn):
             use_container_width=True,
             on_select="rerun",
             selection_mode="single-row",
-            hide_index=True,
-            column_config={
-                "Release Date": st.column_config.DatetimeColumn(
-                    "Release Date",
-                    format="MMM DD, YYYY"
-                )
-            }
+            hide_index=True
         )
 
-        if st.button('Edit'):
+        with st.container():
+            if st.button('Edit', use_container_width=True):
+                if selected.selection.rows:
+                    row_index = selected.selection.rows[0]
+                    data_index = filtered_df.index[row_index]
+                    st.session_state.viewing_film_index = data_index
+                    st.session_state.editing_film_index = data_index
+                    show_film_details()
+                    st.rerun()
+                else:
+                    st.error('No rows is selected on the dataframe!')
+                    st.stop()
+
             if selected.selection.rows:
                 row_index = selected.selection.rows[0]
-                data_index = filtered_df.index[row_index]
-                st.session_state.viewing_film_index = data_index
-                st.session_state.editing_film_index = None
-                show_film_details()
-                st.rerun()
-            else:
-                st.error('No rows is selected on the dataframe!')
-                st.stop()
-
+                link_url = filtered_df.iloc[row_index]['Link']
+                title = filtered_df.iloc[row_index]['Code']
+        
+                # Tombol yang akan membuka di tab baru
+                if not pd.isna(link_url):
+                    st.link_button(f"{title} Preview", link_url, use_container_width=True, type='primary')
+                else:
+                    st.write('No link found!')
     st.markdown("""
     <style>
     /* Hover effect untuk card */
