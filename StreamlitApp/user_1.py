@@ -7,6 +7,7 @@ from upload_image import upload_to_database, delete_cloudinary_image, rename_clo
 import pandas as pd
 from value_handling import values_handling, initial_load
 from dateutil.relativedelta import relativedelta
+from streamlit_scroll_to_top import scroll_to_here
 
 REVIEW_OPTS = [
     'Not Checked',
@@ -340,7 +341,7 @@ def display_single_card(col, actress, card_id):
         
         st.markdown(card_html, unsafe_allow_html=True)
         
-        if st.button("View Details",key=f'view_film_{card_id}',use_container_width=True, type='primary'):
+        if st.button("View Details",key=f'view_film_{card_id}',width='stretch', type='primary'):
             st.session_state.viewing_film_index = card_id
             st.session_state.editing_film_index = None
             st.rerun()
@@ -403,8 +404,7 @@ def display_film_grid(df, cards_per_row=4):
                 with cols[col_idx]:
                     st.image(
                         actress['Picture'],
-                        caption=actress['Code'],
-                        width=380
+                        caption=actress['Code']
                     )
                 
                     with st.expander('📋 View Details', expanded=False):
@@ -426,11 +426,13 @@ def display_film_grid(df, cards_per_row=4):
                         
                         with st.container(horizontal=True):
                             # Gunakan original_index untuk edit
-                            if st.button('✏️ Edit', key=f'film_edit_{original_index}', use_container_width=True):
+                            if st.button('✏️ Edit', key=f'film_edit_{original_index}', width='stretch'):
                                 st.session_state.viewing_film_index = original_index
                                 st.session_state.editing_film_index = original_index
                                 st.rerun()
-                    st.space('small')                      
+                    st.space('small')   
+    if st.button('⬆️ Back to top', width='stretch'):
+        st.session_state.scroll_to_top = True                   
 
 
 def complex_home(conn):
@@ -464,7 +466,7 @@ def complex_home(conn):
             if st.button('Go To Film →'):
                 return 'film'
     
-    if st.button('🔐 Logout', use_container_width=True, type='primary'):
+    if st.button('🔐 Logout', width='stretch', type='primary'):
         st.session_state.clear()
         return 'login'
     
@@ -500,6 +502,12 @@ def complex_film(conn):
         st.session_state.editing_film_index = None
     if "viewing_film_index" not in st.session_state:
         st.session_state.viewing_film_index = None
+    if 'scroll_to_top' not in st.session_state:
+        st.session_state.scroll_to_top = False
+
+    if st.session_state.scroll_to_top:
+        scroll_to_here(0,key='top')  # Scroll to the top of the page
+        st.session_state.scroll_to_top = False  # Reset the state after scrolling
 
     df = init_dataframe_film(conn)
     actress_df = init_dataframe_actress(conn)
@@ -556,14 +564,14 @@ def complex_film(conn):
         st.write(film['Playlist'])
 
         with st.container(key='view_film_edit_container_button', horizontal=True):
-            if st.button('✏️ Edit', use_container_width=True):
+            if st.button('✏️ Edit', width='stretch'):
                 st.session_state.editing_film_index = index
                 st.rerun()
-            if st.button('❌ Close', use_container_width=True):
+            if st.button('❌ Close', width='stretch'):
                 st.session_state.viewing_film_index = None
                 st.session_state.editing_film_index = None
                 st.rerun()
-            if st.button("🗑️ Delete Film", use_container_width=True, type="secondary", key=f"delete_{index}"):
+            if st.button("🗑️ Delete Film", width='stretch', type="secondary", key=f"delete_{index}"):
                 delete_film(index)
 
     def show_edit_film(index):
@@ -590,7 +598,24 @@ def complex_film(conn):
             ]
         )
 
-        edited_actresss = ", ".join(selected_actress)
+        edited_actress = ", ".join(selected_actress)
+
+        if st.checkbox('New Actress', key='new_actress_check'):
+            edited_actress = '?'
+            edited_actress_input = st.text_input('New Actress Name*', placeholder='Alphabet, Kanji')
+            if edited_actress_input:
+                try:
+                    edited_actress_name, edited_actress_kanji = edited_actress_input.split(', ')
+                    st.write('Name: ', edited_actress_name)
+                    st.write('Kanji: ', edited_actress_kanji)
+                except Exception as e:
+                    st.error(f'Error new actress: {e}')
+        elif selected_actress:
+            edited_actress = ", ".join(selected_actress)
+            edited_actress_input = '?'
+        else:
+            edited_actress = '?'
+            edited_actress_input = '?'
 
         # if st.checkbox('New Actress', key='new_actress', value=(film['Actress Name'] != 'Many' or film['Actress Name'] not in actress_df['Name (Alphabet)'].values)):
         #     st.text_input('New Actress Name', placeholder='Enter new actress...', value=film['Actress Name'])
@@ -608,6 +633,10 @@ def complex_film(conn):
         if st.checkbox('No Info', value=(film['Release Date'] == '?'), key=f'check_release_date_{index}'):
             edited_release_date = '?'
         else:
+            if edited_release_date < date.today():
+                edited_status = 0
+            else:
+                edited_status = 1
             edited_release_date = edited_release_date.strftime('%d/%m/%Y')
 
         edited_playlist = st.selectbox('Playlist', options=PLAYLIST_OPTS, index=playlist_index, key=f'film_playlist_{index}')
@@ -620,22 +649,62 @@ def complex_film(conn):
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
 
         if edited_info == 'Not Watched':
-            edited_link = st.text_input('Link Page', key='film_link', placeholder='https://...')
+            edited_link = st.text_input('Link Page', key=f'film_link_{index}', placeholder='https://...', value=film['Link'])
         else:
             edited_link = None
             
         # Tombol aksi
-        if st.button("🗑️ Delete Film", use_container_width=True, type="secondary", key=f"delete_{index}"):
+        if st.button("🗑️ Delete Film", width='stretch', type="secondary", key=f"delete_{index}"):
             delete_film(index)
 
         with st.container(horizontal=True):
-            if st.button("💾 Save", use_container_width=True, type="primary", key=f"save_{index}"):
+            if st.button("💾 Save", width='stretch', type="primary", key=f"save_{index}"):
                 join_code = edited_code.upper()
                 clean_code = re.sub(r'[^\w]', '', join_code)
                 clean_code = "N" + clean_code
 
                 old_filename = str(film['Picture']).split('/')[-1]
                 old_public_id = old_filename.split('.')[0]
+
+                if ((edited_actress!='?')or(edited_actress_input!='?')):
+                    if edited_actress_input!='?':
+                        # Create edited row data
+                        edited_row = pd.DataFrame([{
+                            'Review': 'Not Checked',
+                            'Name (Alphabet)': edited_actress_name,
+                            'Name (Kanji)': edited_actress_kanji,
+                            'Picture': st.secrets.indicators.PLACEHOLDER_IMG,
+                            'Birthdate': '?',
+                            'Debut Date': '?',
+                            'Size': '?',
+                            'Measurement': '?',
+                            'Height (cm)': '? cm',
+                            'Notes': '--',
+                            'Age': '?',
+                            'Debut Period': '?',
+                            'Retire Date': '?',
+                            'Status': 'Active'
+                        }])
+
+
+                        # Add to DataFrame
+                        edited_name_kanji = edited_row['Name (Kanji)'].iloc[0]
+                        df_actress = st.session_state.actress_df
+
+                        if edited_name_kanji in df_actress['Name (Kanji)'].values:
+                            st.warning(f"⚠️ Actress '{edited_name_kanji}' already exist in database with name!")
+                            st.stop()
+                        else:
+                            df_actress = pd.concat([df_actress, edited_row], ignore_index=True)   
+                            df_actress = df_actress.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
+                            # Update ke Google Sheets
+                            if update_google_sheets(df_actress,conn,'actress'):
+                                st.success("✅ edited actress added successfully to Google Sheets!")
+                                st.session_state.actress_df = values_handling(df_actress,'actress')  # Update session state
+                            else:
+                                st.error("❌ Failed to add edited actress to Google Sheets")
+                                st.stop()
+                        edited_actress = edited_actress_name
                 # kalau cuma ganti foto
                 if new_pic and (edited_code.upper() == film['Code']):
                     if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower():
@@ -670,14 +739,9 @@ def complex_film(conn):
                             st.stop()
                 else:
                     final_picture_url = film['Picture']
-                
-                if edited_release_date <= date.today():
-                    edited_status = 0
-                else:
-                    edited_status = 1
 
                 # Update data di DataFrame
-                df.at[index, 'Actress Name'] = edited_actresss
+                df.at[index, 'Actress Name'] = edited_actress
                 df.at[index, 'Picture'] = final_picture_url
                 df.at[index, 'Release Date'] = edited_release_date
                 df.at[index, 'Playlist'] = edited_playlist
@@ -696,7 +760,7 @@ def complex_film(conn):
                 st.session_state.editing_film_index = None
                 st.rerun()
                 
-            if st.button('❌ Close', use_container_width=True):
+            if st.button('❌ Close', width='stretch'):
                 st.session_state.viewing_film_index = None
                 st.session_state.editing_film_index = None
                 st.rerun()
@@ -788,7 +852,7 @@ def complex_film(conn):
         new_info = st.selectbox('Info', key='new_info', options=INFO_OPTS)
 
         with st.container(key='film_new_button'):
-            if st.button('💾 Add Film', use_container_width=True):
+            if st.button('💾 Add Film', width='stretch'):
                 if new_code and ((new_actress!='?')or(new_actress_input!='?')):
                     if new_actress_input!='?':
                         # Create new row data
@@ -864,11 +928,11 @@ def complex_film(conn):
                     st.error('Fill mandatory fields first! (*)')
                     st.stop()
 
-            if st.button('Close', type='primary', use_container_width=True):
+            if st.button('Close', type='primary', width='stretch'):
                 st.rerun()
 
     with st.sidebar:
-        if st.button('⬅️ Back', use_container_width=True):
+        if st.button('⬅️ Back', width='stretch'):
             return 'home'
         st.markdown('---')
         st.header("⚙️ Display Settings")
@@ -878,18 +942,22 @@ def complex_film(conn):
         )
         
         st.markdown('---')
-        if st.button('➕ Add New Film', use_container_width=True):
+        if st.button('➕ Add New Film', width='stretch'):
             add_new_film()
-        if st.button('🔐 Logout', use_container_width=True):
+        if st.button('🔐 Logout', width='stretch'):
             st.session_state.clear()
             return 'login'
+        if st.button('⬆️ Back to top', width='stretch'):
+            st.session_state.scroll_to_top = True
     
     # Main
+    st.space('small')
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Film List</h1>", unsafe_allow_html=True)
     
     if st.session_state.viewing_film_index is not None:
         show_film_details()
 
+    st.session_state.scroll_to_top = True
     if display_mode == "Detailed":
         display_film_card(df)
     elif display_mode == "Simple":
@@ -897,8 +965,7 @@ def complex_film(conn):
     else:  # Table View
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
-        filtered_df = df.copy()
-        filtered_df = filtered_df[filtered_df['Info'] == 'Not Watched']
+        filtered_df = df.loc[df['Info'] == 'Not Watched'].copy() 
 
         # Tambahkan search box
         if st.session_state.get('search_reset', False):
@@ -918,19 +985,24 @@ def complex_film(conn):
             )
             filtered_df = filtered_df[mask]
 
-        filtered_df = filtered_df[['Code', 'Actress Name','Release Date','Link', 'Release Status']]
-        
+        # Buat kolom baru dengan badge HTML/CSS
+        filtered_df['Release'] = filtered_df['Release Status'].apply(
+            lambda x: '🟢 Yes' if x == 1 else '🔴 No'
+        )
+
+        filtered_df = filtered_df[['Release', 'Code', 'Actress Name','Release Date', 'Link']]
+
 
         selected = st.dataframe(
             filtered_df,
-            use_container_width=True,
+            width='stretch',
             on_select="rerun",
             selection_mode="single-row",
             hide_index=True
         )
 
         with st.container():
-            if st.button('Edit', use_container_width=True):
+            if st.button('Edit', width='stretch'):
                 if selected.selection.rows:
                     row_index = selected.selection.rows[0]
                     data_index = filtered_df.index[row_index]
@@ -949,7 +1021,7 @@ def complex_film(conn):
         
                 # Tombol yang akan membuka di tab baru
                 if not pd.isna(link_url):
-                    st.link_button(f"{title} Preview", link_url, use_container_width=True, type='primary')
+                    st.link_button(f"{title} Preview", link_url, width='stretch', type='primary')
                 else:
                     st.write('No link found!')
     st.markdown("""
@@ -1215,11 +1287,11 @@ def complex_actress(conn):
             # Tombol Edit dan Close
             button_container = st.container(key='view_edit_close', horizontal=True)
             with button_container:
-                if st.button("✏️ Edit", use_container_width=True, key=f"edit_btn_{index}"):
+                if st.button("✏️ Edit", width='stretch', key=f"edit_btn_{index}"):
                     st.session_state.editing_index = index
                     st.rerun()
 
-                if st.button("❌ Close", use_container_width=True, key=f"close_{index}"):
+                if st.button("❌ Close", width='stretch', key=f"close_{index}"):
                     st.session_state.viewing_index = None
                     st.session_state.editing_index = None
                     st.rerun()
@@ -1353,7 +1425,7 @@ def complex_actress(conn):
         
         button_container = st.container(horizontal=True, horizontal_alignment='center', key='view_editNotes')
         with button_container:
-            if st.button("💾 Save Notes", use_container_width=True, key=f"save_{index}"):
+            if st.button("💾 Save Notes", width='stretch', key=f"save_{index}"):
                 st.session_state.reset_notes = True
                 if personal_notes:
                     current_notes = df['Notes'].iloc[index]
@@ -1374,7 +1446,7 @@ def complex_actress(conn):
                     st.stop()
                 
 
-            if st.button("Close", use_container_width=True, key=f'cancel_{index}', type='primary'):
+            if st.button("Close", width='stretch', key=f'cancel_{index}', type='primary'):
                 st.session_state.viewing_index = None
                 st.session_state.editing_index = None
                 st.rerun()
@@ -1403,16 +1475,16 @@ def complex_actress(conn):
                     st.image(new_pic, width=200)
             
             # Tombol aksi
-            if st.button("← Back to View", use_container_width=True, key=f"back_{index}"):
+            if st.button("← Back to View", width='stretch', key=f"back_{index}"):
                 st.session_state.editing_index = None
                 st.rerun()
             
-            if st.button("Close", use_container_width=True, key=f"close_{index}"):
+            if st.button("Close", width='stretch', key=f"close_{index}"):
                 st.session_state.viewing_index = None
                 st.session_state.editing_index = None
                 st.rerun()
                 
-            if st.button("🗑️ Delete Actress", use_container_width=True, type="secondary", key=f"delete_{index}"):
+            if st.button("🗑️ Delete Actress", width='stretch', type="secondary", key=f"delete_{index}"):
                 delete_actress(index)
         
         with col2:
@@ -1594,7 +1666,7 @@ def complex_actress(conn):
         )
         
         # Save changes
-        if st.button("💾 Save Changes", use_container_width=True, type="primary", key=f"save_{index}"):
+        if st.button("💾 Save Changes", width='stretch', type="primary", key=f"save_{index}"):
             if edited_measurement != '?':
                 edited_measurement = f"B{b} / W{w} / H{h}"
             
@@ -1807,8 +1879,8 @@ def complex_actress(conn):
         
         # Tombol submit
         with st.container(horizontal=True):
-            submit_new = st.button("💾 Add Actress", use_container_width=True)
-            cancel_new = st.button("❌ Cancel", use_container_width=True)
+            submit_new = st.button("💾 Add Actress", width='stretch')
+            cancel_new = st.button("❌ Cancel", width='stretch')
         
         if submit_new:
             if new_name and new_kanji and new_retire_date:
@@ -1868,7 +1940,7 @@ def complex_actress(conn):
 
     # Sidebar
     with st.sidebar:
-        if st.button('⬅️ Back', use_container_width=True):
+        if st.button('⬅️ Back', width='stretch'):
             return 'home'
         st.header(f'Actress Listed : {len(st.session_state.actress_df)}')
         st.markdown("---")
@@ -1889,15 +1961,15 @@ def complex_actress(conn):
         
         st.markdown("---")
         st.subheader("Management")
-        if st.button("➕ Add New Actress", use_container_width=True):
+        if st.button("➕ Add New Actress", width='stretch'):
             st.session_state.adding_new = True
         
         # # Tombol refresh data
-        # if st.button("🔄 Refresh Data", use_container_width=True):
+        # if st.button("🔄 Refresh Data", width='stretch'):
         #     refresh_data()
         #     st.rerun()
         
-        if st.button('🔐 Logout', use_container_width=True):
+        if st.button('🔐 Logout', width='stretch'):
             st.session_state.clear()
             return 'login'
 
@@ -2019,7 +2091,7 @@ def complex_actress(conn):
                             st.markdown(card_html, unsafe_allow_html=True)
                             
                         # Button container untuk View Details
-                            if st.button("View Details", key=f"view_{idx}", type='primary', use_container_width=True):
+                            if st.button("View Details", key=f"view_{idx}", type='primary', width='stretch'):
                                 st.session_state.viewing_index = idx
                                 st.session_state.editing_index = None
                                 show_actress_details()
@@ -2095,7 +2167,7 @@ def complex_actress(conn):
                             
                             # Button container untuk View Details
                             with st.container(horizontal_alignment='center'):
-                                if st.button("View Details", key=f"view_{idx}", type='primary', use_container_width=True):
+                                if st.button("View Details", key=f"view_{idx}", type='primary', width='stretch'):
                                     st.session_state.viewing_index = idx
                                     st.session_state.editing_index = None
                                     show_actress_details()
