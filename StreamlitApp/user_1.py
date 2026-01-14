@@ -395,7 +395,7 @@ def display_film_grid(df, cards_per_row=4):
     
     playlist_filter = st.selectbox("Playlist:", options=PLAYLIST_OPTS)
 
-    image_width = st.number_input('img width',min_value=98, max_value=184)
+    image_width = st.selectbox('img width',options=[115,106])
 
     if search_name:
         mask = (filtered_df['Actress Name'].str.contains(search_name, case=False, na=False) | 
@@ -407,7 +407,7 @@ def display_film_grid(df, cards_per_row=4):
         filtered_df = filtered_df[filtered_df['Playlist'] == playlist_filter]
         st.session_state.film_page = 1
     
-    total_pages = max(1, (len(filtered_df) + 15 - 1) // 15)
+    total_pages = max(1, (len(filtered_df) + 30 - 1) // 30)
 
     def set_page(p):
         st.session_state.film_page = p
@@ -465,8 +465,8 @@ def display_film_grid(df, cards_per_row=4):
         
         page = st.session_state.film_page
         
-        start_idx = (page - 1) * 15 
-        end_idx = min(start_idx + 15, len(filtered_df)) 
+        start_idx = (page - 1) * 30 
+        end_idx = min(start_idx + 30, len(filtered_df)) 
         st.markdown("---")
         st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} actress")
         
