@@ -359,6 +359,20 @@ def display_film_grid(df, cards_per_row=4):
         .tolist()
     )
 
+    if 'film_page' not in st.session_state:
+        st.session_state.film_page = 1
+    
+    st.markdown(
+        """
+        <style>
+        button[data-testid="stBaseButton-primary"] p {
+            font-size: 13px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
     # Filter data dan simpan index asli
     filtered_df = df[df['Info'] != 'Not Watched'].copy()
     
@@ -381,58 +395,142 @@ def display_film_grid(df, cards_per_row=4):
     
     playlist_filter = st.selectbox("Playlist:", options=PLAYLIST_OPTS)
 
+    image_width = st.number_input('img width',min_value=98, max_value=184)
+
     if search_name:
         mask = (filtered_df['Actress Name'].str.contains(search_name, case=False, na=False) | 
                 filtered_df['Code'].str.contains(search_name, case=False, na=False))
         filtered_df = filtered_df[mask]
+        st.session_state.film_page = 1
 
     if playlist_filter != 'All':
         filtered_df = filtered_df[filtered_df['Playlist'] == playlist_filter]
+        st.session_state.film_page = 1
     
-    # Hitung berapa baris yang dibutuhkan SETELAH semua filter
-    n_rows = (len(filtered_df) + cards_per_row - 1) // cards_per_row
-          
-    for row in range(n_rows):
-        cols = st.columns(cards_per_row)
+    total_pages = max(1, (len(filtered_df) + 15 - 1) // 15)
+
+    def set_page(p):
+        st.session_state.film_page = p
+    
+    if st.session_state.scroll_to_here:
+        scroll_to_here(0,key='here')  # Scroll to the top of the page
+        st.session_state.scroll_to_here = False
+    st.markdown('---')
+    if not filtered_df.empty:
+        st.markdown(
+            f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Page {st.session_state.film_page}</div>",
+            unsafe_allow_html=True
+        )
+
+        if total_pages <= 6:
+            with st.container(key='page_button', horizontal=True, horizontal_alignment='center'):
+                for i in range(1, total_pages + 1):
+                    if st.button(
+                        str(i),
+                        key=f'page_top_{i}',
+                        disabled=(i == st.session_state.film_page),
+                        on_click=set_page,
+                        args=(i,)
+                    ):
+                        st.session_state.scroll_to_here = True
+        else:
+            with st.container(key='page_button_top', horizontal=True, horizontal_alignment='center'):
+                if st.button('⬅️',key='previous_top', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(st.session_state.film_page-1,)):
+                    st.session_state.scroll_to_here = True
+                
+                start_page = max(1, st.session_state.film_page - 1)  
+                end_page = min(total_pages, st.session_state.film_page + 2)  
+                
+                pages_to_show = range(start_page, end_page + 1)
+                
+                if len(pages_to_show) < 4:
+                    if start_page == 1:
+                        pages_to_show = range(1, min(5, total_pages + 1))
+                    else:
+                        pages_to_show = range(max(1, total_pages - 3), total_pages + 1)
+                
+                for i in pages_to_show:
+                    if st.button(
+                        str(i),
+                        key=f'page_top_{i}',
+                        disabled=(i == st.session_state.film_page),
+                        on_click=set_page,
+                        args=(i,)
+                    ):
+                        st.session_state.scroll_to_here = True
+                
+                if st.button('➡️',key='next_top', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,)):
+                    st.session_state.scroll_to_here = True
+                
         
-        for col_idx in range(cards_per_row):
-            idx = row * cards_per_row + col_idx
-            if idx < len(filtered_df):
-                actress = filtered_df.iloc[idx]
-                original_index = actress['original_index']  # Ambil index asli
+        page = st.session_state.film_page
+        
+        start_idx = (page - 1) * 15 
+        end_idx = min(start_idx + 15, len(filtered_df)) 
+        st.markdown("---")
+        st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} actress")
+        
+        rows_to_display = filtered_df.iloc[start_idx:end_idx] 
+        with st.container(horizontal=True):
+            for i in range(0, len(rows_to_display)): # len = 8 // i = [0,8]
+                with st.container(horizontal=True, width=image_width):
+                    with st.container():
+                        if i < len(rows_to_display):
+                            film = rows_to_display.iloc[i]
+                            real_index = rows_to_display.index[i]
+
+                            st.image(
+                                film['Picture']
+                            )
+
+                            if st.button(f'{film["Code"]}', key=f'film_edit_{real_index}', width='stretch', type='primary'):
+                                        st.session_state.viewing_film_index = film['original_index']
+                                        st.rerun()
+                            st.space('small')
+        st.markdown('---')
+        if total_pages <= 6:
+            with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
+                for i in range(1, total_pages + 1):
+                    if st.button(
+                        str(i),
+                        key=f'page_bottom_{i}',
+                        disabled=(i == st.session_state.film_page),
+                        on_click=set_page,
+                        args=(i,)
+                    ):
+                        st.session_state.scroll_to_here = True
+        else:
+            with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
+                if st.button('⬅️',key='previous_bottom', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(st.session_state.film_page-1,)):
+                    st.session_state.scroll_to_here = True
                 
-                with cols[col_idx]:
-                    st.image(
-                        actress['Picture'],
-                        caption=actress['Code']
-                    )
+                start_page = max(1, st.session_state.film_page - 1)  
+                end_page = min(total_pages, st.session_state.film_page + 2)  
                 
-                    with st.expander('📋 View Details', expanded=False):
-                        st.markdown(f"**🎬 {actress['Actress Name']}**")
-                        if actress['Release Date'] != '?':
-                            release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y')
-                        else:
-                            release_date = '?'
-                        st.caption(f"📅 {release_date}")
-                        st.caption(f"📁 {'-' if actress['Playlist'] == 'All' else actress['Playlist']}")
-                        
-                        Info_text = actress['Info']
-                        if Info_text == 'Watched':
-                            st.success(f"🟢 {Info_text}")
-                        elif Info_text == 'Not Watched':
-                            st.error(f"🔴 {Info_text}")
-                        else:
-                            st.warning(f"⚪ {Info_text}")
-                        
-                        with st.container(horizontal=True):
-                            # Gunakan original_index untuk edit
-                            if st.button('✏️ Edit', key=f'film_edit_{original_index}', width='stretch'):
-                                st.session_state.viewing_film_index = original_index
-                                st.session_state.editing_film_index = original_index
-                                st.rerun()
-                    st.space('small')   
+                pages_to_show = range(start_page, end_page + 1)
+                
+                if len(pages_to_show) < 4:
+                    if start_page == 1:
+                        pages_to_show = range(1, min(5, total_pages + 1))
+                    else:
+                        pages_to_show = range(max(1, total_pages - 3), total_pages + 1)
+                
+                for i in pages_to_show:
+                    if st.button(
+                        str(i),
+                        key=f'page_bottom_{i}',
+                        disabled=(i == st.session_state.film_page),
+                        on_click=set_page,
+                        args=(i,)
+                    ):
+                        st.session_state.scroll_to_here = True
+                
+                if st.button('➡️',key='next_bottom', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,)):
+                    st.session_state.scroll_to_here = True                 
+    else:
+        st.info('No film match the filter')
     if st.button('⬆️ Back to top', width='stretch'):
-        st.session_state.scroll_to_top = True                   
+        st.session_state.scroll_to_here = True                   
 
 
 def complex_home(conn):
@@ -504,6 +602,8 @@ def complex_film(conn):
         st.session_state.viewing_film_index = None
     if 'scroll_to_top' not in st.session_state:
         st.session_state.scroll_to_top = False
+    if 'scroll_to_here' not in st.session_state:
+        st.session_state.scroll_to_here = False
 
     if st.session_state.scroll_to_top:
         scroll_to_here(0,key='top')  # Scroll to the top of the page
@@ -1576,7 +1676,6 @@ def complex_actress(conn):
             edited_retire_date = st.date_input(
                 "Retire Date",
                 value=retire_date,
-                placeholder="e.g., 15/08/2024 or August 15, 2024",
                 key=f"retire_date_{index}"
             )
 
