@@ -1625,7 +1625,8 @@ def complex_actress(conn):
             edited_birthdate = st.date_input(
                 "Birthdate",
                 value=birth_date,
-                key=f"birthdate_{index}"
+                key=f"birthdate_{index}",
+                min_value=date(1981,1,1)
             )
             if edited_birthdate != '?':
                 age = relativedelta(date.today(), edited_birthdate).years
@@ -1679,6 +1680,7 @@ def complex_actress(conn):
                 key=f"retire_date_{index}"
             )
 
+            retire_date = edited_retire_date
             edited_retire_date = edited_retire_date.strftime('%d/%m/%Y')
         else:
             edited_retire_date = '?'
@@ -1694,7 +1696,7 @@ def complex_actress(conn):
 
             st.write("Debut Period : ", debut)
         elif edited_debut_date != '?' and edited_retire_date != '?':
-            period = relativedelta(edited_retire_date, edited_debut_date)
+            period = relativedelta(retire_date, edited_debut_date)
 
             if period.months == 0:
                 debut = f'{period.years} Year'
@@ -1814,12 +1816,11 @@ def complex_actress(conn):
                         st.stop()
             
             elif not new_pic and (edited_kanji == actress['Name (Kanji)']):
-                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
-                    try:
-                        final_picture_url = actress['Picture']
-                    except Exception as e:
-                        st.warning(f'Could not rename old image: {e}')
-                        st.stop()
+                try:
+                    final_picture_url = actress['Picture']
+                except Exception as e:
+                    st.warning(f'Could not rename old image: {e}')
+                    st.stop()
 
             # Update data di DataFrame
             df.at[index, 'Review'] = edited_review
