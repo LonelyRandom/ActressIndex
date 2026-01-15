@@ -663,6 +663,10 @@ def complex_film(conn):
         st.markdown('### Playlist')
         st.write(film['Playlist'])
 
+        if pd.isna(film['Link']) :
+            st.button('🔗 No Link Found!', type='primary', width='stretch')
+        else:
+            st.link_button("🎬 Preview", film['Link'], width='stretch', type='primary')
         with st.container(key='view_film_edit_container_button', horizontal=True):
             if st.button('✏️ Edit', width='stretch'):
                 st.session_state.editing_film_index = index
@@ -671,8 +675,6 @@ def complex_film(conn):
                 st.session_state.viewing_film_index = None
                 st.session_state.editing_film_index = None
                 st.rerun()
-            if st.button("🗑️ Delete Film", width='stretch', type="secondary", key=f"delete_{index}"):
-                delete_film(index)
 
     def show_edit_film(index):
         film = df.iloc[index]
@@ -689,6 +691,7 @@ def complex_film(conn):
     
         
         st.subheader("Basic Information")
+        edited_link = st.text_input('Link Page', key=f'film_link_{index}', placeholder='https://...', value=film['Link'])
         selected_actress = st.multiselect(
             'Actress', 
             options = ACTRESS_OPTS, 
@@ -717,9 +720,6 @@ def complex_film(conn):
             edited_actress = '?'
             edited_actress_input = '?'
 
-        # if st.checkbox('New Actress', key='new_actress', value=(film['Actress Name'] != 'Many' or film['Actress Name'] not in actress_df['Name (Alphabet)'].values)):
-        #     st.text_input('New Actress Name', placeholder='Enter new actress...', value=film['Actress Name'])
-
         edited_code = st.text_input('Code', placeholder='Enter film code (e.g. MIDV-791)', value=film['Code'], key=f'film_code_{index}')
         edited_code = edited_code.upper().replace(' ','-')
         
@@ -747,11 +747,6 @@ def complex_film(conn):
                 edited_playlist = new_playlist
         
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
-
-        if edited_info == 'Not Watched':
-            edited_link = st.text_input('Link Page', key=f'film_link_{index}', placeholder='https://...', value=film['Link'])
-        else:
-            edited_link = None
             
         # Tombol aksi
         if st.button("🗑️ Delete Film", width='stretch', type="secondary", key=f"delete_{index}"):
@@ -2375,9 +2370,9 @@ def complex_actress(conn):
             background: linear-gradient(135deg, #F5E5E1 0%, #f8f9fa 100%);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
-            min-height: 250px;
+            min-height: 260px;
             width: 100%;
-            max-width: 140px;
+            max-width: 190px;
             cursor: pointer;
         }
         .cat-card:hover {
