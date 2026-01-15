@@ -346,6 +346,9 @@ def display_single_card(col, actress, card_id):
             st.session_state.editing_film_index = None
             st.rerun()
     
+def reset_page():
+    """Reset halaman ke 1"""
+    st.session_state.film_page = 1
 
 # --- FUNGSI ALTERNATIF: Grid Layout tanpa Pagination ---
 def display_film_grid(df, cards_per_row=4):
@@ -388,24 +391,22 @@ def display_film_grid(df, cards_per_row=4):
     with st.container(horizontal=True, vertical_alignment='bottom'):
         search_name = st.text_input("🔍 Search (Actress Name / Code):", 
                                   placeholder="Name or Code...", 
-                                  key='search_bar')
-        if st.button('Clear'):
+                                  key='search_bar', on_change=reset_page)
+        if st.button('Clear', on_click=reset_page):
             st.session_state.search_reset = True
             st.rerun()
     
-    playlist_filter = st.selectbox("Playlist:", options=PLAYLIST_OPTS)
+    playlist_filter = st.selectbox("Playlist:", options=PLAYLIST_OPTS, on_change=reset_page)
 
-    image_width = st.selectbox('img width',options=[115,106])
+    image_width = st.selectbox('img width',options=[115,106], on_change=reset_page)
 
     if search_name:
         mask = (filtered_df['Actress Name'].str.contains(search_name, case=False, na=False) | 
                 filtered_df['Code'].str.contains(search_name, case=False, na=False))
         filtered_df = filtered_df[mask]
-        st.session_state.film_page = 1
 
     if playlist_filter != 'All':
         filtered_df = filtered_df[filtered_df['Playlist'] == playlist_filter]
-        st.session_state.film_page = 1
     
     total_pages = max(1, (len(filtered_df) + 30 - 1) // 30)
 
