@@ -184,13 +184,15 @@ def display_film_card(df):
         st.metric("Watched", watched_count)
         st.metric("Goat", goat_count)
     
+    image_width = st.text_input('Image_multiplier', value=0.40)
+    image_width = float(image_width)
     st.markdown("---")
     
     if filtered_df.empty:
         st.info("🤔 No results found.")
         return
     
-    items_per_page = 4 * 2  
+    items_per_page = 3 * 10
     
     total_pages = max(1, (len(filtered_df) + items_per_page - 1) // items_per_page)
 
@@ -247,14 +249,11 @@ def display_film_card(df):
     
     rows_to_display = filtered_df.iloc[start_idx:end_idx] #[8,15]
     
-    for i in range(0, len(rows_to_display), 4): # len = 8 // i = [0,8]
-        cols = st.columns(4)
-        
-        for col_idx, col in enumerate(cols):
-            if i + col_idx < len(rows_to_display):
-                actress = rows_to_display.iloc[i + col_idx]
-                real_index = rows_to_display.index[i + col_idx]  # ⬅️ INI KUNCI
-                display_single_card(col, actress, real_index)
+    with st.container(horizontal=True):
+        for i in range(0, len(rows_to_display)): # len = 8 // i = [0,8]
+            actress = rows_to_display.iloc[i]
+            real_index = rows_to_display.index[i]  # ⬅️ INI KUNCI
+            display_single_card(image_width, actress, real_index)
     st.markdown('---')
     if total_pages <= 6:
         with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
@@ -293,54 +292,53 @@ def display_film_card(df):
     st.markdown('---')
     
 
-def display_single_card(col, actress, card_id):
+def display_single_card(image_multiplier,actress, card_id):
     """
     Menampilkan single card untuk satu aktris
     """
-    with col:
-        status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E" if actress['Info'] == 'Drop' else "#9b59b6"
-        
-        if actress['Release Date'] == '?':
-            release_date = '?'
-        else:
-            release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y') if pd.notna(actress['Release Date']) else "Unknown"
-        
-        card_html = f"""<div class="actress-card" id="card_{card_id}" 
-            style="border: 2px solid {status_color}; border-radius: 15px; padding: 15px; 
-            margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
-            height: 450px; display: flex; flex-direction: column;">
-            <!-- Status Badge -->
-            <div style="position: absolute; top: 15px; right: 10px;">
-                <span style="background: {status_color}; color: white; padding: 4px 10px; 
-                      border-radius: 20px; font-size: 11px; font-weight: bold;">
-                    {actress['Info']}
-                </span>
+
+    # st.write(actress['Code'])
+    status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E" if actress['Info'] == 'Drop' else "#9b59b6"
+    
+    if actress['Release Date'] == '?':
+        release_date = '?'
+    else:
+        release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y') if pd.notna(actress['Release Date']) else "Unknown"
+    card_html = f"""<div class="actress-card" id="card_{card_id}" 
+        style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
+        margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
+        height: {590*image_multiplier}px; display: flex; flex-direction: column;">
+        <!-- Status Badge -->
+        <div style="position: absolute; top: 12px; right: 7px;">
+            <span style="background: {status_color}; color: white; padding: 4px 10px; 
+                    border-radius: 20px; font-size: 9px; font-weight: bold;">
+                {actress['Info']}
+            </span>
+        </div>
+        <!-- Image Container -->
+        <div style="height:{340*image_multiplier}px; width:{233*image_multiplier}px;background:black; border-radius: 10px; margin: 0 auto 15px auto;border: 2px solid {status_color};">
+            <img src="{actress['Picture']}" 
+                    style="width: 100%; height: 100%; border-radius:10px"
+                    alt="{actress['Actress Name']}">
+        </div>
+        <!-- Separator -->
+        <div style="width: {50}px; height: {3}px; background: linear-gradient(90deg, {status_color}, #FFD166); 
+                margin: 0 auto 15px auto; border-radius: 2px;"></div>
+        <!-- Code and Date -->
+        <div style="margin-bottom: 5px;">
+            <div style="display: flex; justify-content: center; margin-bottom: 1px;">
+                <span style="color: #e74c3c; font-weight: bold;font-size: 15px;">{actress['Code']}</span>
             </div>
-            <!-- Image Container -->
-            <div style="height:300px; width:213px;background:black; border-radius: 10px; margin: 0 auto 15px auto;border: 2px solid {status_color};">
-                <img src="{actress['Picture']}" 
-                     style="width: 100%; height: 100%; border-radius:10px"
-                     alt="{actress['Actress Name']}">
+            <div style="display: flex; justify-content: center;">
+                <span style="color: #3498db; font-size:11px;">{release_date}</span>
             </div>
-            <!-- Separator -->
-            <div style="width: 50px; height: 3px; background: linear-gradient(90deg, {status_color}, #FFD166); 
-                 margin: 0 auto 15px auto; border-radius: 2px;"></div>
-            <!-- Code and Date -->
-            <div style="margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="font-weight: bold; color: #555;">🎬 Code</span>
-                    <span style="color: #e74c3c; font-weight: bold;">{actress['Code']}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="font-weight: bold; color: #555;">📅 Release Date</span>
-                    <span style="color: #3498db;">{release_date}</span>
-                </div>
-            </div>
-        </div>"""
-        
+        </div>
+    </div>"""
+
+    with st.container(width=int(292*image_multiplier)):
         st.markdown(card_html, unsafe_allow_html=True)
-        
+    
         if st.button("View Details",key=f'view_film_{card_id}',width='stretch', type='primary'):
             st.session_state.viewing_film_index = card_id
             st.session_state.editing_film_index = None
@@ -1179,13 +1177,6 @@ def complex_film(conn):
     /* Smooth transition */
     .actress-card {
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-    }
-    
-    /* Responsive design */
-    @media (max-width: 768px) {
-        .actress-card {
-            height: 420px !important;
-        }
     }
     
     /* Custom scrollbar untuk container */
