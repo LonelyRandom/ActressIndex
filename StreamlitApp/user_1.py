@@ -973,6 +973,8 @@ def complex_film(conn):
         new_code = st.text_input('Code*', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
         new_code = new_code.upper().replace(' ','-')
 
+        new_title = st.text_area('Title*', key='new_title', placeholder='Enter movie title...')
+
         new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
         if new_release < date.today():
             new_status = 0
@@ -996,7 +998,7 @@ def complex_film(conn):
 
         with st.container(key='film_new_button'):
             if st.button('💾 Add Film', width='stretch'):
-                if new_code and ((new_actress!='?')or(new_actress_input!='?')):
+                if new_code and ((new_actress!='?')or(new_actress_input!='?')) and new_title:
                     if new_actress_input!='?':
                         # Create new row data
                         new_row = pd.DataFrame([{
@@ -1047,6 +1049,7 @@ def complex_film(conn):
                     new_row = pd.DataFrame([{
                         'Actress Name': new_actress,
                         'Code': new_code,
+                        'Title': new_title,
                         'Release Date': new_release,
                         'Picture': picture_url,
                         'Playlist': new_playlist,
