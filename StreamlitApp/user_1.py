@@ -53,7 +53,7 @@ PASS_OPTS = [
 
 def load_data_actress(conn):
     try:
-        df = conn.read(worksheet="NList", usecols=list(range(14)))
+        df = conn.read(worksheet="NList", usecols=list(range(15)))
         df = values_handling(df,'actress')
         df = initial_load(df,'actress')
         return df
@@ -102,7 +102,7 @@ def init_dataframe_actress(conn):
                 'Review', 'Picture', 'Name (Alphabet)', 'Name (Kanji)',
                 'Birthdate', 'Debut Date', 'Size', 'Measurement',
                 'Height (cm)', 'Notes', 'Age', 'Debut Period',
-                'Retire Date', 'Status'
+                'Retire Date', 'Status', 'Page'
             ])
         
         st.session_state.actress_df = df
@@ -1436,6 +1436,9 @@ def complex_actress(conn):
                     st.session_state.viewing_index = None
                     st.session_state.editing_index = None
                     st.rerun()
+
+            st.link_button(f"Actress Page", actress['Page'], width='stretch', type='primary')
+            
         
         with col2:
             # Info dasar dalam metrics
