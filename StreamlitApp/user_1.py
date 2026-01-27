@@ -184,8 +184,13 @@ def display_film_card(df):
         st.metric("Watched", watched_count)
         st.metric("Goat", goat_count)
     
-    image_width = st.text_input('Image_multiplier', value=0.40)
-    image_width = float(image_width)
+    select_device = st.selectbox('Device', options=['Device 1', 'Device 2'])
+    if select_device == 'Device 1':
+        image_width = 0.397
+        device = 1
+    else:
+        image_width = 0.366
+        device = 1.035
     st.markdown("---")
     
     if filtered_df.empty:
@@ -253,7 +258,7 @@ def display_film_card(df):
         for i in range(0, len(rows_to_display)): # len = 8 // i = [0,8]
             actress = rows_to_display.iloc[i]
             real_index = rows_to_display.index[i]  # ⬅️ INI KUNCI
-            display_single_card(image_width, actress, real_index)
+            display_single_card(device, image_width, actress, real_index)
     st.markdown('---')
     if total_pages <= 6:
         with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
@@ -292,7 +297,7 @@ def display_film_card(df):
     st.markdown('---')
     
 
-def display_single_card(image_multiplier,actress, card_id):
+def display_single_card(device, image_multiplier,actress, card_id):
     """
     Menampilkan single card untuk satu aktris
     """
@@ -308,7 +313,7 @@ def display_single_card(image_multiplier,actress, card_id):
         style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
         margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
         box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
-        height: {590*image_multiplier}px; display: flex; flex-direction: column;">
+        height: {590*image_multiplier*device}px; display: flex; flex-direction: column;">
         <!-- Status Badge -->
         <div style="position: absolute; top: 12px; right: 7px;">
             <span style="background: {status_color}; color: white; padding: 4px 10px; 
