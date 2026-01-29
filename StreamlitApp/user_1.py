@@ -608,6 +608,8 @@ def complex_film(conn):
         st.session_state.scroll_to_top = False
     if 'scroll_to_here' not in st.session_state:
         st.session_state.scroll_to_here = False
+    if 'film_simple_edit' not in st.session_state:
+        st.session_state.film_simple_edit = False
 
     if st.session_state.scroll_to_top:
         scroll_to_here(0,key='top')  # Scroll to the top of the page
@@ -932,7 +934,11 @@ def complex_film(conn):
 
     @st.dialog("➕ Add New Film", width='small')
     def add_new_film():
+        st.session_state.film_simple_edit = st.toggle('Simple Input', value=st.session_state.film_simple_edit)
+        is_simple = st.session_state.film_simple_edit
+
         new_actress_input = '?'
+
         if st.session_state.get('film_reset', False):
             st.session_state.film_reset = False
             st.session_state.new_actresses = ''
@@ -952,7 +958,8 @@ def complex_film(conn):
             with st.container(horizontal_alignment='center'):
                 st.image(new_picture, width=200)
         
-        new_link = st.text_input('Link Page', key='new_link', placeholder='https://...')
+        if not is_simple:
+            new_link = st.text_input('Link Page', key='new_link', placeholder='https://...')
 
         selected_actress = st.multiselect('Actress*', key='new_actresses', options=ACTRESS_OPTS)
 
@@ -973,28 +980,36 @@ def complex_film(conn):
         new_code = st.text_input('Code*', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
         new_code = new_code.upper().replace(' ','-')
 
-        new_title = st.text_area('Title*', key='new_title', placeholder='Enter movie title...')
+        if not is_simple:
+            new_title = st.text_area('Title*', key='new_title', placeholder='Enter movie title...')
 
-        new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
-        if new_release < date.today():
-            new_status = 0
-        else:
-            new_status = 1
+            new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
+            if new_release < date.today():
+                new_status = 0
+            else:
+                new_status = 1
 
-        if st.checkbox('No Info', key='film_code_check'):
-            new_release = '?'
-        else:
-            new_release = new_release.strftime('%d/%m/%Y')
-        st.write(new_release)
+            if st.checkbox('No Info', key='film_code_check'):
+                new_release = '?'
+            else:
+                new_release = new_release.strftime('%d/%m/%Y')
+            st.write(new_release)
 
-        new_playlist = st.selectbox('Playlist', key='new_playlist', options=PLAYLIST_OPTS)
+            new_playlist = st.selectbox('Playlist', key='new_playlist', options=PLAYLIST_OPTS)
 
-        if st.checkbox('New Playlist', key='add_new_playlist'):
-            new_new_playlist = st.text_input('New Playlist', placeholder='Enter new playlist...', key='add_film_new_playlist')
-            if new_new_playlist != '' or new_new_playlist != None:
-                new_playlist = new_new_playlist
+            if st.checkbox('New Playlist', key='add_new_playlist'):
+                new_new_playlist = st.text_input('New Playlist', placeholder='Enter new playlist...', key='add_film_new_playlist')
+                if new_new_playlist != '' or new_new_playlist != None:
+                    new_playlist = new_new_playlist
 
         new_info = st.selectbox('Info', key='new_info', options=INFO_OPTS)
+
+        if is_simple:
+            new_link = '--'
+            new_title = '--'
+            new_release = '?'
+            new_status = 1
+            new_playlist = 'All'
 
         with st.container(key='film_new_button'):
             if st.button('💾 Add Film', width='stretch'):
@@ -1166,7 +1181,7 @@ def complex_film(conn):
                 title = filtered_df.iloc[row_index]['Code']
         
                 # Tombol yang akan membuka di tab baru
-                if not pd.isna(link_url):
+                if link_url != '--':
                     st.link_button(f"{title} Preview", link_url, width='stretch', type='primary')
                 else:
                     st.write('No link found!')
@@ -1371,6 +1386,8 @@ def complex_actress(conn):
         st.session_state.viewing_index = None
     if "adding_new" not in st.session_state:
         st.session_state.adding_new = False
+    if "is_simple" not in st.session_state:
+        st.session_state.is_simple = False
 
     # Fungsi untuk menghitung usia berdasarkan birthdate
     def calculate_age(birthdate_str):
@@ -1436,8 +1453,12 @@ def complex_actress(conn):
                     st.session_state.viewing_index = None
                     st.session_state.editing_index = None
                     st.rerun()
-
-            st.link_button(f"Actress Page", actress['Page'], width='stretch', type='primary')
+            pages = actress['Page']
+            if pages == '--':
+                if st.button('Actress Page', width='stretch', type='primary'):
+                    st.warning('No link found')
+            else:
+                st.link_button(f"Actress Page", actress['Page'], width='stretch', type='primary')
             
         
         with col2:
@@ -1649,6 +1670,15 @@ def complex_actress(conn):
             review_index = REVIEW_OPTS.index(actress['Review']) if actress['Review'] in REVIEW_OPTS else 0
             size_index = SIZE_OPTS.index(actress['Size']) if actress['Size'] in SIZE_OPTS else 0
             status_index = STATUS_OPTS.index(actress['Status']) if actress['Status'] in STATUS_OPTS else 0
+
+            if actress['Page'] == '--':
+                pages = ''
+            else:
+                pages = actress['Page']
+
+            edited_link = st.text_input('Actress Page', placeholder='Enter your actress link page...', value=pages)
+            if not edited_link:
+                edited_link = '--'
 
             edited_review = st.selectbox(
                 "Review", 
@@ -1893,6 +1923,7 @@ def complex_actress(conn):
             df.at[index, 'Debut Period'] = debut
             df.at[index, 'Retire Date'] = edited_retire_date
             df.at[index, 'Status'] = edited_status
+            df.at[index, 'Page'] = edited_link
             
             # Update ke Google Sheets
             if update_google_sheets(df,conn,'actress'):
@@ -1953,85 +1984,109 @@ def complex_actress(conn):
         col1, col2 = st.columns(2)
         
         with col1:
+            st.session_state.is_simple = st.toggle('Simple Input', value=st.session_state.is_simple)
+            simple_trigger = st.session_state.is_simple
+
             # Basic Information
             st.subheader("Basic Information")
 
-            new_picture = st.file_uploader("Image", type=['png', 'jpg', 'jpeg'], key=f'new_picture_{reset_pic}')
+            if not simple_trigger:
+                new_picture = st.file_uploader("Image", type=['png', 'jpg', 'jpeg'], key=f'new_picture_{reset_pic}')
 
-            if not new_picture is None:
-                st.image(new_picture, width=200)    
-
-            new_review = st.selectbox("Review", options=REVIEW_OPTS, key='new_review')
+                if not new_picture is None:
+                    st.image(new_picture, width=200)    
+                
+                new_page = st.text_input('Actress Page', placeholder='Enter your actress link page...', key='new_page')
+                new_review = st.selectbox("Review", options=REVIEW_OPTS, key='new_review')
             new_name = st.text_input("Name (Alphabet)*", placeholder="Enter name in alphabet", key='new_name')
             new_kanji = st.text_input("Name (Kanji)*", placeholder="Enter name in kanji", key='new_kanji')
-            new_birthdate = st.date_input("Birthdate", min_value=date(1980,1,1), key='new_birthdate')
-            if st.checkbox('No Info', key='New Birthdate', value=(new_birthdate == None)):
-                new_birthdate = '?'
-                new_age = '?'
-            elif new_birthdate != None:
-                new_age = relativedelta(date.today(), new_birthdate).years        
-                new_birthdate = new_birthdate.strftime('%d/%m/%Y')
-            else:
-                new_birthdate = '?'
-                new_age = '?'
-
-        with col2:
-            # Career Information
-            st.subheader("Career Information")
-            new_debut_date = st.date_input("Debut Date", min_value=date(1980,1,1), key='new_debut_date')
-            if st.checkbox('No Info', key='New Debut Date', value=(new_debut_date == None)):
-                new_debut_date= '?'
-            elif new_debut_date == None:
-                new_debut_date = '?'
-
-            new_status = st.selectbox("Status", options=STATUS_OPTS, key='new_status')
-            if new_status == 'Retired':
-                new_retire_date = st.date_input("Retire Date*", min_value=date(1980,1,1), key='new_retire_date')
-                if new_retire_date != None:
-                    new_retire_date = new_retire_date.strftime('%d/%m/%Y')
-                else:
-                    st.error('Please input the Retire Date')
-            else:
-                new_retire_date = '?'
             
-            # Physical Information
-            st.subheader("Physical Information")
-            new_size = st.selectbox("Size", options=SIZE_OPTS, key='new_size')
-
-            new_measurement = st.text_input("Measurement", placeholder="e.g., 75-56-80", key='new_measurement')
-            if st.checkbox('No Info',  key='New Measurement') or new_measurement == '':
-                new_measurement = '?'
-            elif new_measurement != '?':
-                b,w,h = new_measurement.split('-')
-                new_measurement = f'B{b} / W{w} / H{h}'
-            else:
-                new_measurement = '?'
-
-            new_height = st.number_input("Height (cm)", min_value=130, key='new_height')
-            if st.checkbox('No Info', key='New Height'):
-                new_height = '? cm'
-            else:
-                new_height = str(new_height) + ' cm'
-            
-            if new_debut_date != '?':
-                if new_status != 'Retired':
-                    debut_period = relativedelta(date.today(), new_debut_date)
-                elif new_status == 'Retired':
-                    debut_period = relativedelta(new_retire_date, new_debut_date)
-                
-                if debut_period.months == 0:
-                    new_debut_period = f'{debut_period.years} Year'
+            if not simple_trigger:
+                new_birthdate = st.date_input("Birthdate", min_value=date(1980,1,1), key='new_birthdate')
+                if st.checkbox('No Info', key='New Birthdate', value=(new_birthdate == None)):
+                    new_birthdate = '?'
+                    new_age = '?'
+                elif new_birthdate != None:
+                    new_age = relativedelta(date.today(), new_birthdate).years        
+                    new_birthdate = new_birthdate.strftime('%d/%m/%Y')
                 else:
-                    new_debut_period = f'{debut_period.years} Year {debut_period.months} Month'
-                new_debut_date = new_debut_date.strftime('%d/%m/%Y')
-            else:
-                new_debut_period = '?'
-        # Notes
-        st.subheader("Additional Notes")
-        new_notes = st.text_area("Notes", placeholder="Enter any additional notes...", key='new_notes')
+                    new_birthdate = '?'
+                    new_age = '?'
 
-        if not new_notes:
+                with col2:
+                    # Career Information
+                    st.subheader("Career Information")
+                    new_debut_date = st.date_input("Debut Date", min_value=date(1980,1,1), key='new_debut_date')
+                    if st.checkbox('No Info', key='New Debut Date', value=(new_debut_date == None)):
+                        new_debut_date= '?'
+                    elif new_debut_date == None:
+                        new_debut_date = '?'
+
+                    new_status = st.selectbox("Status", options=STATUS_OPTS, key='new_status')
+                    if new_status == 'Retired':
+                        new_retire_date = st.date_input("Retire Date*", min_value=date(1980,1,1), key='new_retire_date')
+                        if new_retire_date != None:
+                            new_retire_date = new_retire_date.strftime('%d/%m/%Y')
+                        else:
+                            st.error('Please input the Retire Date')
+                    else:
+                        new_retire_date = '?'
+                    
+                    # Physical Information
+                    st.subheader("Physical Information")
+                    new_size = st.selectbox("Size", options=SIZE_OPTS, key='new_size')
+
+                    new_measurement = st.text_input("Measurement", placeholder="e.g., 75-56-80", key='new_measurement')
+                    if st.checkbox('No Info',  key='New Measurement') or new_measurement == '':
+                        new_measurement = '?'
+                    elif new_measurement != '?':
+                        b,w,h = new_measurement.split('-')
+                        new_measurement = f'B{b} / W{w} / H{h}'
+                    else:
+                        new_measurement = '?'
+
+                    new_height = st.number_input("Height (cm)", min_value=130, key='new_height')
+                    if st.checkbox('No Info', key='New Height'):
+                        new_height = '? cm'
+                    else:
+                        new_height = str(new_height) + ' cm'
+                    
+                    if new_debut_date != '?':
+                        if new_status != 'Retired':
+                            debut_period = relativedelta(date.today(), new_debut_date)
+                        elif new_status == 'Retired':
+                            debut_period = relativedelta(new_retire_date, new_debut_date)
+                        
+                        if debut_period.months == 0:
+                            new_debut_period = f'{debut_period.years} Year'
+                        else:
+                            new_debut_period = f'{debut_period.years} Year {debut_period.months} Month'
+                        new_debut_date = new_debut_date.strftime('%d/%m/%Y')
+                    else:
+                        new_debut_period = '?'
+                # Notes
+                st.subheader("Additional Notes")
+                new_notes = st.text_area("Notes", placeholder="Enter any additional notes...", key='new_notes')
+
+                if not new_notes:
+                    new_notes = '--'
+
+        if simple_trigger:
+            # Create new row data
+            new_review = 'Not Checked'
+            new_picture = ''
+            new_birthdate = '?'
+            new_debut_date = '?'
+            new_size = '?'
+            new_measurement = '?'
+            new_height = '?'
             new_notes = '--'
+            new_age = '?'
+            new_debut_period = '?'
+            new_retire_date = '?'
+            new_status = 'Active'
+            new_page = '--'
+
         
         # Tombol submit
         with st.container(horizontal=True):
@@ -2063,8 +2118,10 @@ def complex_actress(conn):
                     'Age': new_age,
                     'Debut Period': new_debut_period,
                     'Retire Date': new_retire_date,
-                    'Status': new_status
+                    'Status': new_status,
+                    'Page': new_page
                 }])
+
 
                 # Add to DataFrame
                 df = st.session_state.actress_df
