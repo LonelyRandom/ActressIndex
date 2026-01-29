@@ -354,7 +354,7 @@ def reset_page():
     st.session_state.film_page = 1
 
 # --- FUNGSI ALTERNATIF: Grid Layout tanpa Pagination ---
-def display_film_grid(df, cards_per_row=4):
+def display_film_grid(df, filters):
     """
     Menampilkan semua card sekaligus dalam grid
     """
@@ -380,7 +380,10 @@ def display_film_grid(df, cards_per_row=4):
     )
 
     # Filter data dan simpan index asli
-    filtered_df = df[df['Info'] != 'Not Watched'].copy()
+    if filters == 'Watched':
+        filtered_df = df[df['Info'] != 'Not Watched'].copy()
+    elif filters == 'Not Watched':
+        filtered_df = df[df['Info'] == 'Not Watched'].copy()
     
     # Reset index dan simpan index asli dalam kolom baru
     filtered_df = filtered_df.reset_index(drop=False)  # ini akan membuat kolom 'index' dengan index asli
@@ -836,7 +839,7 @@ def complex_film(conn):
                         edited_actress = edited_actress_name
                 # kalau cuma ganti foto
                 if new_pic and (edited_code.upper() == film['Code']):
-                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower():
+                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower() and "pics.dmm.co.jp" not in str(film['Picture']).lower():
                         try:
                             delete_cloudinary_image(old_public_id)
                         except Exception as e:
@@ -848,7 +851,7 @@ def complex_film(conn):
                         st.stop()
                 # kalau ganti foto dan code
                 elif new_pic and (film['Code'] != edited_code.upper()):
-                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower():
+                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower() and "pics.dmm.co.jp" not in str(film['Picture']).lower():
                         try:
                             delete_cloudinary_image(old_public_id)
                         except Exception as e:
@@ -860,7 +863,7 @@ def complex_film(conn):
                             st.stop()
                 # kalau cuma ganti code
                 elif not new_pic and (film['Code'] != edited_code.upper()):
-                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower():
+                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower() and "pics.dmm.co.jp" not in str(film['Picture']).lower():
                         try:
                             final_picture_url = rename_cloudinary_image(old_public_id, clean_code)
                         except Exception as e:
@@ -915,7 +918,7 @@ def complex_film(conn):
         pic_filename = str(film['Picture']).split('/')[-1]
         pic_id = pic_filename.split('.')[0]
 
-        if 'placeholder' not in pic_id:
+        if 'placeholder' not in pic_id and "pics.dmm.co.jp" not in str(film['Picture']).lower():
             delete_cloudinary_image(pic_id)
 
         df.drop(index, inplace=True)
@@ -1099,7 +1102,7 @@ def complex_film(conn):
         st.header("⚙️ Display Settings")
         display_mode = st.radio(
             "View Mode",
-            ["Detailed", "Simple", "Not Watched"]
+            ["Detailed", "Simple - Watched", "Simple - Not Watched", "Not Watched"]
         )
         
         st.markdown('---')
@@ -1121,8 +1124,10 @@ def complex_film(conn):
     st.session_state.scroll_to_top = True
     if display_mode == "Detailed":
         display_film_card(df)
-    elif display_mode == "Simple":
-        display_film_grid(df, cards_per_row=4)
+    elif display_mode == "Simple - Watched":
+        display_film_grid(df,'Watched')
+    elif display_mode == "Simple - Not Watched":
+        display_film_grid(df,'Not Watched')
     else:  # Table View
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
