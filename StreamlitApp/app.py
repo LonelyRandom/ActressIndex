@@ -20,6 +20,9 @@ if 'usn' not in st.session_state:
 if 'check_login' not in st.session_state:
     st.session_state.check_login = None
 
+if "is_logged_in" not in st.session_state:
+    st.session_state.is_logged_in = False
+
 if st.session_state.page == 'login':
     st.cache_data.clear()
     check_login, usn, page = log_in(conn)
@@ -29,9 +32,6 @@ if st.session_state.page == 'login':
 
     if check_login:
         st.rerun()
-    else:
-        # Tetap di login page, jangan rerun
-        st.stop()  
 
 elif st.session_state.page == 'home':
     st.set_page_config(

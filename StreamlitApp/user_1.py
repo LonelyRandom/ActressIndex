@@ -541,6 +541,9 @@ def display_film_grid(df, filters):
 
 
 def complex_home(conn):
+    if 'log_out_btn' not in st.session_state:
+        st.session_state.log_out_btn = False
+        
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
     df_actress = init_dataframe_actress(conn)
     df_film = init_dataframe_film(conn)
@@ -571,9 +574,19 @@ def complex_home(conn):
             if st.button('Go To Film →'):
                 return 'film'
     
-    if st.button('🔐 Logout', width='stretch', type='primary'):
-        st.session_state.clear()
-        return 'login'
+    if st.session_state.log_out_btn == False:
+        if st.button('🔐 Logout', width='stretch', type='primary'):
+            st.session_state.log_out_btn = True
+            st.rerun()
+    else:
+        st.warning('Are you sure want to logout?')
+        with st.container(horizontal=True):
+            if st.button('Yes', width='stretch'):
+                st.session_state.log_out_btn = False
+                return 'login'
+            if st.button('No', width='stretch'):
+                st.session_state.log_out_btn = False
+                st.rerun()
     
     # CSS custom untuk container tertentu
     st.markdown("""
@@ -767,6 +780,7 @@ def complex_film(conn):
 
         if st.checkbox('No Info', value=(film['Release Date'] == '?'), key=f'check_release_date_{index}'):
             edited_release_date = '?'
+            edited_status = '?'
         else:
             if edited_release_date < date.today():
                 edited_status = 0
@@ -994,6 +1008,7 @@ def complex_film(conn):
 
             if st.checkbox('No Info', key='film_code_check'):
                 new_release = '?'
+                new_status = '?'
             else:
                 new_release = new_release.strftime('%d/%m/%Y')
             st.write(new_release)
@@ -1011,7 +1026,7 @@ def complex_film(conn):
             new_link = '--'
             new_title = '--'
             new_release = '?'
-            new_status = 1
+            new_status = '?'
             new_playlist = 'All'
 
         with st.container(key='film_new_button'):
@@ -1108,9 +1123,20 @@ def complex_film(conn):
         st.markdown('---')
         if st.button('➕ Add New Film', width='stretch'):
             add_new_film()
-        if st.button('🔐 Logout', width='stretch'):
-            st.session_state.clear()
-            return 'login'
+        if st.session_state.log_out_btn == False:
+            if st.button('🔐 Logout', width='stretch'):
+                st.session_state.log_out_btn = True
+                st.rerun()
+        else:
+            st.warning('Are you sure want to logout?')
+            with st.container(horizontal=True):
+                if st.button('Yes', width='stretch'):
+                    st.session_state.log_out_btn = False
+                    return 'login'
+                if st.button('No', width='stretch'):
+                    st.session_state.log_out_btn = False
+                    st.rerun()
+
         if st.button('⬆️ Back to top', width='stretch'):
             st.session_state.scroll_to_top = True
     
@@ -1153,7 +1179,7 @@ def complex_film(conn):
 
         # Buat kolom baru dengan badge HTML/CSS
         filtered_df['Release'] = filtered_df['Release Status'].apply(
-            lambda x: '🟢 Yes' if x == 1 else '🔴 No'
+            lambda x: '🟢 Yes' if x == 1 else '🔴 No' if x == 0 else '⚪ ?'
         )
 
         filtered_df = filtered_df[['Release', 'Code', 'Actress Name','Release Date', 'Link']]
@@ -2187,10 +2213,19 @@ def complex_actress(conn):
         #     refresh_data()
         #     st.rerun()
         
-        if st.button('🔐 Logout', width='stretch'):
-            st.session_state.clear()
-            return 'login'
-
+        if st.session_state.log_out_btn == False:
+            if st.button('🔐 Logout', width='stretch'):
+                st.session_state.log_out_btn = True
+                st.rerun()
+        else:
+            st.warning('Are you sure want to logout?')
+            with st.container(horizontal=True):
+                if st.button('Yes', width='stretch'):
+                    st.session_state.log_out_btn = False
+                    return 'login'
+                if st.button('No', width='stretch'):
+                    st.session_state.log_out_btn = False
+                    st.rerun()
 
     # Tampilkan dialog add new jika needed
     if st.session_state.adding_new:

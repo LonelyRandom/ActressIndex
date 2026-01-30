@@ -25,8 +25,8 @@ def log_in(conn):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
 
-        with st.container(horizontal_alignment="center"):
-            login_button = st.button("Login", use_container_width=True)
+        with st.container():
+            login_button = st.button("Login", width="stretch")
         
         # Inisialisasi status error di session state
         if 'login_error' not in st.session_state:
