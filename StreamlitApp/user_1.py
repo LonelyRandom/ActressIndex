@@ -382,8 +382,29 @@ def display_film_grid(df, filters):
     # Filter data dan simpan index asli
     if filters == 'Watched':
         filtered_df = df[df['Info'] != 'Not Watched'].copy()
+        filtered_df['badge_icon'] = filtered_df['Info'].map({
+            'Watched': '🟢',
+            'Goat': '🟣'
+        }).fillna('⚪')
+        filtered_df['badge_color'] = filtered_df['Info'].map({
+            'Watched': 'green',
+            'Goat': 'violet'
+        }).fillna('⚪')
     elif filters == 'Not Watched':
         filtered_df = df[df['Info'] == 'Not Watched'].copy()
+        filtered_df['is_release'] = filtered_df['Release Status'].map({
+            1: 'Released',
+            0: 'Not Released'
+        }).fillna('Unknown')
+        filtered_df['badge_icon'] = filtered_df['Release Status'].map({
+            1: '🟢',
+            0: '🔴'
+        }).fillna('⚪')
+        filtered_df['badge_color'] = filtered_df['Release Status'].map({
+            1: 'green',
+            0: 'red'
+        }).fillna('grey')
+
     
     # Reset index dan simpan index asli dalam kolom baru
     filtered_df = filtered_df.reset_index(drop=False)  # ini akan membuat kolom 'index' dengan index asli
@@ -486,9 +507,18 @@ def display_film_grid(df, filters):
                             film = rows_to_display.iloc[i]
                             real_index = rows_to_display.index[i]
 
+                            if filters == 'Not Watched':
+                                with st.container(horizontal_alignment='center'):
+                                    st.badge(film['is_release'], icon=film['badge_icon'], color=film['badge_color'])
+                            else:
+                                with st.container(horizontal_alignment='center'):
+                                    st.badge(film['Info'], icon=film['badge_icon'], color=film['badge_color'])
+
+
                             st.image(
                                 film['Picture']
                             )
+
 
                             if st.button(f'{film["Code"]}', key=f'film_edit_{real_index}', width='stretch', type='primary'):
                                         st.session_state.viewing_film_index = film['original_index']
@@ -543,6 +573,10 @@ def display_film_grid(df, filters):
 def complex_home(conn):
     if 'log_out_btn' not in st.session_state:
         st.session_state.log_out_btn = False
+    if 'first_load_film' not in st.session_state:
+        st.session_state.first_load_film = True
+    if 'first_load_actress' not in st.session_state:
+        st.session_state.first_load_actress = True
         
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
     df_actress = init_dataframe_actress(conn)
@@ -572,6 +606,7 @@ def complex_home(conn):
                     st.metric('Not Watched', len(df_film[df_film['Info'] == 'Not Watched']))
                     st.metric('Goat', len(df_film[df_film['Info'] == 'Goat']))
             if st.button('Go To Film →'):
+                st.session_state.first_load_film = True
                 return 'film'
     
     if st.session_state.log_out_btn == False:
@@ -672,7 +707,19 @@ def complex_film(conn):
         st.write(film['Title'])
         
         st.markdown('### Actress')
-        st.write(film['Actress Name'])
+        actress_list = film['Actress Name'].split(', ')
+        matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
+        if len(matching_actresses)>2:
+            is_center = 'center'
+        else:
+            is_center = 'left'
+        with st.container(horizontal=True, horizontal_alignment=is_center):
+            for index in matching_actresses.index:
+                st.image(
+                    matching_actresses['Picture'][index],
+                    width=80,
+                    caption=matching_actresses['Name (Alphabet)'][index]
+                )
 
         if film['Release Date'] != '?':
             release_date_text = datetime.strptime(film['Release Date'], '%d/%m/%Y').strftime("%b, %d %Y")
@@ -1010,8 +1057,8 @@ def complex_film(conn):
                 new_release = '?'
                 new_status = '?'
             else:
+                st.write(new_release.strftime("%b, %d %Y"))
                 new_release = new_release.strftime('%d/%m/%Y')
-            st.write(new_release)
 
             new_playlist = st.selectbox('Playlist', key='new_playlist', options=PLAYLIST_OPTS)
 
@@ -1112,6 +1159,7 @@ def complex_film(conn):
 
     with st.sidebar:
         if st.button('⬅️ Back', width='stretch'):
+            st.session_state.first_load_film = True
             return 'home'
         st.markdown('---')
         st.header("⚙️ Display Settings")
@@ -1146,8 +1194,11 @@ def complex_film(conn):
     
     if st.session_state.viewing_film_index is not None:
         show_film_details()
+    
+    if st.session_state.first_load_film:
+        st.session_state.scroll_to_top = True
+        st.session_state.first_load_film = False
 
-    st.session_state.scroll_to_top = True
     if display_mode == "Detailed":
         display_film_card(df)
     elif display_mode == "Simple - Watched":
