@@ -63,7 +63,7 @@ def load_data_actress(conn):
 
 def load_data_film(conn):
     try:
-        df = conn.read(worksheet="NCode", usecols=list(range(9)))
+        df = conn.read(worksheet="NCode", usecols=list(range(10)))
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
         return df
@@ -151,7 +151,7 @@ def display_film_card(df):
     # Filter options
     col1, col2, col3 = st.columns(3)
     with col1:
-        search_name = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...")
+        search_name = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
     with col2:
         info_filter = st.multiselect(
             "📊 Status Filter:",
@@ -445,6 +445,7 @@ def display_film_grid(df, filters):
     def set_page(p):
         st.session_state.film_page = p
     
+    
     if st.session_state.scroll_to_here:
         scroll_to_here(0,key='here')  # Scroll to the top of the page
         st.session_state.scroll_to_here = False
@@ -574,7 +575,6 @@ def display_film_grid(df, filters):
     if st.button('⬆️ Back to top', width='stretch'):
         st.session_state.scroll_to_here = True                   
 
-
 def complex_home(conn):
     if 'log_out_btn' not in st.session_state:
         st.session_state.log_out_btn = False
@@ -702,6 +702,17 @@ def complex_film(conn):
             show_view_film(index)
 
     def show_view_film(index):
+        def reset_pic():
+            st.session_state.prev_pic = 0
+
+        def prev():
+            if st.session_state.prev_pic > 0:
+                st.session_state.prev_pic -= 1
+        
+        def next(count):
+            if st.session_state.prev_pic < count:
+                st.session_state.prev_piv += 1
+
         st.markdown(
             """
             <style>
@@ -772,6 +783,31 @@ def complex_film(conn):
 
         st.markdown('### Playlist')
         st.write(film['Playlist'])
+
+        st.markdown('### Gallery')
+        if st.checkbox('Show', on_change=reset_pic):
+            if 'prev_pic' not in st.session_state:
+                st.session_state.prev_pic = 0
+                
+            pics = film['Preview Picture'].split(', ')
+            count = len(pics)
+            with st.container(horizontal=True):
+                if st.button('⬅️ Previous',disabled=(st.session_state.prev_pic == 0), width='stretch'):
+                    if st.session_state.prev_pic > 0:
+                        st.session_state.prev_pic-=1
+                    else:
+                        st.session_state.prev_pic-=0
+                if st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), width='stretch'):
+                    if st.session_state.prev_pic < count-1:
+                        st.session_state.prev_pic+=1
+                    else:
+                        st.session_state.prev_pic+=0
+                        
+            st.image(pics[st.session_state.prev_pic])
+
+
+
+
 
         if pd.isna(film['Link']) :
             st.button('🔗 No Link Found!', type='primary', width='stretch')
