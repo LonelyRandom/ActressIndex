@@ -414,6 +414,11 @@ def display_film_grid(df, filters):
     if st.session_state.get('search_reset', False):
         st.session_state.search_reset = False
         st.session_state.search_bar = ''
+
+    if st.session_state.get('set_search', False):
+        st.session_state.set_search = False
+        st.session_state.search_bar = st.session_state.search_text
+        st.session_state.search_text = ''
     
     with st.container(horizontal=True, vertical_alignment='bottom'):
         search_name = st.text_input("🔍 Search (Actress Name / Code):", 
@@ -697,6 +702,18 @@ def complex_film(conn):
             show_view_film(index)
 
     def show_view_film(index):
+        st.markdown(
+            """
+            <style>
+            button[data-testid="stBaseButton-tertiary"] p {
+                font-size: 14px !important;
+                color: #d6cfc7 !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
         film = df.iloc[index]
 
         with st.container(key='poster_code', horizontal_alignment='center'):
@@ -707,19 +724,28 @@ def complex_film(conn):
         st.write(film['Title'])
         
         st.markdown('### Actress')
-        actress_list = film['Actress Name'].split(', ')
-        matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
-        if len(matching_actresses)>2:
-            is_center = 'center'
+        if film['Actress Name'] != 'Many':
+            actress_list = film['Actress Name'].split(', ')
+            matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
+            if len(matching_actresses)>2:
+                is_center = 'center'
+            else:
+                is_center = 'left'
+            with st.container(horizontal=True, horizontal_alignment=is_center):
+                for index in matching_actresses.index:
+                    with st.container(width=80):
+                        st.image(
+                            matching_actresses['Picture'][index]
+                        )
+                        if st.button(matching_actresses['Name (Alphabet)'][index], width='stretch', type='tertiary', key=f"{matching_actresses['Name (Alphabet)'][index]}_{index}", on_click=reset_page):
+                            st.session_state.viewing_film_index = None
+                            st.session_state.editing_film_index = None
+                            st.session_state.search_text = matching_actresses['Name (Alphabet)'][index]
+                            st.session_state.set_search = True
+                            st.session_state.scroll_to_top = True
+                            st.rerun()
         else:
-            is_center = 'left'
-        with st.container(horizontal=True, horizontal_alignment=is_center):
-            for index in matching_actresses.index:
-                st.image(
-                    matching_actresses['Picture'][index],
-                    width=80,
-                    caption=matching_actresses['Name (Alphabet)'][index]
-                )
+            st.image(st.secrets.indicators.PLACEHOLDER_IMG, width=80, caption='Many')
 
         if film['Release Date'] != '?':
             release_date_text = datetime.strptime(film['Release Date'], '%d/%m/%Y').strftime("%b, %d %Y")
@@ -1165,7 +1191,7 @@ def complex_film(conn):
         st.header("⚙️ Display Settings")
         display_mode = st.radio(
             "View Mode",
-            ["Detailed", "Simple - Watched", "Simple - Not Watched", "Not Watched"]
+            ["Detailed", "Simple", "Not Watched"]
         )
         
         st.markdown('---')
@@ -1201,10 +1227,16 @@ def complex_film(conn):
 
     if display_mode == "Detailed":
         display_film_card(df)
-    elif display_mode == "Simple - Watched":
-        display_film_grid(df,'Watched')
-    elif display_mode == "Simple - Not Watched":
-        display_film_grid(df,'Not Watched')
+    elif display_mode == "Simple":
+        simple_type = st.radio(
+            "Type",
+            ["Watched", "Not Watched"],
+            horizontal=True
+        )
+        if simple_type == 'Watched':
+            display_film_grid(df,'Watched')
+        else:
+            display_film_grid(df,'Not Watched')
     else:  # Table View
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
