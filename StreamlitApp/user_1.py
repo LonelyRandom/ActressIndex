@@ -495,6 +495,13 @@ def display_film_grid(df, filters):
                 
                 if st.button('➡️',key='next_top', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,)):
                     st.session_state.scroll_to_here = True
+            with st.container(horizontal=True):
+                if st.button('First Page', width='stretch', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(1,)):
+                    st.session_state.scroll_to_here = True
+                if st.button('Last Page', width='stretch', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(total_pages,)):
+                    st.session_state.scroll_to_here = True
+                
+
                 
         
         page = st.session_state.film_page
@@ -666,6 +673,8 @@ def complex_film(conn):
         st.session_state.scroll_to_here = False
     if 'film_simple_edit' not in st.session_state:
         st.session_state.film_simple_edit = False
+    if 'prev_pic_page' not in st.session_state:
+        st.session_state.prev_pic_page = 1
 
     if st.session_state.scroll_to_top:
         scroll_to_here(0,key='top')  # Scroll to the top of the page
@@ -681,8 +690,8 @@ def complex_film(conn):
         .tolist()
     )
 
-    ACTRESS_OPTS = ['Many'] + sorted(
-        actress_df.loc[actress_df['Name (Alphabet)'] != 'Many', 'Name (Alphabet)']
+    ACTRESS_OPTS = ['Many', 'Not Listed'] + sorted(
+        actress_df.loc[~actress_df['Name (Alphabet)'].isin(['Many', 'Not Listed']), 'Name (Alphabet)']
         .dropna()
         .unique()
         .tolist()
@@ -705,13 +714,8 @@ def complex_film(conn):
         def reset_pic():
             st.session_state.prev_pic = 0
 
-        def prev():
-            if st.session_state.prev_pic > 0:
-                st.session_state.prev_pic -= 1
-        
-        def next(count):
-            if st.session_state.prev_pic < count:
-                st.session_state.prev_piv += 1
+        def set_prev_pic(pic):
+            st.session_state.prev_pic = pic
 
         st.markdown(
             """
@@ -735,7 +739,7 @@ def complex_film(conn):
         st.write(film['Title'])
         
         st.markdown('### Actress')
-        if film['Actress Name'] != 'Many':
+        if film['Actress Name'] not in ['Many', 'Not Listed']:
             actress_list = film['Actress Name'].split(', ')
             matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
             if len(matching_actresses)>2:
@@ -743,20 +747,38 @@ def complex_film(conn):
             else:
                 is_center = 'left'
             with st.container(horizontal=True, horizontal_alignment=is_center):
-                for index in matching_actresses.index:
+                for idx in matching_actresses.index:
                     with st.container(width=80):
                         st.image(
-                            matching_actresses['Picture'][index]
+                            matching_actresses['Picture'][idx]
                         )
-                        if st.button(matching_actresses['Name (Alphabet)'][index], width='stretch', type='tertiary', key=f"{matching_actresses['Name (Alphabet)'][index]}_{index}", on_click=reset_page):
+                        if st.button(matching_actresses['Name (Alphabet)'][idx], width='stretch', type='tertiary', key=f"{matching_actresses['Name (Alphabet)'][idx]}_{idx}", on_click=reset_page):
                             st.session_state.viewing_film_index = None
                             st.session_state.editing_film_index = None
-                            st.session_state.search_text = matching_actresses['Name (Alphabet)'][index]
+                            st.session_state.search_text = matching_actresses['Name (Alphabet)'][idx]
                             st.session_state.set_search = True
                             st.session_state.scroll_to_top = True
                             st.rerun()
+        elif film['Actress Name'] == 'Many':
+            with st.container(width=80):
+                st.image(st.secrets.indicators.PLACEHOLDER_IMG)
+                if st.button('Many', width='stretch', type='tertiary', key="many_profile", on_click=reset_page):
+                    st.session_state.viewing_film_index = None
+                    st.session_state.editing_film_index = None
+                    st.session_state.search_text = 'Many'
+                    st.session_state.set_search = True
+                    st.session_state.scroll_to_top = True
+                    st.rerun()
         else:
-            st.image(st.secrets.indicators.PLACEHOLDER_IMG, width=80, caption='Many')
+            with st.container(width=80):
+                st.image(st.secrets.indicators.PLACEHOLDER_IMG)
+                if st.button('Not Listed', width='stretch', type='tertiary', key="not_listed_profile", on_click=reset_page):
+                    st.session_state.viewing_film_index = None
+                    st.session_state.editing_film_index = None
+                    st.session_state.search_text = 'Not Listed'
+                    st.session_state.set_search = True
+                    st.session_state.scroll_to_top = True
+                    st.rerun()
 
         if film['Release Date'] != '?':
             release_date_text = datetime.strptime(film['Release Date'], '%d/%m/%Y').strftime("%b, %d %Y")
@@ -786,35 +808,61 @@ def complex_film(conn):
 
         st.markdown('### Gallery')
         if st.checkbox('Show', on_change=reset_pic):
-            if 'prev_pic' not in st.session_state:
-                st.session_state.prev_pic = 0
+            if film['Preview Picture'] != 'not both':
+                if 'prev_pic' not in st.session_state:  
+                    st.session_state.prev_pic = 0
                 
-            pics = film['Preview Picture'].split(', ')
-            count = len(pics)
-            with st.container(horizontal=True):
-                if st.button('⬅️ Previous',disabled=(st.session_state.prev_pic == 0), width='stretch'):
-                    if st.session_state.prev_pic > 0:
-                        st.session_state.prev_pic-=1
-                    else:
-                        st.session_state.prev_pic-=0
-                if st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), width='stretch'):
-                    if st.session_state.prev_pic < count-1:
-                        st.session_state.prev_pic+=1
-                    else:
-                        st.session_state.prev_pic+=0
+                pics = film['Preview Picture'].split(', ')
+                count = len(pics)
+                with st.container(horizontal=True):
+                    st.button('⬅️ Previous',disabled=(st.session_state.prev_pic == 0), width='stretch',args=(st.session_state.prev_pic - 1,), on_click=set_prev_pic)
+                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), width='stretch', args=(st.session_state.prev_pic + 1,), on_click=set_prev_pic)
+                with st.container(height=200):
+                    st.markdown(
+                        """
+                        <style>
+                        /* Hilangin padding container */
+                        div[data-testid="stVerticalBlock"] {
+                            padding-top: 0rem;
+                            padding-bottom: 0rem;
+                        }
+
+                        /* Hilangin margin default markdown */
+                        .img-fit {
+                            margin-top: -13px;
+                            padding-top: 0;
+                        }
+
+                        .img-fit img {
+                            max-height: 190px;
+                            width: auto;
+                            object-fit: contain;
+                            display: block;
+                            margin: 0 auto;
+                        }
+                        </style>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                    st.markdown(
+                        f"""
+                        <div class="img-fit">
+                            <img src="{pics[st.session_state.prev_pic]}">
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+            else:
+                st.warning('Picture Unavailable')
+
                         
-            st.image(pics[st.session_state.prev_pic])
-
-
-
-
-
         if pd.isna(film['Link']) :
             st.button('🔗 No Link Found!', type='primary', width='stretch')
         else:
             st.link_button("🎬 Preview", film['Link'], width='stretch', type='primary')
         with st.container(key='view_film_edit_container_button', horizontal=True):
-            if st.button('✏️ Edit', width='stretch'):
+            if st.button('✏️ Edit', width='stretch', key='edited'):
                 st.session_state.editing_film_index = index
                 st.rerun()
             if st.button('❌ Close', width='stretch'):
@@ -1197,7 +1245,8 @@ def complex_film(conn):
                         'Playlist': new_playlist,
                         'Info': new_info,
                         'Release Status': new_status,
-                        'Link': new_link
+                        'Link': new_link,
+                        'Preview Picture' : '--'
                     }])
 
                     df = st.session_state.film_df
@@ -1227,7 +1276,8 @@ def complex_film(conn):
         st.header("⚙️ Display Settings")
         display_mode = st.radio(
             "View Mode",
-            ["Detailed", "Simple", "Not Watched"]
+            ["Detailed", "Simple", "Not Watched"],
+            on_change=reset_page
         )
         
         st.markdown('---')
@@ -1267,7 +1317,8 @@ def complex_film(conn):
         simple_type = st.radio(
             "Type",
             ["Watched", "Not Watched"],
-            horizontal=True
+            horizontal=True,
+            on_change=reset_page
         )
         if simple_type == 'Watched':
             display_film_grid(df,'Watched')
