@@ -63,7 +63,7 @@ def load_data_actress(conn):
 
 def load_data_film(conn):
     try:
-        df = conn.read(worksheet="NCode", usecols=list(range(10)))
+        df = conn.read(worksheet="NCode", usecols=list(range(11)))
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
         return df
@@ -118,7 +118,7 @@ def init_dataframe_film(conn):
         if df.empty:
             df = pd.DataFrame(columns=[
                 'Actress', 'Code', 'Title', 'Release Date', 'Picture', 'Playlist', 'Info',
-                'Release Status', 'Link'
+                'Release Status', 'Link', 'Preview Picture', 'A-Detector'
             ])
         
         st.session_state.film_df = df
@@ -309,37 +309,77 @@ def display_single_card(device, image_multiplier,actress, card_id):
         release_date = '?'
     else:
         release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y') if pd.notna(actress['Release Date']) else "Unknown"
-    card_html = f"""<div class="actress-card" id="card_{card_id}" 
-        style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
-        margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
-        height: {590*image_multiplier*device}px; display: flex; flex-direction: column;">
-        <!-- Status Badge -->
-        <div style="position: absolute; top: 12px; right: 7px;">
-            <span style="background: {status_color}; color: white; padding: 4px 10px; 
-                    border-radius: 20px; font-size: 9px; font-weight: bold;">
-                {actress['Info']}
-            </span>
-        </div>
-        <!-- Image Container -->
-        <div style="height:{340*image_multiplier}px; width:{233*image_multiplier}px;background:black; border-radius: 10px; margin: 0 auto 15px auto;border: 2px solid {status_color};">
-            <img src="{actress['Picture']}" 
-                    style="width: 100%; height: 100%; border-radius:10px"
-                    alt="{actress['Actress Name']}">
-        </div>
-        <!-- Separator -->
-        <div style="width: {50}px; height: {3}px; background: linear-gradient(90deg, {status_color}, #FFD166); 
-                margin: 0 auto 15px auto; border-radius: 2px;"></div>
-        <!-- Code and Date -->
-        <div style="margin-bottom: 5px;">
-            <div style="display: flex; justify-content: center; margin-bottom: 1px;">
-                <span style="color: #e74c3c; font-weight: bold;font-size: 15px;">{actress['Code']}</span>
+    
+    if actress['A-Detector'] == 1:
+        card_html = f"""<div class="actress-card" id="card_{card_id}" 
+            style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
+            margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
+            height: {590*image_multiplier*device}px; display: flex; flex-direction: column;">
+            <!-- Status Badge -->
+            <div style="position: absolute; top: 12px; right: 7px;">
+                <span style="background: {status_color}; color: white; padding: 4px 10px; 
+                        border-radius: 20px; font-size: 9px; font-weight: bold;">
+                    {actress['Info']}
+                </span>
             </div>
-            <div style="display: flex; justify-content: center;">
-                <span style="color: #3498db; font-size:11px;">{release_date}</span>
+            <div style="position: absolute; top: 12px; left: 7px;">
+                <span style="background: #F4f186; color: white; padding: 4px 5px; 
+                        border-radius: 20px; font-size: 9px; font-weight: bold;">
+                    ⭐
+                </span>
             </div>
-        </div>
-    </div>"""
+            <!-- Image Container -->
+            <div style="height:{340*image_multiplier}px; width:{233*image_multiplier}px;background:black; border-radius: 10px; margin: 0 auto 15px auto;border: 2px solid {status_color};">
+                <img src="{actress['Picture']}" 
+                        style="width: 100%; height: 100%; border-radius:10px"
+                        alt="{actress['Actress Name']}">
+            </div>
+            <!-- Separator -->
+            <div style="width: {50}px; height: {3}px; background: linear-gradient(90deg, {status_color}, #FFD166); 
+                    margin: 0 auto 15px auto; border-radius: 2px;"></div>
+            <!-- Code and Date -->
+            <div style="margin-bottom: 5px;">
+                <div style="display: flex; justify-content: center; margin-bottom: 1px;">
+                    <span style="color: #e74c3c; font-weight: bold;font-size: 15px;">{actress['Code']}</span>
+                </div>
+                <div style="display: flex; justify-content: center;">
+                    <span style="color: #3498db; font-size:11px;">{release_date}</span>
+                </div>
+            </div>
+        </div>"""
+    else:
+        card_html = f"""<div class="actress-card" id="card_{card_id}" 
+            style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
+            margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
+            height: {590*image_multiplier*device}px; display: flex; flex-direction: column;">
+            <!-- Status Badge -->
+            <div style="position: absolute; top: 12px; right: 7px;">
+                <span style="background: {status_color}; color: white; padding: 4px 10px; 
+                        border-radius: 20px; font-size: 9px; font-weight: bold;">
+                    {actress['Info']}
+                </span>
+            </div>
+            <!-- Image Container -->
+            <div style="height:{340*image_multiplier}px; width:{233*image_multiplier}px;background:black; border-radius: 10px; margin: 0 auto 15px auto;border: 2px solid {status_color};">
+                <img src="{actress['Picture']}" 
+                        style="width: 100%; height: 100%; border-radius:10px"
+                        alt="{actress['Actress Name']}">
+            </div>
+            <!-- Separator -->
+            <div style="width: {50}px; height: {3}px; background: linear-gradient(90deg, {status_color}, #FFD166); 
+                    margin: 0 auto 15px auto; border-radius: 2px;"></div>
+            <!-- Code and Date -->
+            <div style="margin-bottom: 5px;">
+                <div style="display: flex; justify-content: center; margin-bottom: 1px;">
+                    <span style="color: #e74c3c; font-weight: bold;font-size: 15px;">{actress['Code']}</span>
+                </div>
+                <div style="display: flex; justify-content: center;">
+                    <span style="color: #3498db; font-size:11px;">{release_date}</span>
+                </div>
+            </div>
+        </div>"""
 
     with st.container(width=int(292*image_multiplier)):
         st.markdown(card_html, unsafe_allow_html=True)
@@ -520,11 +560,10 @@ def display_film_grid(df, filters):
                             film = rows_to_display.iloc[i]
                             real_index = rows_to_display.index[i]
 
-                            if filters == 'Not Watched':
-                                with st.container(horizontal_alignment='center'):
+                            with st.container(horizontal_alignment='center', horizontal=True):
+                                if filters == 'Not Watched':
                                     st.badge(film['is_release'], icon=film['badge_icon'], color=film['badge_color'])
-                            else:
-                                with st.container(horizontal_alignment='center'):
+                                else:
                                     st.badge(film['Info'], icon=film['badge_icon'], color=film['badge_color'])
 
 
@@ -629,7 +668,7 @@ def complex_home(conn):
         st.warning('Are you sure want to logout?')
         with st.container(horizontal=True):
             if st.button('Yes', width='stretch'):
-                st.session_state.log_out_btn = False
+                st.session_state.clear()
                 return 'login'
             if st.button('No', width='stretch'):
                 st.session_state.log_out_btn = False
@@ -801,7 +840,11 @@ def complex_film(conn):
             icons = '🔴'
             colors = 'red'
             
-        st.badge(label=film['Info'], icon=icons, color=colors)
+        with st.container(horizontal=True):
+            st.badge(label=film['Info'], icon=icons, color=colors)
+            if film['A-Detector'] == 1:
+                st.badge(label='', icon='⭐', color='yellow')
+
 
         st.markdown('### Playlist')
         st.write(film['Playlist'])
@@ -814,9 +857,6 @@ def complex_film(conn):
                 
                 pics = film['Preview Picture'].split(', ')
                 count = len(pics)
-                with st.container(horizontal=True):
-                    st.button('⬅️ Previous',disabled=(st.session_state.prev_pic == 0), width='stretch',args=(st.session_state.prev_pic - 1,), on_click=set_prev_pic)
-                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), width='stretch', args=(st.session_state.prev_pic + 1,), on_click=set_prev_pic)
                 with st.container(height=200):
                     st.markdown(
                         """
@@ -853,6 +893,9 @@ def complex_film(conn):
                         """,
                         unsafe_allow_html=True
                     )
+                with st.container(horizontal=True):
+                    st.button('⬅️ Previous',disabled=(st.session_state.prev_pic == 0), width='stretch',args=(st.session_state.prev_pic - 1,), on_click=set_prev_pic)
+                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), width='stretch', args=(st.session_state.prev_pic + 1,), on_click=set_prev_pic)
             else:
                 st.warning('Picture Unavailable')
 
@@ -885,6 +928,8 @@ def complex_film(conn):
     
         
         st.subheader("Basic Information")
+
+        edited_a = st.toggle('✨', value=film['A-Detector'])
         film_link = film['Link']
 
         if film_link == '--':
@@ -1053,6 +1098,7 @@ def complex_film(conn):
                 df.at[index, 'Info'] = edited_info
                 df.at[index, 'Release Status'] = edited_status
                 df.at[index, 'Link'] = edited_link
+                df.at[index, 'A-Detector'] = edited_a
                 
                 # Update ke Google Sheets
                 if update_google_sheets(df,conn,'film'):
@@ -1179,6 +1225,8 @@ def complex_film(conn):
 
         new_info = st.selectbox('Info', key='new_info', options=INFO_OPTS)
 
+        new_a = st.toggle('✨')
+
         if is_simple:
             new_link = '--'
             new_title = '--'
@@ -1246,7 +1294,8 @@ def complex_film(conn):
                         'Info': new_info,
                         'Release Status': new_status,
                         'Link': new_link,
-                        'Preview Picture' : '--'
+                        'Preview Picture' : '--',
+                        'A-Detector' : new_a
                     }])
 
                     df = st.session_state.film_df
@@ -1279,6 +1328,9 @@ def complex_film(conn):
             ["Detailed", "Simple", "Not Watched"],
             on_change=reset_page
         )
+
+        st.markdown('---')
+        show_a = st.toggle('✨')
         
         st.markdown('---')
         if st.button('➕ Add New Film', width='stretch'):
@@ -1291,7 +1343,7 @@ def complex_film(conn):
             st.warning('Are you sure want to logout?')
             with st.container(horizontal=True):
                 if st.button('Yes', width='stretch'):
-                    st.session_state.log_out_btn = False
+                    st.session_state.clear()
                     return 'login'
                 if st.button('No', width='stretch'):
                     st.session_state.log_out_btn = False
@@ -1310,9 +1362,14 @@ def complex_film(conn):
     if st.session_state.first_load_film:
         st.session_state.scroll_to_top = True
         st.session_state.first_load_film = False
+    
+    filtered_df = df.copy()
 
+    if show_a:
+        filtered_df = filtered_df[filtered_df['A-Detector'] == 1]
+    
     if display_mode == "Detailed":
-        display_film_card(df)
+        display_film_card(filtered_df)
     elif display_mode == "Simple":
         simple_type = st.radio(
             "Type",
@@ -1321,13 +1378,13 @@ def complex_film(conn):
             on_change=reset_page
         )
         if simple_type == 'Watched':
-            display_film_grid(df,'Watched')
+            display_film_grid(filtered_df,'Watched')
         else:
-            display_film_grid(df,'Not Watched')
+            display_film_grid(filtered_df,'Not Watched')
     else:  # Table View
-        df = values_handling(df, 'film')
-        df = initial_load(df, 'film')
-        filtered_df = df.loc[df['Info'] == 'Not Watched'].copy() 
+        filtered_df = values_handling(filtered_df, 'film')
+        filtered_df = initial_load(filtered_df, 'film')
+        filtered_df = filtered_df.loc[filtered_df['Info'] == 'Not Watched'].copy() 
 
         # Tambahkan search box
         if st.session_state.get('search_reset', False):
@@ -2391,7 +2448,7 @@ def complex_actress(conn):
             st.warning('Are you sure want to logout?')
             with st.container(horizontal=True):
                 if st.button('Yes', width='stretch'):
-                    st.session_state.log_out_btn = False
+                    st.session_state.clear()
                     return 'login'
                 if st.button('No', width='stretch'):
                     st.session_state.log_out_btn = False
