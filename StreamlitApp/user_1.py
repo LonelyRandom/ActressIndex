@@ -63,7 +63,9 @@ def load_data_actress(conn):
 
 def load_data_film(conn):
     try:
+
         df = conn.read(worksheet="NCode", usecols=list(range(11)))
+
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
         return df
@@ -561,6 +563,9 @@ def display_film_grid(df, filters):
                             real_index = rows_to_display.index[i]
 
                             with st.container(horizontal_alignment='center', horizontal=True):
+                                if film['A-Detector'] == 1:
+                                    film['badge_color'] = 'yellow'
+
                                 if filters == 'Not Watched':
                                     st.badge(film['is_release'], icon=film['badge_icon'], color=film['badge_color'])
                                 else:
@@ -1085,6 +1090,8 @@ def complex_film(conn):
                         except Exception as e:
                             st.warning(f'Could not rename old image: {e}')
                             st.stop()
+                    else:
+                        final_picture_url = film['Picture']
                 else:
                     final_picture_url = film['Picture']
 
