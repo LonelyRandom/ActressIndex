@@ -555,7 +555,7 @@ def display_film_grid(df, filters):
         
         rows_to_display = filtered_df.iloc[start_idx:end_idx] 
         with st.container(horizontal=True):
-            for i in range(0, len(rows_to_display)): # len = 8 // i = [0,8]
+            for i in range(0, len(rows_to_display)):
                 with st.container(horizontal=True, width=image_width):
                     with st.container():
                         if i < len(rows_to_display):
@@ -571,15 +571,31 @@ def display_film_grid(df, filters):
                                 else:
                                     st.badge(film['Info'], icon=film['badge_icon'], color=film['badge_color'])
 
-
-                            st.image(
-                                film['Picture']
-                            )
-
+                            # Tambahkan wrapper dengan fixed height
+                            st.markdown(f"""
+                                <div style="
+                                    height: 163px;  /* Atur tinggi tetap */
+                                    width: 100%;
+                                    overflow: hidden;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    margin-bottom: 10px;
+                                    border-radius: 5px;
+                                ">
+                                    <img src="{film['Picture']}" 
+                                        style="
+                                            width: 100%;
+                                            height: 100%;
+                                            object-fit: cover;
+                                            object-position: center;
+                                        ">
+                                </div>
+                            """, unsafe_allow_html=True)
 
                             if st.button(f'{film["Code"]}', key=f'film_edit_{real_index}', width='stretch', type='primary'):
-                                        st.session_state.viewing_film_index = film['original_index']
-                                        st.rerun()
+                                st.session_state.viewing_film_index = film['original_index']
+                                st.rerun()
                             st.space('small')
         st.markdown('---')
         if total_pages <= 6:
@@ -761,17 +777,6 @@ def complex_film(conn):
         def set_prev_pic(pic):
             st.session_state.prev_pic = pic
 
-        st.markdown(
-            """
-            <style>
-            button[data-testid="stBaseButton-tertiary"] p {
-                font-size: 14px !important;
-                color: #d6cfc7 !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
 
         film = df.iloc[index]
 
@@ -781,6 +786,16 @@ def complex_film(conn):
         
         st.markdown('### Title')
         st.write(film['Title'])
+        st.markdown(
+            """
+            <style>
+            button[data-testid="stBaseButton-tertiary"] p {
+                font-size: 14px !important;
+                color: #d6cfc7 !important;
+            }
+            """,
+            unsafe_allow_html=True
+        )
         
         st.markdown('### Actress')
         if film['Actress Name'] not in ['Many', 'Not Listed']:
@@ -792,17 +807,42 @@ def complex_film(conn):
                 is_center = 'left'
             with st.container(horizontal=True, horizontal_alignment=is_center):
                 for idx in matching_actresses.index:
-                    with st.container(width=80):
-                        st.image(
-                            matching_actresses['Picture'][idx]
-                        )
-                        if st.button(matching_actresses['Name (Alphabet)'][idx], width='stretch', type='tertiary', key=f"{matching_actresses['Name (Alphabet)'][idx]}_{idx}", on_click=reset_page):
+                    actress_name = matching_actresses['Name (Alphabet)'][idx]
+                    container_key = f"{actress_name}_{index}"
+
+                    with st.container(width=80, key=container_key):
+                        # Display image as circle using HTML
+                        st.markdown(f"""
+                            <div style="
+                                width: 70px;
+                                height: 70px;
+                                border-radius: 50%;
+                                overflow: hidden;
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                margin: 0 auto 8px auto;
+                                background: white;
+                            ">
+                                <img src="{matching_actresses['Picture'][idx]}" 
+                                    style="
+                                        width: 100%;
+                                        height: 100%;
+                                        object-fit: cover;
+                                    ">
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Button
+                        if st.button(actress_name, width='stretch', type='tertiary', 
+                                    key=f"{actress_name}_{idx}", on_click=reset_page):
                             st.session_state.viewing_film_index = None
                             st.session_state.editing_film_index = None
-                            st.session_state.search_text = matching_actresses['Name (Alphabet)'][idx]
+                            st.session_state.search_text = actress_name
                             st.session_state.set_search = True
                             st.session_state.scroll_to_top = True
                             st.rerun()
+                        
         elif film['Actress Name'] == 'Many':
             with st.container(width=80):
                 st.image(st.secrets.indicators.PLACEHOLDER_IMG)
