@@ -862,7 +862,7 @@ def complex_film(conn):
                 
                 pics = film['Preview Picture'].split(', ')
                 count = len(pics)
-                with st.container(height=200):
+                with st.container():
                     st.markdown(
                         """
                         <style>
@@ -879,7 +879,8 @@ def complex_film(conn):
                         }
 
                         .img-fit img {
-                            max-height: 190px;
+                            max-width: 100%;
+                            height: 400px;  /* batasi maksimal tinggi */
                             width: auto;
                             object-fit: contain;
                             display: block;
@@ -892,12 +893,13 @@ def complex_film(conn):
 
                     st.markdown(
                         f"""
-                        <div class="img-fit">
+                        <div class="img-fit" style="background-color: #ffffff; border-radius:5px; margin-bottom:15px">
                             <img src="{pics[st.session_state.prev_pic]}">
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
+
                 with st.container(horizontal=True):
                     st.button('⬅️ Previous',disabled=(st.session_state.prev_pic == 0), width='stretch',args=(st.session_state.prev_pic - 1,), on_click=set_prev_pic)
                     st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), width='stretch', args=(st.session_state.prev_pic + 1,), on_click=set_prev_pic)
