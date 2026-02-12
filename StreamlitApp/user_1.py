@@ -8,6 +8,8 @@ import pandas as pd
 from value_handling import values_handling, initial_load
 from dateutil.relativedelta import relativedelta
 from streamlit_scroll_to_top import scroll_to_here
+import requests
+import base64
 
 REVIEW_OPTS = [
     'Not Checked',
@@ -145,6 +147,8 @@ def display_film_card(df):
 
     if 'film_page' not in st.session_state:
         st.session_state.film_page = 1
+    if 'width_option' not in st.session_state:
+        st.session_state.width_option = 'Device 1'
 
     if df.empty:
         st.warning("📭 No film data available!")
@@ -186,8 +190,14 @@ def display_film_card(df):
         st.metric("Watched", watched_count)
         st.metric("Goat", goat_count)
     
-    select_device = st.selectbox('Device', options=['Device 1', 'Device 2'])
-    if select_device == 'Device 1':
+    if st.session_state.width_option == 'Device 1':
+        device_index = 0
+    else:
+        device_index = 1
+
+    st.session_state.width_option = st.selectbox('Device', options=['Device 1', 'Device 2'], index=device_index, on_change=reset_page)
+    
+    if st.session_state.width_option == 'Device 1':
         image_width = 0.397
         device = 1
     else:
@@ -409,6 +419,8 @@ def display_film_grid(df, filters):
 
     if 'film_page' not in st.session_state:
         st.session_state.film_page = 1
+    if 'width_option' not in st.session_state:
+        st.session_state.width_option = 'Device 1'
     
     st.markdown(
         """
@@ -472,15 +484,27 @@ def display_film_grid(df, filters):
     
     playlist_filter = st.selectbox("Playlist:", options=PLAYLIST_OPTS, on_change=reset_page)
 
-    image_width = st.selectbox('img width',options=[115,106], on_change=reset_page)
+    if st.session_state.width_option == 'Device 1':
+        width_index = 0
+    else:
+        width_index = 1
+
+    st.session_state.width_option = st.selectbox('img width',options=['Device 1','Device 2'], on_change=reset_page, index=width_index)
+
+    if st.session_state.width_option == 'Device 1':
+        image_width = 115
+        image_heigth = 164
+    else:
+        image_width = 106
+        image_heigth = 151
 
     if search_name:
         mask = (filtered_df['Actress Name'].str.contains(search_name, case=False, na=False) | 
                 filtered_df['Code'].str.contains(search_name, case=False, na=False))
-        filtered_df = filtered_df[mask]
+        filtered_df = filtered_df[mask].copy()
 
     if playlist_filter != 'All':
-        filtered_df = filtered_df[filtered_df['Playlist'] == playlist_filter]
+        filtered_df = filtered_df[filtered_df['Playlist'] == playlist_filter].copy()
     
     total_pages = max(1, (len(filtered_df) + 30 - 1) // 30)
 
@@ -554,7 +578,7 @@ def display_film_grid(df, filters):
         st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} actress")
         
         rows_to_display = filtered_df.iloc[start_idx:end_idx] 
-        with st.container(horizontal=True):
+        with st.container(horizontal=True, horizontal_alignment='center'):
             for i in range(0, len(rows_to_display)):
                 with st.container(horizontal=True, width=image_width):
                     with st.container():
@@ -574,7 +598,7 @@ def display_film_grid(df, filters):
                             # Tambahkan wrapper dengan fixed height
                             st.markdown(f"""
                                 <div style="
-                                    height: 163px;  /* Atur tinggi tetap */
+                                    height: {image_heigth}px;  /* Atur tinggi tetap */
                                     width: 100%;
                                     overflow: hidden;
                                     display: flex;
@@ -735,6 +759,7 @@ def complex_film(conn):
         st.session_state.film_simple_edit = False
     if 'prev_pic_page' not in st.session_state:
         st.session_state.prev_pic_page = 1
+
 
     if st.session_state.scroll_to_top:
         scroll_to_here(0,key='top')  # Scroll to the top of the page
@@ -902,49 +927,56 @@ def complex_film(conn):
                 
                 pics = film['Preview Picture'].split(', ')
                 count = len(pics)
-                with st.container():
-                    st.markdown(
-                        """
-                        <style>
-                        /* Hilangin padding container */
-                        div[data-testid="stVerticalBlock"] {
-                            padding-top: 0rem;
-                            padding-bottom: 0rem;
-                        }
 
-                        /* Hilangin margin default markdown */
-                        .img-fit {
-                            margin-top: -13px;
-                            padding-top: 0;
-                        }
+                st.markdown(
+                    """
+                    <style>
+                    div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
 
-                        .img-fit img {
-                            max-width: 100%;
-                            height: 400px;  /* batasi maksimal tinggi */
-                            width: auto;
-                            object-fit: contain;
-                            display: block;
-                            margin: 0 auto;
-                        }
-                        </style>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                    .img-fit {
+                        margin-top: -13px; 
+                        padding-top: 0; 
+                        display: flex;             /* gunakan flexbox */
+                        justify-content: center;   /* horizontal center */
+                        align-items: center;       /* vertical center jika container tinggi ditentukan */
+                        background-color: #ffffff;
+                        border-radius: 5px;
+                        margin-bottom: 15px;
+                    }
 
-                    st.markdown(
-                        f"""
-                        <div class="img-fit" style="background-color: #ffffff; border-radius:5px; margin-bottom:15px">
-                            <img src="{pics[st.session_state.prev_pic]}">
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                    .img-fit img {
+                        max-width: 100%;
+                        height: 400px;
+                        width: auto;
+                        object-fit: contain;
+                        display: none;  /* default hidden semua gambar */
+                    }
+
+                    .img-fit img.active {
+                        display: block; /* hanya gambar active yang terlihat */
+                    }
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                # HTML untuk semua gambar, preload semuanya
+                img_html = '<div class="img-fit">'
+                for i, pic in enumerate(pics):
+                    active_class = 'active' if i == st.session_state.prev_pic else ''
+                    img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
+                img_html += '</div>'
+
+                st.markdown(img_html, unsafe_allow_html=True)
+
 
                 with st.container(horizontal=True):
-                    st.button('⬅️ Previous',disabled=(st.session_state.prev_pic == 0), width='stretch',args=(st.session_state.prev_pic - 1,), on_click=set_prev_pic)
-                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), width='stretch', args=(st.session_state.prev_pic + 1,), on_click=set_prev_pic)
+                    # Tombol navigasi
+                    st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,), on_click=set_prev_pic, width='stretch')
+                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,), on_click=set_prev_pic, width='stretch')
             else:
                 st.warning('Picture Unavailable')
+
 
                         
         if pd.isna(film['Link']) :
@@ -1032,9 +1064,9 @@ def complex_film(conn):
             edited_status = '?'
         else:
             if edited_release_date < date.today():
-                edited_status = 0
-            else:
                 edited_status = 1
+            else:
+                edited_status = 0
             edited_release_date = edited_release_date.strftime('%d/%m/%Y')
 
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
@@ -1458,40 +1490,68 @@ def complex_film(conn):
             lambda x: '🟢 Yes' if x == 1 else '🔴 No' if x == 0 else '⚪ ?'
         )
 
-        filtered_df = filtered_df[['Release', 'Code', 'Actress Name','Release Date', 'Link']]
-
+        show_df = filtered_df[['Release', 'Code', 'Actress Name']]
 
         selected = st.dataframe(
-            filtered_df,
+            show_df,
             width='stretch',
             on_select="rerun",
             selection_mode="single-row",
             hide_index=True
         )
 
-        with st.container():
-            if st.button('Edit', width='stretch'):
+        with st.container(horizontal=True):
+            with st.container(width='content'):
+                if selected:
+                    try:
+                        pics = filtered_df['Picture'].iloc[selected.selection.rows[0]]
+                    except:
+                        pics = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
+
+                st.markdown(f"""
+                    <div style="
+                        height: 250px;  /* Atur tinggi tetap */
+                        width: 175px;
+                        overflow: hidden;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        margin-bottom: 10px;
+                        border-radius: 5px;
+                    ">
+                        <img src="{pics}" 
+                            style="
+                                width: 100%;
+                                height: 100%;
+                                object-fit: cover;
+                                object-position: center;
+                            ">
+                    </div>
+                """, unsafe_allow_html=True)
+
+            with st.container(width='stretch'):
+                if st.button('Edit', width='stretch'):
+                    if selected.selection.rows:
+                        row_index = selected.selection.rows[0]
+                        data_index = filtered_df.index[row_index]
+                        st.session_state.viewing_film_index = data_index
+                        st.session_state.editing_film_index = data_index
+                        show_film_details()
+                        st.rerun()
+                    else:
+                        st.error('No rows is selected on the dataframe!')
+                        st.stop()
+
                 if selected.selection.rows:
                     row_index = selected.selection.rows[0]
-                    data_index = filtered_df.index[row_index]
-                    st.session_state.viewing_film_index = data_index
-                    st.session_state.editing_film_index = data_index
-                    show_film_details()
-                    st.rerun()
-                else:
-                    st.error('No rows is selected on the dataframe!')
-                    st.stop()
-
-            if selected.selection.rows:
-                row_index = selected.selection.rows[0]
-                link_url = filtered_df.iloc[row_index]['Link']
-                title = filtered_df.iloc[row_index]['Code']
-        
-                # Tombol yang akan membuka di tab baru
-                if link_url != '--':
-                    st.link_button(f"{title} Preview", link_url, width='stretch', type='primary')
-                else:
-                    st.write('No link found!')
+                    link_url = filtered_df.iloc[row_index]['Link']
+                    title = filtered_df.iloc[row_index]['Code']
+            
+                    # Tombol yang akan membuka di tab baru
+                    if link_url != '--':
+                        st.link_button(f"{title} Preview", link_url, width='stretch', type='primary')
+                    else:
+                        st.write('No link found!')
     st.markdown("""
     <style>
     /* Hover effect untuk card */
