@@ -156,8 +156,21 @@ def display_film_card(df):
     
     # Filter options
     col1, col2, col3 = st.columns(3)
+    if st.session_state.get('search_reset', False):
+        st.session_state.search_reset = False
+        st.session_state.search_bar = ''
+
+    if st.session_state.get('set_search', False):
+        st.session_state.set_search = False
+        st.session_state.search_bar = st.session_state.search_text
+        st.session_state.search_text = ''
+
     with col1:
-        search_name = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
+        with st.container(horizontal=True):
+            search_name = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
+            if st.button('Clear', on_click=reset_page):
+                st.session_state.search_reset = True
+                st.rerun()
     with col2:
         info_filter = st.multiselect(
             "📊 Status Filter:",
@@ -262,7 +275,7 @@ def display_film_card(df):
     start_idx = (page - 1) * items_per_page # page = 2 / Start idx = 8
     end_idx = min(start_idx + items_per_page, len(filtered_df)) # end idx = 16
     
-    st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} actress")
+    st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} films")
     
     rows_to_display = filtered_df.iloc[start_idx:end_idx] #[8,15]
     
@@ -575,7 +588,7 @@ def display_film_grid(df, filters):
         start_idx = (page - 1) * 30 
         end_idx = min(start_idx + 30, len(filtered_df)) 
         st.markdown("---")
-        st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} actress")
+        st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} films")
         
         rows_to_display = filtered_df.iloc[start_idx:end_idx] 
         with st.container(horizontal=True, horizontal_alignment='center'):
@@ -823,7 +836,7 @@ def complex_film(conn):
         )
         
         st.markdown('### Actress')
-        if film['Actress Name'] not in ['Many', 'Not Listed']:
+        if film['Actress Name'] not in 'Not Listed':
             actress_list = film['Actress Name'].split(', ')
             matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
             if len(matching_actresses)>2:
@@ -867,17 +880,6 @@ def complex_film(conn):
                             st.session_state.set_search = True
                             st.session_state.scroll_to_top = True
                             st.rerun()
-                        
-        elif film['Actress Name'] == 'Many':
-            with st.container(width=80):
-                st.image(st.secrets.indicators.PLACEHOLDER_IMG)
-                if st.button('Many', width='stretch', type='tertiary', key="many_profile", on_click=reset_page):
-                    st.session_state.viewing_film_index = None
-                    st.session_state.editing_film_index = None
-                    st.session_state.search_text = 'Many'
-                    st.session_state.set_search = True
-                    st.session_state.scroll_to_top = True
-                    st.rerun()
         else:
             with st.container(width=80):
                 st.image(st.secrets.indicators.PLACEHOLDER_IMG)
