@@ -166,7 +166,7 @@ def display_film_card(df):
         st.session_state.search_text = ''
 
     with col1:
-        with st.container(horizontal=True):
+        with st.container(horizontal=True, vertical_alignment='bottom'):
             search_name = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
             if st.button('Clear', on_click=reset_page):
                 st.session_state.search_reset = True
@@ -279,7 +279,7 @@ def display_film_card(df):
     
     rows_to_display = filtered_df.iloc[start_idx:end_idx] #[8,15]
     
-    with st.container(horizontal=True):
+    with st.container(horizontal=True, horizontal_alignment='center'):
         for i in range(0, len(rows_to_display)): # len = 8 // i = [0,8]
             actress = rows_to_display.iloc[i]
             real_index = rows_to_display.index[i]  # ⬅️ INI KUNCI
