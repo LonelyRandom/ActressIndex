@@ -1674,6 +1674,8 @@ def complex_film(conn):
                         st.link_button(f"{title} Preview", link_url, width='stretch', type='primary')
                     else:
                         st.write('No link found!')
+
+                    st.write(filtered_df.iloc[row_index]['Title'])
     st.markdown("""
     <style>
     /* Hover effect untuk card */
