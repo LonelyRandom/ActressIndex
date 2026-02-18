@@ -74,6 +74,13 @@ def load_data_film(conn):
     except Exception as e:
         return pd.DataFrame()
     
+def load_data_tag(conn):
+    try:
+        df = conn.read(worksheet="Sheet11", usecols=list(range(1)))
+        return df
+    except Exception as e:
+        return pd.DataFrame()
+    
 def update_google_sheets(df,conn,type):
     try:
         if not isinstance(df, pd.DataFrame):
@@ -131,15 +138,30 @@ def init_dataframe_film(conn):
     else:
         return st.session_state.film_df
 
-def display_film_card(df):
+def init_dataframe_tags(conn):
+    """Inisialisasi DataFrame di session state"""
+    if "tag_df" not in st.session_state:
+        df = load_data_tag(conn)
+        if df.empty:
+            df = pd.DataFrame(columns=[
+                'Tags'
+            ])
+        
+        st.session_state.tag_df = df
+        st.session_state.data_loaded = True
+        return df
+    else:
+        return st.session_state.tag_df
+
+def display_film_card(df, tag_df):
     """
     Menampilkan DataFrame aktris dalam bentuk card yang menarik
     
     Args:
         df: DataFrame dengan kolom: Actress Name, Code, Release Date, Picture, Playlist, Status
     """
-    PLAYLIST_OPTS = ['All'] + sorted(
-        df.loc[df['Playlist'] != 'All', 'Playlist']
+    TAGS_OPTS = sorted(
+        tag_df['Tags']
         .dropna()
         .unique()
         .tolist()
@@ -159,6 +181,10 @@ def display_film_card(df):
     if st.session_state.get('search_reset', False):
         st.session_state.search_reset = False
         st.session_state.search_bar = ''
+    
+    if st.session_state.get('tags_reset', False):
+        st.session_state.tags_reset = False
+        st.session_state.tag_bar = []
 
     if st.session_state.get('set_search', False):
         st.session_state.set_search = False
@@ -178,8 +204,11 @@ def display_film_card(df):
             default=['Watched', 'Goat']
         )
     with col3:
-        playlist_filter = st.selectbox("Playlist:", options=PLAYLIST_OPTS)
-    
+        with st.container(horizontal=True, vertical_alignment='bottom'):
+            playlist_filter = st.multiselect("Tags:", options=TAGS_OPTS, on_change=reset_page, key='tag_bar')
+            if st.button('Clear', on_click=reset_page, key='tag_clear'):
+                st.session_state.tags_reset = True
+                st.rerun()
     # Filter data
     filtered_df = df.copy()
     
@@ -191,9 +220,13 @@ def display_film_card(df):
     if info_filter and 'Info' in filtered_df.columns:
         filtered_df = filtered_df[filtered_df['Info'].isin(info_filter)]
     
-    if playlist_filter != 'All':
-        filtered_df = filtered_df[filtered_df['Playlist'] == playlist_filter]      
-    
+    if playlist_filter:
+        filtered_df = filtered_df[
+            filtered_df["Playlist"].apply(
+                lambda x: any(tag.strip() in playlist_filter for tag in x.split(","))
+            )
+        ]
+        
     # Tampilkan statistik filter
     watched_count = len(filtered_df[filtered_df['Info'] == 'Watched']) if 'Info' in filtered_df.columns else 0
     goat_count = len(filtered_df[filtered_df['Info'] == 'Goat']) if 'Info' in filtered_df.columns else 0
@@ -419,12 +452,12 @@ def reset_page():
     st.session_state.film_page = 1
 
 # --- FUNGSI ALTERNATIF: Grid Layout tanpa Pagination ---
-def display_film_grid(df, filters):
+def display_film_grid(df, filters, tag_df):
     """
     Menampilkan semua card sekaligus dalam grid
     """
-    PLAYLIST_OPTS = ['All'] + sorted(
-        df.loc[df['Playlist'] != 'All', 'Playlist']
+    TAGS_OPTS = sorted(
+        tag_df['Tags']
         .dropna()
         .unique()
         .tolist()
@@ -482,6 +515,10 @@ def display_film_grid(df, filters):
         st.session_state.search_reset = False
         st.session_state.search_bar = ''
 
+    if st.session_state.get('tags_reset', False):
+        st.session_state.tags_reset = False
+        st.session_state.tag_bar = ''
+
     if st.session_state.get('set_search', False):
         st.session_state.set_search = False
         st.session_state.search_bar = st.session_state.search_text
@@ -494,8 +531,15 @@ def display_film_grid(df, filters):
         if st.button('Clear', on_click=reset_page):
             st.session_state.search_reset = True
             st.rerun()
-    
-    playlist_filter = st.selectbox("Playlist:", options=PLAYLIST_OPTS, on_change=reset_page)
+
+    with st.container(horizontal=True, vertical_alignment='bottom'):
+        playlist_filter = st.multiselect(
+            "Tags:", 
+            options=TAGS_OPTS, 
+            on_change=reset_page)
+        if st.button('Clear', on_click=reset_page, key='tag_clear'):
+                st.session_state.search_reset = True
+                st.rerun()
 
     if st.session_state.width_option == 'Device 1':
         width_index = 0
@@ -516,8 +560,12 @@ def display_film_grid(df, filters):
                 filtered_df['Code'].str.contains(search_name, case=False, na=False))
         filtered_df = filtered_df[mask].copy()
 
-    if playlist_filter != 'All':
-        filtered_df = filtered_df[filtered_df['Playlist'] == playlist_filter].copy()
+    if playlist_filter:
+        filtered_df = filtered_df[
+            filtered_df["Playlist"].apply(
+                lambda x: any(tag.strip() in playlist_filter for tag in x.split(","))
+            )
+        ]
     
     total_pages = max(1, (len(filtered_df) + 30 - 1) // 30)
 
@@ -550,6 +598,7 @@ def display_film_grid(df, filters):
             with st.container(key='page_button_top', horizontal=True, horizontal_alignment='center'):
                 if st.button('⬅️',key='previous_top', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(st.session_state.film_page-1,)):
                     st.session_state.scroll_to_here = True
+                    st.rerun()
                 
                 start_page = max(1, st.session_state.film_page - 1)  
                 end_page = min(total_pages, st.session_state.film_page + 2)  
@@ -571,14 +620,19 @@ def display_film_grid(df, filters):
                         args=(i,)
                     ):
                         st.session_state.scroll_to_here = True
+                        st.rerun()
                 
                 if st.button('➡️',key='next_top', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,)):
                     st.session_state.scroll_to_here = True
+                    st.rerun()
+
             with st.container(horizontal=True):
                 if st.button('First Page', width='stretch', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(1,)):
                     st.session_state.scroll_to_here = True
+                    st.rerun()
                 if st.button('Last Page', width='stretch', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(total_pages,)):
                     st.session_state.scroll_to_here = True
+                    st.rerun()
                 
 
                 
@@ -646,10 +700,12 @@ def display_film_grid(df, filters):
                         args=(i,)
                     ):
                         st.session_state.scroll_to_here = True
+                        st.rerun()
         else:
             with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
                 if st.button('⬅️',key='previous_bottom', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(st.session_state.film_page-1,)):
                     st.session_state.scroll_to_here = True
+                    st.rerun()
                 
                 start_page = max(1, st.session_state.film_page - 1)  
                 end_page = min(total_pages, st.session_state.film_page + 2)  
@@ -671,9 +727,11 @@ def display_film_grid(df, filters):
                         args=(i,)
                     ):
                         st.session_state.scroll_to_here = True
+                        st.rerun()
                 
                 if st.button('➡️',key='next_bottom', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,)):
-                    st.session_state.scroll_to_here = True                 
+                    st.session_state.scroll_to_here = True    
+                    st.rerun()             
     else:
         st.info('No film match the filter')
     if st.button('⬆️ Back to top', width='stretch'):
@@ -780,9 +838,10 @@ def complex_film(conn):
 
     df = init_dataframe_film(conn)
     actress_df = init_dataframe_actress(conn)
+    tag_df = init_dataframe_tags(conn)
 
-    PLAYLIST_OPTS = ['All'] + sorted(
-        df.loc[df['Playlist'] != 'All', 'Playlist']
+    TAGS_OPTS = sorted(
+        tag_df['Tags']
         .dropna()
         .unique()
         .tolist()
@@ -838,6 +897,35 @@ def complex_film(conn):
         st.markdown('### Actress')
         if film['Actress Name'] not in 'Not Listed':
             actress_list = film['Actress Name'].split(', ')
+            if 'Many' in actress_list:
+                with st.container(width=80):
+                    st.markdown(f"""
+                        <div style="
+                            width: 70px;
+                            height: 70px;
+                            border-radius: 50%;
+                            overflow: hidden;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            margin: 0 auto 8px auto;
+                            background: white;
+                        ">
+                            <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
+                                style="
+                                    width: 100%;
+                                    height: 100%;
+                                    object-fit: cover;
+                                ">
+                        </div>
+                    """, unsafe_allow_html=True)
+                    if st.button('Many', width='stretch', type='tertiary', key="not_listed_profile", on_click=reset_page):
+                        st.session_state.viewing_film_index = None
+                        st.session_state.editing_film_index = None
+                        st.session_state.search_text = 'Many'
+                        st.session_state.set_search = True
+                        st.session_state.scroll_to_top = True
+                        st.rerun()
             matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
             if len(matching_actresses)>2:
                 is_center = 'center'
@@ -882,7 +970,26 @@ def complex_film(conn):
                             st.rerun()
         else:
             with st.container(width=80):
-                st.image(st.secrets.indicators.PLACEHOLDER_IMG)
+                st.markdown(f"""
+                    <div style="
+                        width: 70px;
+                        height: 70px;
+                        border-radius: 50%;
+                        overflow: hidden;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        margin: 0 auto 8px auto;
+                        background: white;
+                    ">
+                        <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
+                            style="
+                                width: 100%;
+                                height: 100%;
+                                object-fit: cover;
+                            ">
+                    </div>
+                """, unsafe_allow_html=True)
                 if st.button('Not Listed', width='stretch', type='tertiary', key="not_listed_profile", on_click=reset_page):
                     st.session_state.viewing_film_index = None
                     st.session_state.editing_film_index = None
@@ -997,7 +1104,6 @@ def complex_film(conn):
     def show_edit_film(index):
         film = df.iloc[index]
 
-        playlist_index = PLAYLIST_OPTS.index(film['Playlist']) if film['Playlist'] in PLAYLIST_OPTS else 0
         info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
 
         with st.container(horizontal_alignment='center'): 
@@ -1072,14 +1178,28 @@ def complex_film(conn):
             edited_release_date = edited_release_date.strftime('%d/%m/%Y')
 
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
-        
-        edited_playlist = st.selectbox('Playlist', options=PLAYLIST_OPTS, index=playlist_index, key=f'film_playlist_{index}')
-        
-        if st.checkbox('New Playlist'):
-            new_playlist = st.text_input('New Playlist', placeholder='Enter new playlist...', key=f'film_new_playlist_{index}')
-            if new_playlist != '' or new_playlist != None:
-                edited_playlist = new_playlist
-            
+
+        if film['Playlist'] == 'No Tags':
+            tags = []
+        else:
+            tags = [
+                j.strip() for j in film['Playlist'].split(',')
+                if j.strip() in TAGS_OPTS
+            ]
+
+        edited_selected_playlist = st.multiselect(
+            'Tags', 
+            options=TAGS_OPTS, 
+            default=tags, 
+            key=f'film_playlist_{index}'
+        )
+
+        if edited_selected_playlist:
+            edited_playlist = ', '.join(edited_selected_playlist)
+        else:
+            edited_playlist = 'No Tags'
+
+        st.write(edited_playlist)
         # Tombol aksi
         if 'delete_btn' not in st.session_state:
             st.session_state.delete_btn = False
@@ -1247,7 +1367,6 @@ def complex_film(conn):
             st.session_state.new_actresses = ''
             st.session_state.new_code = ''
             st.session_state.new_release = date.today()
-            st.session_state.new_playlist = PLAYLIST_OPTS[0]
             st.session_state.new_info = INFO_OPTS[0]
 
         if 'new_film_reset' not in st.session_state:
@@ -1299,12 +1418,12 @@ def complex_film(conn):
                 st.write(new_release.strftime("%b, %d %Y"))
                 new_release = new_release.strftime('%d/%m/%Y')
 
-            new_playlist = st.selectbox('Playlist', key='new_playlist', options=PLAYLIST_OPTS)
+            new_tags = st.multiselect('Tags', key='new_tags', options=TAGS_OPTS)
 
-            if st.checkbox('New Playlist', key='add_new_playlist'):
-                new_new_playlist = st.text_input('New Playlist', placeholder='Enter new playlist...', key='add_film_new_playlist')
-                if new_new_playlist != '' or new_new_playlist != None:
-                    new_playlist = new_new_playlist
+            if st.checkbox('New Tags', key='add_new_playlist'):
+                new_new_tags = st.text_input('New Tag', placeholder='Enter new tag...', key='add_film_new_tag')
+                if new_new_tags != '' or new_new_tags != None:
+                    new_tags = new_new_tags
 
         new_info = st.selectbox('Info', key='new_info', options=INFO_OPTS)
 
@@ -1315,7 +1434,7 @@ def complex_film(conn):
             new_title = '--'
             new_release = '?'
             new_status = '?'
-            new_playlist = 'All'
+            new_tags = 'No Tags'
 
         with st.container(key='film_new_button'):
             if st.button('💾 Add Film', width='stretch'):
@@ -1373,7 +1492,7 @@ def complex_film(conn):
                         'Title': new_title,
                         'Release Date': new_release,
                         'Picture': picture_url,
-                        'Playlist': new_playlist,
+                        'Playlist': new_tags,
                         'Info': new_info,
                         'Release Status': new_status,
                         'Link': new_link,
@@ -1447,12 +1566,13 @@ def complex_film(conn):
         st.session_state.first_load_film = False
     
     filtered_df = df.copy()
+    filtered_df = filtered_df.sort_values(by='Code', ascending=True)
 
     if show_a:
         filtered_df = filtered_df[filtered_df['A-Detector'] == 1]
     
     if display_mode == "Detailed":
-        display_film_card(filtered_df)
+        display_film_card(filtered_df, tag_df)
     elif display_mode == "Simple":
         simple_type = st.radio(
             "Type",
@@ -1461,9 +1581,9 @@ def complex_film(conn):
             on_change=reset_page
         )
         if simple_type == 'Watched':
-            display_film_grid(filtered_df,'Watched')
+            display_film_grid(filtered_df,'Watched', tag_df)
         else:
-            display_film_grid(filtered_df,'Not Watched')
+            display_film_grid(filtered_df,'Not Watched', tag_df)
     else:  # Table View
         filtered_df = values_handling(filtered_df, 'film')
         filtered_df = initial_load(filtered_df, 'film')
