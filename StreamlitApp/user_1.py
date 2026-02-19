@@ -1482,28 +1482,6 @@ def complex_film(conn):
                                 st.stop()
                         new_actress = new_actress_name
                         
-                    if new_picture:
-                        join_name = new_code.upper()
-                        clean_name = re.sub(r'[^\w]', '', join_name)
-                        clean_name = "N" + clean_name
-                        picture_url = upload_to_database(new_picture, clean_name)
-                    else:
-                        picture_url = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
-
-                    new_row = pd.DataFrame([{
-                        'Actress Name': new_actress,
-                        'Code': new_code,
-                        'Title': new_title,
-                        'Release Date': new_release,
-                        'Picture': picture_url,
-                        'Playlist': new_tags,
-                        'Info': new_info,
-                        'Release Status': new_status,
-                        'Link': new_link,
-                        'Preview Picture' : '--',
-                        'A-Detector' : new_a
-                    }])
-
                     df = st.session_state.film_df
                     new_film_code = new_row['Code'].iloc[0]
 
@@ -1511,11 +1489,32 @@ def complex_film(conn):
                         st.warning(f'⚠️ Code {new_film_code} already exist in database')
                         st.stop()
                     else:
+                        if new_picture:
+                            join_name = new_code.upper()
+                            clean_name = re.sub(r'[^\w]', '', join_name)
+                            clean_name = "N" + clean_name
+                            picture_url = upload_to_database(new_picture, clean_name)
+                        else:
+                            picture_url = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
+
+                        new_row = pd.DataFrame([{
+                            'Actress Name': new_actress,
+                            'Code': new_code,
+                            'Title': new_title,
+                            'Release Date': new_release,
+                            'Picture': picture_url,
+                            'Playlist': new_tags,
+                            'Info': new_info,
+                            'Release Status': new_status,
+                            'Link': new_link,
+                            'Preview Picture' : '--',
+                            'A-Detector' : new_a
+                        }])
+
                         df = pd.concat([df,new_row], ignore_index=True)
                         if update_google_sheets(df,conn,'film'):
                             st.session_state.film_df = values_handling(df,'film')
-                    
-                    st.rerun()
+                            st.rerun()
                 else:
                     st.error('Fill mandatory fields first! (*)')
                     st.stop()
