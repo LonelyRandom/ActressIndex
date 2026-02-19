@@ -1382,6 +1382,8 @@ def complex_film(conn):
         
         if not is_simple:
             new_link = st.text_input('Link Page', key='new_link', placeholder='https://...')
+            if not new_link:
+                new_link = '--'
 
         selected_actress = st.multiselect('Actress*', key='new_actresses', options=ACTRESS_OPTS)
 
