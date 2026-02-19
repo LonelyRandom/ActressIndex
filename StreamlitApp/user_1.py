@@ -1424,6 +1424,8 @@ def complex_film(conn):
                 new_new_tags = st.text_input('New Tag', placeholder='Enter new tag...', key='add_film_new_tag')
                 if new_new_tags != '' or new_new_tags != None:
                     new_tags = new_new_tags
+            else:
+                new_tags = ', '.join(new_tags)
 
         new_info = st.selectbox('Info', key='new_info', options=INFO_OPTS)
 
