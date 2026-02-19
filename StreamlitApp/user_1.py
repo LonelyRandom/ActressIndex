@@ -1481,9 +1481,9 @@ def complex_film(conn):
                                 st.error("❌ Failed to add new actress to Google Sheets")
                                 st.stop()
                         new_actress = new_actress_name
-                        
+
                     df = st.session_state.film_df
-                    new_film_code = new_row['Code'].iloc[0]
+                    new_film_code = new_code
 
                     if new_film_code in df['Code'].values:
                         st.warning(f'⚠️ Code {new_film_code} already exist in database')
