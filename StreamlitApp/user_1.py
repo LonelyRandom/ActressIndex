@@ -895,37 +895,8 @@ def complex_film(conn):
         )
         
         st.markdown('### Actress')
-        if film['Actress Name'] not in 'Not Listed':
+        if film['Actress Name'] not in 'Not Listed' and film['Actress Name'] not in 'Many':
             actress_list = film['Actress Name'].split(', ')
-            if 'Many' in actress_list:
-                with st.container(width=80):
-                    st.markdown(f"""
-                        <div style="
-                            width: 70px;
-                            height: 70px;
-                            border-radius: 50%;
-                            overflow: hidden;
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                            margin: 0 auto 8px auto;
-                            background: white;
-                        ">
-                            <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
-                                style="
-                                    width: 100%;
-                                    height: 100%;
-                                    object-fit: cover;
-                                ">
-                        </div>
-                    """, unsafe_allow_html=True)
-                    if st.button('Many', width='stretch', type='tertiary', key="not_listed_profile", on_click=reset_page):
-                        st.session_state.viewing_film_index = None
-                        st.session_state.editing_film_index = None
-                        st.session_state.search_text = 'Many'
-                        st.session_state.set_search = True
-                        st.session_state.scroll_to_top = True
-                        st.rerun()
             matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
             if len(matching_actresses)>2:
                 is_center = 'center'
@@ -968,6 +939,35 @@ def complex_film(conn):
                             st.session_state.set_search = True
                             st.session_state.scroll_to_top = True
                             st.rerun()
+        elif 'Many' in actress_list:
+            with st.container(width=80):
+                st.markdown(f"""
+                    <div style="
+                        width: 70px;
+                        height: 70px;
+                        border-radius: 50%;
+                        overflow: hidden;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        margin: 0 auto 8px auto;
+                        background: white;
+                    ">
+                        <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
+                            style="
+                                width: 100%;
+                                height: 100%;
+                                object-fit: cover;
+                            ">
+                    </div>
+                """, unsafe_allow_html=True)
+                if st.button('Many', width='stretch', type='tertiary', key="not_listed_profile", on_click=reset_page):
+                    st.session_state.viewing_film_index = None
+                    st.session_state.editing_film_index = None
+                    st.session_state.search_text = 'Many'
+                    st.session_state.set_search = True
+                    st.session_state.scroll_to_top = True
+                    st.rerun()
         else:
             with st.container(width=80):
                 st.markdown(f"""
@@ -1030,7 +1030,7 @@ def complex_film(conn):
 
         st.markdown('### Gallery')
         if st.checkbox('Show', on_change=reset_pic):
-            if film['Preview Picture'] != 'not both':
+            if film['Preview Picture'] != 'No Pics' or film['Preview Picture'] != '--':
                 if 'prev_pic' not in st.session_state:  
                     st.session_state.prev_pic = 0
                 
