@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 *.pyo
 coba.py
+coba_coba.py
 
 # Virtual environment
 .venv/

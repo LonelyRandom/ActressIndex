@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 from datetime import datetime, date
 import time
 import re
@@ -8,8 +7,51 @@ import pandas as pd
 from value_handling import values_handling, initial_load
 from dateutil.relativedelta import relativedelta
 from streamlit_scroll_to_top import scroll_to_here
-import requests
-import base64
+import gspread
+from google.oauth2.service_account import Credentials
+
+@st.cache_resource
+def get_gsheet_client():
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+
+    creds = Credentials.from_service_account_info(
+        st.secrets["connections"]["gsheets"],
+        scopes=scope
+    )
+
+    return gspread.authorize(creds)
+
+
+@st.cache_resource()
+def film_worksheet():
+    client = get_gsheet_client()
+
+    spreadsheet = client.open(
+        st.secrets["indicators"]["spred_title"]
+    )
+
+    worksheet = spreadsheet.worksheet(
+        st.secrets["indicators"]["USER_1_CODE"]
+    )
+
+    return worksheet
+
+@st.cache_resource()
+def actress_worksheet():
+    client = get_gsheet_client()
+
+    spreadsheet = client.open(
+        st.secrets["indicators"]["spred_title"]
+    )
+
+    worksheet = spreadsheet.worksheet(
+        st.secrets["indicators"]["USER_1_LIST"]
+    )
+
+    return worksheet
 
 REVIEW_OPTS = [
     'Not Checked',
@@ -177,10 +219,10 @@ def display_film_card(df, tag_df):
         return
     
     # Filter options
-    col1, col2, col3 = st.columns(3)
     if st.session_state.get('search_reset', False):
         st.session_state.search_reset = False
         st.session_state.search_bar = ''
+        st.session_state.search_by = 'Code'
     
     if st.session_state.get('tags_reset', False):
         st.session_state.tags_reset = False
@@ -189,11 +231,15 @@ def display_film_card(df, tag_df):
     if st.session_state.get('set_search', False):
         st.session_state.set_search = False
         st.session_state.search_bar = st.session_state.search_text
+        st.session_state.search_by = 'Actress'
         st.session_state.search_text = ''
+
+    search_by = st.radio('Search By:', options=['Code', 'Actress'], horizontal=True, key='search_by', on_change=reset_page)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         with st.container(horizontal=True, vertical_alignment='bottom'):
-            search_name = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
+            search_name = st.text_input("🔍 Search Bar", placeholder="Name or Code...", key='search_bar', on_change=reset_page)
             if st.button('Clear', on_click=reset_page):
                 st.session_state.search_reset = True
                 st.rerun()
@@ -213,8 +259,13 @@ def display_film_card(df, tag_df):
     filtered_df = df.copy()
     
     if search_name:
-        mask = (filtered_df['Actress Name'].str.contains(search_name, case=False, na=False) | 
-                filtered_df['Code'].str.contains(search_name, case=False, na=False))
+        if search_by == 'Code':
+            search_name = search_name.split(' ')
+            search_name = '-'.join(search_name)
+            mask = filtered_df['Code'].str.contains(search_name, case=False, na=False)
+        else:
+            mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
+
         filtered_df = filtered_df[mask]
     
     if info_filter and 'Info' in filtered_df.columns:
@@ -452,7 +503,7 @@ def reset_page():
     st.session_state.film_page = 1
 
 # --- FUNGSI ALTERNATIF: Grid Layout tanpa Pagination ---
-def display_film_grid(df, filters, tag_df):
+def display_film_grid(df, tag_df):
     """
     Menampilkan semua card sekaligus dalam grid
     """
@@ -478,6 +529,31 @@ def display_film_grid(df, filters, tag_df):
         """,
         unsafe_allow_html=True
     )
+
+    if st.session_state.get('search_reset', False):
+        st.session_state.search_reset = False
+        st.session_state.search_bar = ''
+        st.session_state.search_by = 'Code'
+
+    if st.session_state.get('tags_reset', False):
+        st.session_state.tags_reset = False
+        st.session_state.tag_bar = ''
+
+    if st.session_state.get('set_search', False):
+        st.session_state.set_search = False
+        st.session_state.search_bar = st.session_state.search_text
+        st.session_state.search_text = ''
+        st.session_state.search_by = 'Actress'
+
+    with st.container(horizontal=True):
+        search_by = st.radio('Search By :', options=['Code', 'Actress'], key='search_by', width='content', horizontal=False)    
+        filters = st.radio(
+                "Type :",
+                ["Watched", "Not Watched"],
+                horizontal=False,
+                on_change=reset_page,
+                width='content'
+            )
 
     # Filter data dan simpan index asli
     if filters == 'Watched':
@@ -511,19 +587,7 @@ def display_film_grid(df, filters, tag_df):
     # Rename kolom index agar tidak bentrok
     filtered_df = filtered_df.rename(columns={'index': 'original_index'})
     
-    if st.session_state.get('search_reset', False):
-        st.session_state.search_reset = False
-        st.session_state.search_bar = ''
 
-    if st.session_state.get('tags_reset', False):
-        st.session_state.tags_reset = False
-        st.session_state.tag_bar = ''
-
-    if st.session_state.get('set_search', False):
-        st.session_state.set_search = False
-        st.session_state.search_bar = st.session_state.search_text
-        st.session_state.search_text = ''
-    
     with st.container(horizontal=True, vertical_alignment='bottom'):
         search_name = st.text_input("🔍 Search (Actress Name / Code):", 
                                   placeholder="Name or Code...", 
@@ -556,8 +620,12 @@ def display_film_grid(df, filters, tag_df):
         image_heigth = 151
 
     if search_name:
-        mask = (filtered_df['Actress Name'].str.contains(search_name, case=False, na=False) | 
-                filtered_df['Code'].str.contains(search_name, case=False, na=False))
+        if search_by == 'Code':
+            search_name = search_name.split(' ')
+            search_name = '-'.join(search_name)
+            mask = filtered_df['Code'].str.contains(search_name, case=False, na=False)
+        else:
+            mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
         filtered_df = filtered_df[mask].copy()
 
     if playlist_filter:
@@ -931,8 +999,7 @@ def complex_film(conn):
                         """, unsafe_allow_html=True)
                         
                         # Button
-                        if st.button(actress_name, width='stretch', type='tertiary', 
-                                    key=f"{actress_name}_{idx}", on_click=reset_page):
+                        if st.button(actress_name, width='stretch', type='tertiary', key=f"{actress_name}_{idx}_{idx}", on_click=reset_page):
                             st.session_state.viewing_film_index = None
                             st.session_state.editing_film_index = None
                             st.session_state.search_text = actress_name
@@ -961,14 +1028,14 @@ def complex_film(conn):
                             ">
                     </div>
                 """, unsafe_allow_html=True)
-                if st.button('Many', width='stretch', type='tertiary', key="not_listed_profile", on_click=reset_page):
+                if st.button('Many', width='stretch', type='tertiary', key="many_profile", on_click=reset_page):
                     st.session_state.viewing_film_index = None
                     st.session_state.editing_film_index = None
                     st.session_state.search_text = 'Many'
                     st.session_state.set_search = True
                     st.session_state.scroll_to_top = True
                     st.rerun()
-        else:
+        elif 'Not Listed' in actress_list:
             with st.container(width=80):
                 st.markdown(f"""
                     <div style="
@@ -1102,6 +1169,7 @@ def complex_film(conn):
                 st.rerun()
 
     def show_edit_film(index):
+        df = st.session_state.film_df
         film = df.iloc[index]
 
         info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
@@ -1292,24 +1360,26 @@ def complex_film(conn):
                     final_picture_url = film['Picture']
 
                 # Update data di DataFrame
-                df.at[index, 'Actress Name'] = edited_actress
-                df.at[index, 'Picture'] = final_picture_url
-                df.at[index, 'Release Date'] = edited_release_date
-                df.at[index, 'Playlist'] = edited_playlist
-                df.at[index, 'Code'] = edited_code
-                df.at[index, 'Title'] = edited_title
-                df.at[index, 'Info'] = edited_info
-                df.at[index, 'Release Status'] = edited_status
-                df.at[index, 'Link'] = edited_link
-                df.at[index, 'A-Detector'] = edited_a
-                
-                # Update ke Google Sheets
-                if update_google_sheets(df,conn,'film'):
-                    st.session_state.film_df = values_handling(df,'film')  # Update session state
-                else:
-                    st.error("❌ Failed to update Google Sheets")
-                    st.stop()
-                
+                row = index + 2
+                new_values = [
+                    edited_actress,
+                    edited_code,
+                    edited_title,
+                    edited_release_date,
+                    final_picture_url,
+                    edited_playlist,
+                    edited_info,
+                    edited_status,
+                    edited_link,
+                    film['Preview Picture'],
+                    edited_a
+                ]
+
+                film_worksheet().update(f"A{row}:K{row}", [new_values])
+
+                df.loc[index] = new_values
+
+                st.session_state.film_df = values_handling(df,'film')
                 st.session_state.editing_film_index = None
                 st.rerun()
         
@@ -1334,6 +1404,7 @@ def complex_film(conn):
                     st.rerun()
     
     def delete_film(index):
+        df = st.session_state.film_df
         film = df.loc[index]
         pic_filename = str(film['Picture']).split('/')[-1]
         pic_id = pic_filename.split('.')[0]
@@ -1343,14 +1414,11 @@ def complex_film(conn):
 
         df.drop(index, inplace=True)
         df.reset_index(drop=True, inplace=True)
-        
-        # Update ke Google Sheets
-        if update_google_sheets(df,conn,'film'):
-            st.session_state.film_df = values_handling(df,'film') 
-        else:
-            st.error("❌ Failed to delete actress from Google Sheets")
-            st.stop()
-        
+
+        film_worksheet().delete_row(int(index)+2)
+
+        st.session_state.film_df = values_handling(df,'film')
+    
         st.session_state.editing_film_index = None
         st.session_state.viewing_film_index = None
         st.rerun()
@@ -1497,24 +1565,29 @@ def complex_film(conn):
                         else:
                             picture_url = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
 
-                        new_row = pd.DataFrame([{
-                            'Actress Name': new_actress,
-                            'Code': new_code,
-                            'Title': new_title,
-                            'Release Date': new_release,
-                            'Picture': picture_url,
-                            'Playlist': new_tags,
-                            'Info': new_info,
-                            'Release Status': new_status,
-                            'Link': new_link,
-                            'Preview Picture' : '--',
-                            'A-Detector' : new_a
-                        }])
+                        new_row = [
+                            new_actress,
+                            new_code,
+                            new_title,
+                            new_release,
+                            picture_url,
+                            new_tags,
+                            new_info,
+                            new_status,
+                            new_link,
+                            '--',
+                            new_a
+                        ]
 
-                        df = pd.concat([df,new_row], ignore_index=True)
-                        if update_google_sheets(df,conn,'film'):
-                            st.session_state.film_df = values_handling(df,'film')
-                            st.rerun()
+                        film_data = film_worksheet()
+
+                        film_data.append_row(new_row)
+                        new_row_df = pd.DataFrame([new_row], columns=df.columns)
+
+                        df = pd.concat([df, new_row_df], ignore_index=True)
+
+                        st.session_state.film_df = values_handling(df,'film')
+                        st.rerun()
                 else:
                     st.error('Fill mandatory fields first! (*)')
                     st.stop()
@@ -1560,7 +1633,6 @@ def complex_film(conn):
     # Main
     st.space('small')
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Film List</h1>", unsafe_allow_html=True)
-    
     if st.session_state.viewing_film_index is not None:
         show_film_details()
     
@@ -1577,16 +1649,7 @@ def complex_film(conn):
     if display_mode == "Detailed":
         display_film_card(filtered_df, tag_df)
     elif display_mode == "Simple":
-        simple_type = st.radio(
-            "Type",
-            ["Watched", "Not Watched"],
-            horizontal=True,
-            on_change=reset_page
-        )
-        if simple_type == 'Watched':
-            display_film_grid(filtered_df,'Watched', tag_df)
-        else:
-            display_film_grid(filtered_df,'Not Watched', tag_df)
+        display_film_grid(filtered_df, tag_df)
     else:  # Table View
         filtered_df = values_handling(filtered_df, 'film')
         filtered_df = initial_load(filtered_df, 'film')
@@ -1596,6 +1659,8 @@ def complex_film(conn):
         if st.session_state.get('search_reset', False):
             st.session_state.search_reset = False
             st.session_state.search_bar = ''
+        
+        search_by = st.radio('Search By: ', options=['Code', 'Actress'], horizontal=True)
         with st.container(horizontal=True, vertical_alignment='bottom'):
             search_term = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
             if st.button('Clear'):
@@ -1604,10 +1669,13 @@ def complex_film(conn):
 
         # Terapkan filter search jika ada input
         if search_term:
-            mask = (
-                filtered_df['Actress Name'].str.contains(search_term, case=False, na=False) |
-                filtered_df['Code'].astype(str).str.contains(search_term, case=False, na=False)
-            )
+            if search_by == 'Code':
+                search_term = search_term.split(' ')
+                search_term = '-'.join(search_term)
+                mask =  filtered_df['Code'].astype(str).str.contains(search_term, case=False, na=False)
+            else:
+                mask = filtered_df['Actress Name'].str.contains(search_term, case=False, na=False)
+            
             filtered_df = filtered_df[mask]
 
         # Buat kolom baru dengan badge HTML/CSS
@@ -2111,6 +2179,7 @@ def complex_actress(conn):
                 st.rerun()
 
     def show_edit_mode(index):
+        df = st.session_state.actress_df
         actress = df.iloc[index]
         
         st.markdown(f"### ✏️ Editing: {actress['Name (Alphabet)']}")
@@ -2402,36 +2471,37 @@ def complex_actress(conn):
                     st.warning(f'Could not rename old image: {e}')
                     st.stop()
 
-            # Update data di DataFrame
-            df.at[index, 'Review'] = edited_review
-            df.at[index, 'Name (Alphabet)'] = edited_name
-            df.at[index, 'Name (Kanji)'] = edited_kanji
-            df.at[index, 'Picture'] = final_picture_url
-            df.at[index, 'Birthdate'] = edited_birthdate
-            df.at[index, 'Debut Date'] = edited_debut_date
-            df.at[index, 'Size'] = edited_size
-            df.at[index, 'Measurement'] = edited_measurement
-            df.at[index, 'Height (cm)'] = edited_height
-            df.at[index, 'Notes'] = edited_notes
-            df.at[index, 'Age'] = age
-            df.at[index, 'Debut Period'] = debut
-            df.at[index, 'Retire Date'] = edited_retire_date
-            df.at[index, 'Status'] = edited_status
-            df.at[index, 'Page'] = edited_link
-            
-            # Update ke Google Sheets
-            if update_google_sheets(df,conn,'actress'):
-                st.success("✅ Data updated successfully in Google Sheets!")
-                st.session_state.actress_df = values_handling(df,'actress')  # Update session state
-            else:
-                st.error("❌ Failed to update Google Sheets")
-            
+            new_values = [
+                edited_review,
+                final_picture_url,
+                edited_name,
+                edited_kanji,
+                edited_birthdate,
+                edited_debut_date,
+                edited_size,
+                edited_measurement,
+                edited_height,
+                edited_notes,
+                age,
+                debut,
+                edited_retire_date,
+                edited_status,
+                edited_link
+            ]
+
+            row = index + 2
+            actress_worksheet().update(f"A{row}:O{row}", [new_values])
+
+            df.loc[index] = new_values
+
+            st.session_state.actress_df = values_handling(df,'actress')  # Update session state
             st.session_state.editing_index = None
             st.rerun()
             
 
     def delete_actress(index):
         # Hapus data dari DataFrame
+        df = st.session_state.actress_df
         actress = df.loc[index]
         pic_filename = str(actress['Picture']).split('/')[-1]
         pic_id = pic_filename.split('.')[0]
@@ -2442,13 +2512,9 @@ def complex_actress(conn):
         df.drop(index, inplace=True)
         df.reset_index(drop=True, inplace=True)
         
-        # Update ke Google Sheets
-        if update_google_sheets(df,conn,'actress'):
-            st.success("✅ Actress deleted successfully from Google Sheets!")
-            st.session_state.actress_df = values_handling(df,'actress')  # Update session state
-        else:
-            st.error("❌ Failed to delete actress from Google Sheets")
-        
+        actress_worksheet().delete_row(int(index)+2)
+
+        st.session_state.actress_df = values_handling(df,'actress')  # Update session state
         st.session_state.editing_index = None
         st.session_state.viewing_index = None
         st.rerun()
@@ -2573,7 +2639,7 @@ def complex_actress(conn):
             new_debut_date = '?'
             new_size = '?'
             new_measurement = '?'
-            new_height = '?'
+            new_height = '? cm'
             new_notes = '--'
             new_age = '?'
             new_debut_period = '?'
@@ -2598,43 +2664,36 @@ def complex_actress(conn):
                     picture_url = st.secrets.indicators.PLACEHOLDER_IMG
 
                 # Create new row data
-                new_row = pd.DataFrame([{
-                    'Review': new_review,
-                    'Name (Alphabet)': new_name,
-                    'Name (Kanji)': new_kanji,
-                    'Picture': picture_url,
-                    'Birthdate': new_birthdate,
-                    'Debut Date': new_debut_date,
-                    'Size': new_size,
-                    'Measurement': new_measurement,
-                    'Height (cm)': new_height,
-                    'Notes': new_notes,
-                    'Age': new_age,
-                    'Debut Period': new_debut_period,
-                    'Retire Date': new_retire_date,
-                    'Status': new_status,
-                    'Page': new_page
-                }])
+                new_row = [
+                    new_review,
+                    picture_url,
+                    new_name,
+                    new_kanji,
+                    new_birthdate,
+                    new_debut_date,
+                    new_size,
+                    new_measurement,
+                    new_height,
+                    new_notes,
+                    new_age,
+                    new_debut_period,
+                    new_retire_date,
+                    new_status,
+                    new_page
+                ]
 
-
-                # Add to DataFrame
                 df = st.session_state.actress_df
-                new_name_kanji = new_row['Name (Kanji)'].iloc[0]
 
-                if new_name_kanji in df['Name (Kanji)'].values:
-                    st.warning(f"⚠️ Aktris '{new_name_kanji}' sudah ada di database!")
+                if new_kanji in df['Name (Kanji)'].values:
+                    st.warning(f"⚠️ Aktris '{new_kanji}' sudah ada di database!")
                     st.stop()
                 else:
-                    df = pd.concat([df, new_row], ignore_index=True)   
-                    df = df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
-                    # Update ke Google Sheets
-                    if update_google_sheets(df,conn,'actress'):
-                        st.success("✅ New actress added successfully to Google Sheets!")
-                        st.session_state.actress_df = values_handling(df,'actress')  # Update session state
-                    else:
-                        st.error("❌ Failed to add new actress to Google Sheets")
-                        st.stop()
+                    actress_worksheet().append_row(new_row)
+                    new_row_df = pd.DataFrame([new_row], columns=df.columns)
                     
+                    df = pd.concat([df, new_row_df], ignore_index=True)   
+                    df = df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
+                    st.session_state.actress_df = values_handling(df,'actress')  # Update session state
                     st.session_state.adding_new = False
                     st.rerun()
             else:
