@@ -53,6 +53,20 @@ def actress_worksheet():
 
     return worksheet
 
+@st.cache_resource()
+def tags_worksheet():
+    client = get_gsheet_client()
+
+    spreadsheet = client.open(
+        st.secrets["indicators"]["spred_title"]
+    )
+
+    worksheet = spreadsheet.worksheet(
+        st.secrets["indicators"]["USER_1_TAGS"]
+    )
+
+    return worksheet
+
 REVIEW_OPTS = [
     'Not Checked',
     'Pass',
@@ -118,7 +132,7 @@ def load_data_film(conn):
     
 def load_data_tag(conn):
     try:
-        df = conn.read(worksheet="Sheet11", usecols=list(range(1)))
+        df = conn.read(worksheet="NTags", usecols=list(range(1)))
         return df
     except Exception as e:
         return pd.DataFrame()
@@ -170,7 +184,7 @@ def init_dataframe_film(conn):
         df = load_data_film(conn)
         if df.empty:
             df = pd.DataFrame(columns=[
-                'Actress', 'Code', 'Title', 'Release Date', 'Picture', 'Playlist', 'Info',
+                'Actress', 'Code', 'Title', 'Release Date', 'Picture', 'Tags', 'Info',
                 'Release Status', 'Link', 'Preview Picture', 'A-Detector'
             ])
         
@@ -200,7 +214,7 @@ def display_film_card(df, tag_df):
     Menampilkan DataFrame aktris dalam bentuk card yang menarik
     
     Args:
-        df: DataFrame dengan kolom: Actress Name, Code, Release Date, Picture, Playlist, Status
+        df: DataFrame dengan kolom: Actress Name, Code, Release Date, Picture, Tags, Status
     """
     TAGS_OPTS = sorted(
         tag_df['Tags']
@@ -251,7 +265,7 @@ def display_film_card(df, tag_df):
         )
     with col3:
         with st.container(horizontal=True, vertical_alignment='bottom'):
-            playlist_filter = st.multiselect("Tags:", options=TAGS_OPTS, on_change=reset_page, key='tag_bar')
+            tags_filter = st.multiselect("Tags:", options=TAGS_OPTS, on_change=reset_page, key='tag_bar')
             if st.button('Clear', on_click=reset_page, key='tag_clear'):
                 st.session_state.tags_reset = True
                 st.rerun()
@@ -271,10 +285,10 @@ def display_film_card(df, tag_df):
     if info_filter and 'Info' in filtered_df.columns:
         filtered_df = filtered_df[filtered_df['Info'].isin(info_filter)]
     
-    if playlist_filter:
+    if tags_filter:
         filtered_df = filtered_df[
-            filtered_df["Playlist"].apply(
-                lambda x: any(tag.strip() in playlist_filter for tag in x.split(","))
+            filtered_df["Tags"].apply(
+                lambda x: any(tag.strip() in tags_filter for tag in x.split(","))
             )
         ]
         
@@ -597,7 +611,7 @@ def display_film_grid(df, tag_df):
             st.rerun()
 
     with st.container(horizontal=True, vertical_alignment='bottom'):
-        playlist_filter = st.multiselect(
+        tags_filter = st.multiselect(
             "Tags:", 
             options=TAGS_OPTS, 
             on_change=reset_page)
@@ -628,10 +642,10 @@ def display_film_grid(df, tag_df):
             mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
         filtered_df = filtered_df[mask].copy()
 
-    if playlist_filter:
+    if tags_filter:
         filtered_df = filtered_df[
-            filtered_df["Playlist"].apply(
-                lambda x: any(tag.strip() in playlist_filter for tag in x.split(","))
+            filtered_df["Tags"].apply(
+                lambda x: any(tag.strip() in tags_filter for tag in x.split(","))
             )
         ]
     
@@ -963,7 +977,7 @@ def complex_film(conn):
         )
         
         st.markdown('### Actress')
-        if film['Actress Name'] not in 'Not Listed' and film['Actress Name'] not in 'Many':
+        if 'Not Listed' not in film['Actress Name'] and 'Many' not in film['Actress Name']:
             actress_list = film['Actress Name'].split(', ')
             matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
             if len(matching_actresses)>2:
@@ -1006,7 +1020,7 @@ def complex_film(conn):
                             st.session_state.set_search = True
                             st.session_state.scroll_to_top = True
                             st.rerun()
-        elif 'Many' in actress_list:
+        elif 'Many' in film['Actress Name']:
             with st.container(width=80):
                 st.markdown(f"""
                     <div style="
@@ -1035,7 +1049,7 @@ def complex_film(conn):
                     st.session_state.set_search = True
                     st.session_state.scroll_to_top = True
                     st.rerun()
-        elif 'Not Listed' in actress_list:
+        elif 'Not Listed' in film['Actress Name']:
             with st.container(width=80):
                 st.markdown(f"""
                     <div style="
@@ -1092,8 +1106,8 @@ def complex_film(conn):
                 st.badge(label='', icon='⭐', color='yellow')
 
 
-        st.markdown('### Playlist')
-        st.write(film['Playlist'])
+        st.markdown('### Tags')
+        st.write(film['Tags'])
 
         st.markdown('### Gallery')
         if st.checkbox('Show', on_change=reset_pic):
@@ -1247,27 +1261,27 @@ def complex_film(conn):
 
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
 
-        if film['Playlist'] == 'No Tags':
+        if film['Tags'] == 'No Tags':
             tags = []
         else:
             tags = [
-                j.strip() for j in film['Playlist'].split(',')
+                j.strip() for j in film['Tags'].split(',')
                 if j.strip() in TAGS_OPTS
             ]
 
-        edited_selected_playlist = st.multiselect(
+        edited_selected_tags = st.multiselect(
             'Tags', 
             options=TAGS_OPTS, 
             default=tags, 
-            key=f'film_playlist_{index}'
+            key=f'film_Tags_{index}'
         )
 
-        if edited_selected_playlist:
-            edited_playlist = ', '.join(edited_selected_playlist)
+        if edited_selected_tags:
+            edited_tags = ', '.join(edited_selected_tags)
         else:
-            edited_playlist = 'No Tags'
+            edited_tags = 'No Tags'
 
-        st.write(edited_playlist)
+        st.write(edited_tags)
         # Tombol aksi
         if 'delete_btn' not in st.session_state:
             st.session_state.delete_btn = False
@@ -1367,7 +1381,7 @@ def complex_film(conn):
                     edited_title,
                     edited_release_date,
                     final_picture_url,
-                    edited_playlist,
+                    edited_tags,
                     edited_info,
                     edited_status,
                     edited_link,
@@ -1381,6 +1395,8 @@ def complex_film(conn):
 
                 st.session_state.film_df = values_handling(df,'film')
                 st.session_state.editing_film_index = None
+                st.toast("✅ Data edited successfully!")
+                time.sleep(1)
                 st.rerun()
         
             if st.button('❌ Close', width='stretch'):
@@ -1412,7 +1428,7 @@ def complex_film(conn):
         if 'placeholder' not in pic_id and "pics.dmm.co.jp" not in str(film['Picture']).lower():
             delete_cloudinary_image(pic_id)
 
-        df.drop(index, inplace=True)
+        df.drop(index, inplace=True)    
         df.reset_index(drop=True, inplace=True)
 
         film_worksheet().delete_row(int(index)+2)
@@ -1421,6 +1437,8 @@ def complex_film(conn):
     
         st.session_state.editing_film_index = None
         st.session_state.viewing_film_index = None
+        st.toast("✅ Data deleted successfully!")
+        time.sleep(1)
         st.rerun()
 
     @st.dialog("➕ Add New Film", width='small')
@@ -1490,7 +1508,7 @@ def complex_film(conn):
 
             new_tags = st.multiselect('Tags', key='new_tags', options=TAGS_OPTS)
 
-            if st.checkbox('New Tags', key='add_new_playlist'):
+            if st.checkbox('New Tags', key='add_new_tags'):
                 new_new_tags = st.text_input('New Tag', placeholder='Enter new tag...', key='add_film_new_tag')
                 if new_new_tags != '' or new_new_tags != None:
                     new_tags = new_new_tags
@@ -1587,6 +1605,8 @@ def complex_film(conn):
                         df = pd.concat([df, new_row_df], ignore_index=True)
 
                         st.session_state.film_df = values_handling(df,'film')
+                        st.toast("✅ Data added successfully!")
+                        time.sleep(1)
                         st.rerun()
                 else:
                     st.error('Fill mandatory fields first! (*)')
@@ -1600,11 +1620,37 @@ def complex_film(conn):
             st.session_state.first_load_film = True
             return 'home'
         st.markdown('---')
+        with st.expander('Add Tags'):
+            if st.session_state.get('reset_tag', False):
+                st.session_state.reset_flage = False
+                st.session_state.add_new_tag = ''
+            new_tag = st.text_input('Tag', placeholder='Enter tag... (tag1, tag2, tag3, ..)', key='add_new_tag')
+            if st.button('Save Tag', width='stretch'):
+                new_tags = []
+                new_tag = new_tag.split(', ')
+
+                for tag in new_tag:
+                    new_tags.append([tag])
+                
+                new_tag_df = pd.DataFrame({'Tags': new_tag})
+                st.session_state.tag_df = pd.concat([tag_df, new_tag_df], ignore_index=True)
+                tags_worksheet().append_rows(new_tags)
+                st.rerun()
+
+            edited_selected_playlist = st.multiselect(
+                'Tags', 
+                options=TAGS_OPTS, 
+                key=f'film_playlist'
+            )
+
+
+        st.markdown('---')
         st.header("⚙️ Display Settings")
         display_mode = st.radio(
             "View Mode",
             ["Detailed", "Simple", "Not Watched"],
-            on_change=reset_page
+            on_change=reset_page,
+            horizontal=False
         )
 
         st.markdown('---')
