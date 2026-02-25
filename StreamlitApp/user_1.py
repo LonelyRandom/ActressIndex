@@ -618,6 +618,33 @@ def display_film_grid(df, tag_df):
         if st.button('Clear', on_click=reset_page, key='tag_clear'):
                 st.session_state.search_reset = True
                 st.rerun()
+    if st.toggle('Date filter', key='date_filter'):
+        with st.container(horizontal=True):
+            select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_page)
+            filtered_df['filtered_date'] = pd.to_datetime(
+                filtered_df['Release Date'],
+                format='%d/%m/%Y',
+                errors='coerce'
+            )
+            selected_date = st.date_input('Filter by date:', key='calender_filter', min_value=date(1980,1,1), on_change=reset_page)
+            if selected_date:
+                selected_date = pd.to_datetime(selected_date).date()
+                if select_date_type == 'Date':
+                    st.write(f'Filter by {select_date_type} : {selected_date}')
+                    filtered_df = filtered_df[
+                        filtered_df['filtered_date'].dt.date == selected_date
+                    ]
+                elif select_date_type == 'Month/Year':
+                    st.write(f'Filter by {select_date_type} : {selected_date.strftime("%B")} {selected_date.year}')
+                    filtered_df = filtered_df[
+                        (filtered_df['filtered_date'].dt.month == selected_date.month) &
+                        (filtered_df['filtered_date'].dt.year == selected_date.year)
+                    ]
+                elif select_date_type == 'Year':
+                    st.write(f'Filter by {select_date_type} : {selected_date.year}')
+                    filtered_df = filtered_df[
+                        filtered_df['filtered_date'].dt.year == selected_date.year
+                    ]
 
     if st.session_state.width_option == 'Device 1':
         width_index = 0
@@ -1112,7 +1139,7 @@ def complex_film(conn):
 
         st.markdown('### Gallery')
         if st.checkbox('Show', on_change=reset_pic):
-            if film['Preview Picture'] != 'No Pics' or film['Preview Picture'] != '--':
+            if film['Preview Picture'] != 'No Pics' and film['Preview Picture'] != '--':
                 if 'prev_pic' not in st.session_state:  
                     st.session_state.prev_pic = 0
                 
