@@ -261,7 +261,7 @@ def display_film_card(df, tag_df):
         info_filter = st.multiselect(
             "📊 Status Filter:",
             options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
-            default=['Watched', 'Goat']
+            default=['Watched', 'Goat', 'Not Watched']
         )
     with col3:
         with st.container(horizontal=True, vertical_alignment='bottom'):
@@ -271,6 +271,33 @@ def display_film_card(df, tag_df):
                 st.rerun()
     # Filter data
     filtered_df = df.copy()
+    if st.toggle('Date filter', key='date_filter'):
+        with st.container(horizontal=True):
+            select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_page)
+            filtered_df['filtered_date'] = pd.to_datetime(
+                filtered_df['Release Date'],
+                format='%d/%m/%Y',
+                errors='coerce'
+            )
+            selected_date = st.date_input('Filter by date:', key='calender_filter', min_value=filtered_df['filtered_date'].min(), on_change=reset_page)
+            if selected_date:
+                selected_date = pd.to_datetime(selected_date).date()
+                if select_date_type == 'Date':
+                    st.write(f'Filter by {select_date_type} : {selected_date}')
+                    filtered_df = filtered_df[
+                        filtered_df['filtered_date'].dt.date == selected_date
+                    ]
+                elif select_date_type == 'Month/Year':
+                    st.write(f'Filter by {select_date_type} : {selected_date.strftime("%B")} {selected_date.year}')
+                    filtered_df = filtered_df[
+                        (filtered_df['filtered_date'].dt.month == selected_date.month) &
+                        (filtered_df['filtered_date'].dt.year == selected_date.year)
+                    ]
+                elif select_date_type == 'Year':
+                    st.write(f'Filter by {select_date_type} : {selected_date.year}')
+                    filtered_df = filtered_df[
+                        filtered_df['filtered_date'].dt.year == selected_date.year
+                    ]
     
     if search_name:
         if search_by == 'Code':
