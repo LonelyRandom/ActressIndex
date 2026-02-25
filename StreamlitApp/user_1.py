@@ -912,7 +912,8 @@ def complex_film(conn):
         st.session_state.film_simple_edit = False
     if 'prev_pic_page' not in st.session_state:
         st.session_state.prev_pic_page = 1
-
+    if 'film_layout' not in st.session_state:
+        st.session_state.film_layout = 'Detailed'
 
     if st.session_state.scroll_to_top:
         scroll_to_here(0,key='top')  # Scroll to the top of the page
@@ -1622,8 +1623,9 @@ def complex_film(conn):
         st.markdown('---')
         with st.expander('Add Tags'):
             if st.session_state.get('reset_tag', False):
-                st.session_state.reset_flage = False
+                st.session_state.reset_tag = False
                 st.session_state.add_new_tag = ''
+                st.session_state.film_playlist = []
             new_tag = st.text_input('Tag', placeholder='Enter tag... (tag1, tag2, tag3, ..)', key='add_new_tag')
             if st.button('Save Tag', width='stretch'):
                 new_tags = []
@@ -1635,14 +1637,38 @@ def complex_film(conn):
                 new_tag_df = pd.DataFrame({'Tags': new_tag})
                 st.session_state.tag_df = pd.concat([tag_df, new_tag_df], ignore_index=True)
                 tags_worksheet().append_rows(new_tags)
+                st.session_state.reset_tag = True
                 st.rerun()
-
-            edited_selected_playlist = st.multiselect(
-                'Tags', 
-                options=TAGS_OPTS, 
+            
+            opts = st.session_state.tag_df['Tags'].values
+            test_new_tags = st.multiselect(
+                'Test Tags', 
+                options=opts, 
                 key=f'film_playlist'
             )
 
+            if st.button('Delete Tags', width='stretch'):
+                if test_new_tags:
+                    tag_df = st.session_state.tag_df
+                    rows_to_delete = tag_df[
+                        tag_df['Tags'].isin(test_new_tags)
+                    ].index.tolist()
+
+                    for index in sorted(rows_to_delete, reverse=True):
+                        tags_worksheet().delete_row(int(index)+2)
+
+                    tag_df = tag_df[
+                        ~tag_df['Tags'].isin(test_new_tags)
+                    ].reset_index(drop=True)
+
+                    st.session_state.tag_df = tag_df
+
+                    st.session_state.reset_tag = True   
+
+                    st.rerun()
+                else:
+                    st.warning('No Tags selectec above')
+                        
 
         st.markdown('---')
         st.header("⚙️ Display Settings")
@@ -1650,7 +1676,8 @@ def complex_film(conn):
             "View Mode",
             ["Detailed", "Simple", "Not Watched"],
             on_change=reset_page,
-            horizontal=False
+            horizontal=False,
+            key='film_layout'
         )
 
         st.markdown('---')
