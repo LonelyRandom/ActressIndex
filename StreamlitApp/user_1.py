@@ -3061,14 +3061,14 @@ def complex_actress(conn):
                             # Buat card dengan HTML lengkap
                             card_html = f"""
                             <div class="card-wrapper">
-                                <div class="cat-card">
+                                <div class="cat-card review-{review_class}">
                                     <div class="badge-stack">
                                         <div class="review-badge review-{review_class}">
                                             {actress["Review"]}
                                         </div>
                                     </div>
                                     <div class="cat-image-container">
-                                        <img src="{cat_url}" class="cat-image" width="150" height="150">
+                                        <img src="{cat_url}" class="cat-image review-{review_class}" width="150" height="150">
                                     </div>
                                     <div class="card-divider"></div>"""
                             
