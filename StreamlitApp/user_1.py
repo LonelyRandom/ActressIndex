@@ -71,7 +71,14 @@ REVIEW_OPTS = [
     'Not Checked',
     'Pass',
     'Goat',
-    'Drop'
+    'Drop',
+    'S-Tier',
+    'A-Tier',
+    'B-Tier',
+    'C-Tier',
+    'D-Tier',
+    'E-Tier',
+    'F-Tier'
 ]
 
 STATUS_OPTS = [
@@ -2852,6 +2859,13 @@ def complex_actress(conn):
                 show_review_not_checked = st.checkbox("Not Checked",value=True)
                 show_review_pass = st.checkbox("Pass",value=True)
                 show_review_goat = st.checkbox("Goat",value=True)
+                show_review_s = st.checkbox("S-Tier",value=True)
+                show_review_a = st.checkbox("A-Tier",value=True)
+                show_review_b = st.checkbox("B-Tier",value=True)
+                show_review_c = st.checkbox("C-Tier",value=True)
+                show_review_d = st.checkbox("D-Tier",value=True)
+                show_review_e = st.checkbox("E-Tier",value=True)
+                show_review_f = st.checkbox("F-Tier",value=True)
                 show_review_drop = st.checkbox("Drop",value=False)
         
         st.markdown("---")
@@ -2928,6 +2942,20 @@ def complex_actress(conn):
             review_conditions.append(filtered_df['Review'].str.lower() == 'drop')
         if show_review_not_checked:
             review_conditions.append(filtered_df['Review'].str.lower() == 'not checked')
+        if show_review_s:
+            review_conditions.append(filtered_df['Review'].str.lower() == 's-tier')
+        if show_review_a:
+            review_conditions.append(filtered_df['Review'].str.lower() == 'a-tier')
+        if show_review_b:
+            review_conditions.append(filtered_df['Review'].str.lower() == 'b-tier')
+        if show_review_c:
+            review_conditions.append(filtered_df['Review'].str.lower() == 'c-tier')
+        if show_review_d:
+            review_conditions.append(filtered_df['Review'].str.lower() == 'd-tier')
+        if show_review_e:
+            review_conditions.append(filtered_df['Review'].str.lower() == 'e-tier')
+        if show_review_f:
+            review_conditions.append(filtered_df['Review'].str.lower() == 'f-tier')
 
         
         if status_conditions:
@@ -2959,23 +2987,18 @@ def complex_actress(conn):
                             name_text = actress['Name (Alphabet)'] if pd.notna(actress['Name (Alphabet)']) else ""
                             kanji_text = actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ""
                             
-                            status_class = actress["Status"].lower().strip().replace(" ", "-")
                             review_class = actress["Review"].lower().strip().replace(" ", "-")
-
                             # Buat card dengan HTML lengkap
                             card_html = f"""
                             <div class="card-wrapper">
-                                <div class="cat-card">
+                                <div class="cat-card review-{review_class}">
                                     <div class="badge-stack">
-                                        <div class="status-badge status-{status_class}">
-                                            {actress["Status"]}
-                                        </div>
                                         <div class="review-badge review-{review_class}">
                                             {actress["Review"]}
                                         </div>
                                     </div>
                                     <div class="cat-image-container">
-                                        <img src="{cat_url}" class="cat-image" width="150" height="150">
+                                        <img src="{cat_url}" class="cat-image review-{review_class}" width="150" height="150">
                                     </div>
                                     <div class="card-divider"></div>"""
                             
@@ -3033,7 +3056,6 @@ def complex_actress(conn):
                             name_text = actress['Name (Alphabet)'] if pd.notna(actress['Name (Alphabet)']) else ""
                             kanji_text = actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ""
                             
-                            status_class = actress["Status"].lower().strip().replace(" ", "-")
                             review_class = actress["Review"].lower().strip().replace(" ", "-")
                             
                             # Buat card dengan HTML lengkap
@@ -3041,9 +3063,6 @@ def complex_actress(conn):
                             <div class="card-wrapper">
                                 <div class="cat-card">
                                     <div class="badge-stack">
-                                        <div class="status-badge status-{status_class}">
-                                            {actress["Status"]}
-                                        </div>
                                         <div class="review-badge review-{review_class}">
                                             {actress["Review"]}
                                         </div>
@@ -3099,7 +3118,7 @@ def complex_actress(conn):
         /* Container untuk beberapa badge */
         .badge-stack {
             position: absolute;
-            top: 10px;
+            top: 15px;
             right: 10px;
             display: flex;
             flex-direction: column;
@@ -3108,24 +3127,12 @@ def complex_actress(conn):
             z-index: 10;
         }
 
-        /* Status badge (yang sudah ada) */
-        .status-badge {
-            padding: 4px 9px;
-            border-radius: 20px;
-            font-size: 8px;
-            font-weight: 600;
-            text-transform: uppercase;
-            color: white;
-            text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-        }
-
         /* Review badge */
         .review-badge {
-            padding: 4px 9px;
+            padding: 5px 10px;
             border-radius: 20px;
-            font-size: 8px;
-            font-weight: 600;
+            font-size: 10px;
+            font-weight: 700;
             text-transform: uppercase;
             text-align: center;
             color: white;
@@ -3140,25 +3147,20 @@ def complex_actress(conn):
             background-color: #bdc3c7;
             color: #2c3e50;
         }
-
-
-        /* Warna berdasarkan status */
-        .status-active {
-            background-color: #2ecc71; /* hijau */
-        }
-        .status-retired {
-            background-color: #95a5a6; /* abu */
-        }
-        .status-no-info {
-            background-color: #f1c40f; /* kuning */
+        .review-s-tier { 
+            background-color: #FFD700; 
             color: #2c3e50;
         }
-        .status-slow-release {
-            background-color: #e67e22; /* orange */
+
+        .review-a-tier { background-color: #9b59b6; }
+        .review-b-tier { background-color: #3498db; }
+        .review-c-tier { 
+            background-color: #2ecc71; 
+            color: #2c3e50;
         }
-        .status-problem {
-            background-color: #e74c3c; /* merah */
-        }
+        .review-d-tier { background-color: #e67e22; }
+        .review-e-tier { background-color: #ff8c42; }
+        .review-f-tier { background-color: #e74c3c; }
 
         /* Supaya badge nempel di card */
         .cat-card {
@@ -3171,11 +3173,11 @@ def complex_actress(conn):
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 20px 15px;
+            padding: 15px 15px;
             margin-bottom: 15px;
             border-radius: 15px;
-            border: 2px solid #e0e0e0;
-            background: linear-gradient(135deg, #F5E5E1 0%, #f8f9fa 100%);
+            border: 2px solid transparent;   /* ⬅ penting */
+            background: linear-gradient(135deg, #ffffff 0%, #e8ebee 100%);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             min-height: 260px;
@@ -3183,10 +3185,17 @@ def complex_actress(conn):
             max-width: 190px;
             cursor: pointer;
         }
+        /* ===== BORDER BASED ON TIER ===== */
+        .review-s-tier { border-color: #FFD700 !important; }
+        .review-a-tier { border-color: #9b59b6 !important; }
+        .review-b-tier { border-color: #3498db !important; }
+        .review-c-tier { border-color: #2ecc71 !important; }
+        .review-d-tier { border-color: #e67e22 !important; }
+        .review-e-tier { border-color: #ff8c42 !important; }
+        .review-f-tier { border-color: #e74c3c !important; }
         .cat-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            border-color: #ff6b6b;
         }
         .cat-image-container {
             display: flex;
@@ -3204,7 +3213,7 @@ def complex_actress(conn):
             object-fit: cover;
             max-width: 115px;
             max-height: 115px;
-            border: 2px solid #ff6b6b;
+            border: 2px solid transparent;
         }
         .cat-name {
             font-weight: 700;
