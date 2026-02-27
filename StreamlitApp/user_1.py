@@ -1471,6 +1471,7 @@ def complex_film(conn):
                 if edited_info != 'Not Watched':
                     for review in new_review:
                         actress_worksheet().update(f'A{int(review[0]+2)}', review[1])
+                        actress_df.at[review[0], 'Review'] = review[1]
                 
                 film_worksheet().update(f"A{row}:K{row}", [new_values])
 
