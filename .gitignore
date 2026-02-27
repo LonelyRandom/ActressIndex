@@ -4,7 +4,7 @@ __pycache__/
 *.pyo
 coba.py
 coba_coba.py
-
+coba_scrapping.py
 # Virtual environment
 .venv/
 venv/

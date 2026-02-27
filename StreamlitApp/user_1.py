@@ -248,6 +248,20 @@ def display_film_card(df, tag_df):
         st.session_state.search_by = 'Actress'
         st.session_state.search_text = ''
 
+    if st.session_state.width_option == 'Device 1':
+        device_index = 0
+    else:
+        device_index = 1
+
+    st.session_state.width_option = st.selectbox('Device', options=['Device 1', 'Device 2'], index=device_index, on_change=reset_page)
+    
+    if st.session_state.width_option == 'Device 1':
+        image_width = 0.397
+        device = 1
+    else:
+        image_width = 0.366
+        device = 1.035
+        
     search_by = st.radio('Search By:', options=['Code', 'Actress'], horizontal=True, key='search_by', on_change=reset_page)
     col1, col2, col3 = st.columns(3)
 
@@ -328,19 +342,6 @@ def display_film_card(df, tag_df):
         st.metric("Watched", watched_count)
         st.metric("Goat", goat_count)
     
-    if st.session_state.width_option == 'Device 1':
-        device_index = 0
-    else:
-        device_index = 1
-
-    st.session_state.width_option = st.selectbox('Device', options=['Device 1', 'Device 2'], index=device_index, on_change=reset_page)
-    
-    if st.session_state.width_option == 'Device 1':
-        image_width = 0.397
-        device = 1
-    else:
-        image_width = 0.366
-        device = 1.035
     st.markdown("---")
     
     if filtered_df.empty:
@@ -586,6 +587,20 @@ def display_film_grid(df, tag_df):
         st.session_state.search_text = ''
         st.session_state.search_by = 'Actress'
 
+    if st.session_state.width_option == 'Device 1':
+        width_index = 0
+    else:
+        width_index = 1
+
+    st.session_state.width_option = st.selectbox('img width',options=['Device 1','Device 2'], on_change=reset_page, index=width_index)
+
+    if st.session_state.width_option == 'Device 1':
+        image_width = 115
+        image_heigth = 164
+    else:
+        image_width = 106
+        image_heigth = 151
+        
     with st.container(horizontal=True):
         search_by = st.radio('Search By :', options=['Code', 'Actress'], key='search_by', width='content', horizontal=False)    
         filters = st.radio(
@@ -673,19 +688,6 @@ def display_film_grid(df, tag_df):
                         filtered_df['filtered_date'].dt.year == selected_date.year
                     ]
 
-    if st.session_state.width_option == 'Device 1':
-        width_index = 0
-    else:
-        width_index = 1
-
-    st.session_state.width_option = st.selectbox('img width',options=['Device 1','Device 2'], on_change=reset_page, index=width_index)
-
-    if st.session_state.width_option == 'Device 1':
-        image_width = 115
-        image_heigth = 164
-    else:
-        image_width = 106
-        image_heigth = 151
 
     if search_name:
         if search_by == 'Code':
@@ -1787,7 +1789,7 @@ def complex_film(conn):
             st.session_state.search_reset = False
             st.session_state.search_bar = ''
         
-        search_by = st.radio('Search By: ', options=['Code', 'Actress'], horizontal=True)
+        search_by = st.radio('Search By: ', options=['Code', 'Actress'], horizontal=True, key='search_by')
         with st.container(horizontal=True, vertical_alignment='bottom'):
             search_term = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
             if st.button('Clear'):
