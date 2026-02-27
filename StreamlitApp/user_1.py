@@ -1298,7 +1298,7 @@ def complex_film(conn):
             edited_actress = ", ".join(selected_actress)
             edited_actress_input = '?'
         else:
-            edited_actress = '?'
+            edited_actress = 'Not Listed'
             edited_actress_input = '?'
 
         edited_code = st.text_input('Code', placeholder='Enter film code (e.g. MIDV-791)', value=film['Code'], key=f'film_code_{index}')
@@ -1324,6 +1324,20 @@ def complex_film(conn):
             edited_release_date = edited_release_date.strftime('%d/%m/%Y')
 
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
+
+        if edited_info == 'Watched' or edited_info == 'Goat':
+            if 'Not Listed' not in film['Actress Name'] and 'Many' not in film['Actress Name']:
+                new_review = []
+                actress_list = film['Actress Name'].split(', ')
+                matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
+
+                for i in matching_actresses.index:
+                    review_index = REVIEW_OPTS.index(actress_df['Review'].iloc[i]) if actress_df['Review'].iloc[i] in REVIEW_OPTS else 0
+                    with st.container(horizontal=True):
+                        with st.container(width=80):
+                            st.image(actress_df['Picture'].iloc[i],width=80)
+                        with st.container():
+                            new_review.append((i,st.selectbox(f'Review "{actress_df["Name (Alphabet)"].iloc[i]}"', options=REVIEW_OPTS, index=review_index, key=f'review_{index}_{i}')))
 
         if film['Tags'] == 'No Tags':
             tags = []
@@ -1436,6 +1450,7 @@ def complex_film(conn):
                         final_picture_url = film['Picture']
                 else:
                     final_picture_url = film['Picture']
+                
 
                 # Update data di DataFrame
                 row = index + 2
@@ -1453,6 +1468,10 @@ def complex_film(conn):
                     edited_a
                 ]
 
+                if edited_info != 'Not Watched':
+                    for review in new_review:
+                        actress_worksheet().update(f'A{int(review[0]+2)}', review[1])
+                
                 film_worksheet().update(f"A{row}:K{row}", [new_values])
 
                 df.loc[index] = new_values
