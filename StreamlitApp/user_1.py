@@ -232,8 +232,6 @@ def display_film_card(df, tag_df):
 
     if 'film_page' not in st.session_state:
         st.session_state.film_page = 1
-    if 'width_option' not in st.session_state:
-        st.session_state.width_option = 'Device 1'
 
     if df.empty:
         st.warning("📭 No film data available!")
@@ -254,13 +252,6 @@ def display_film_card(df, tag_df):
         st.session_state.search_bar = st.session_state.search_text
         st.session_state.search_by = 'Actress'
         st.session_state.search_text = ''
-
-    if st.session_state.width_option == 'Device 1':
-        device_index = 0
-    else:
-        device_index = 1
-
-    st.session_state.width_option = st.selectbox('Device', options=['Device 1', 'Device 2'], index=device_index, on_change=reset_page)
     
     if st.session_state.width_option == 'Device 1':
         image_width = 0.397
@@ -551,6 +542,10 @@ def reset_page():
     """Reset halaman ke 1"""
     st.session_state.film_page = 1
 
+def reset_page_actress():
+    """Reset halaman ke 1"""
+    st.session_state.actress_page = 1
+
 # --- FUNGSI ALTERNATIF: Grid Layout tanpa Pagination ---
 def display_film_grid(df, tag_df):
     """
@@ -593,13 +588,6 @@ def display_film_grid(df, tag_df):
         st.session_state.search_bar = st.session_state.search_text
         st.session_state.search_text = ''
         st.session_state.search_by = 'Actress'
-
-    if st.session_state.width_option == 'Device 1':
-        width_index = 0
-    else:
-        width_index = 1
-
-    st.session_state.width_option = st.selectbox('img width',options=['Device 1','Device 2'], on_change=reset_page, index=width_index)
 
     if st.session_state.width_option == 'Device 1':
         image_width = 115
@@ -961,7 +949,7 @@ def complex_home(conn):
     """, unsafe_allow_html=True)
 
 
-def complex_film(conn):
+def complex_film(conn, device):
     # Inisialisasi variabel kontrol
     if "editing_film_index" not in st.session_state:
         st.session_state.editing_film_index = None
@@ -977,6 +965,8 @@ def complex_film(conn):
         st.session_state.prev_pic_page = 1
     if 'film_layout' not in st.session_state:
         st.session_state.film_layout = 'Detailed'
+    if 'width_option' not in st.session_state:
+        st.session_state.width_option = device
 
     if st.session_state.scroll_to_top:
         scroll_to_here(0,key='top')  # Scroll to the top of the page
@@ -2055,14 +2045,17 @@ def complex_film(conn):
     </script>
     """, unsafe_allow_html=True)
 
-def complex_actress(conn):
+def complex_actress(conn, device):
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Actress List</h1>", unsafe_allow_html=True)
 
     if 'initial' not in st.session_state:
         st.session_state.initial = False
     if 'delete_btn_actress' not in st.session_state:
         st.session_state.delete_btn_actress = False
+    if 'width_option' not in st.session_state:
+        st.session_state.width_option = device
 
+        
     # Fungsi untuk refresh data dari Google Sheets
     def refresh_data(conn):
         """Refresh data dari Google Sheets ke session state"""
@@ -2307,6 +2300,7 @@ def complex_actress(conn):
         st.markdown('### Gallery')
         if st.checkbox('Show', on_change=reset_pic):
             if film['Preview Picture'] != 'No Pics' and film['Preview Picture'] != '--':
+
                 if 'prev_pic' not in st.session_state:  
                     st.session_state.prev_pic = 0
                 
@@ -2527,8 +2521,13 @@ def complex_actress(conn):
         
         st.markdown("---")
         st.markdown("### 🎬 Filmography")
-        img_width = st.number_input('img widths', min_value=100)
-        img_height = st.number_input('img heights', min_value=100)
+        if st.session_state.width_option == 'Device 1':
+            img_width = 140
+            img_height = 199
+        else:
+            img_width = 127
+            img_height = 181
+
         with st.expander("### ✅ Watched Movies"):
             with st.container(horizontal=True):
                 for idx in film_watched_df.index:
@@ -3165,6 +3164,7 @@ def complex_actress(conn):
             st.session_state.adding_new = False
             st.rerun()
 
+
     # Sidebar
     with st.sidebar:
         if st.button('⬅️ Back', width='stretch'):
@@ -3174,24 +3174,22 @@ def complex_actress(conn):
         with st.container(key='filter_container', horizontal=True):
             with st.container(key='status_filter'):
                 st.header("Status Filters")
-                show_active = st.checkbox("Active", value=True)
-                show_retired = st.checkbox("Retired", value=True)
-                show_no_info = st.checkbox("No Info", value=True)
-                show_slow_release = st.checkbox("Slow Release", value=True)
-                show_problem = st.checkbox("Problem", value=True)
+                show_active = st.checkbox("Active", value=True, on_change=reset_page_actress)
+                show_retired = st.checkbox("Retired", value=True, on_change=reset_page_actress)
+                show_no_info = st.checkbox("No Info", value=True, on_change=reset_page_actress)
+                show_slow_release = st.checkbox("Slow Release", value=True, on_change=reset_page_actress)
+                show_problem = st.checkbox("Problem", value=True, on_change=reset_page_actress)
             with st.container(key='review_filter'):
                 st.header("Review Filters")
-                show_review_not_checked = st.checkbox("Not Checked",value=True)
-                show_review_pass = st.checkbox("Pass",value=True)
-                show_review_goat = st.checkbox("Goat",value=True)
-                show_review_s = st.checkbox("S-Tier",value=True)
-                show_review_a = st.checkbox("A-Tier",value=True)
-                show_review_b = st.checkbox("B-Tier",value=True)
-                show_review_c = st.checkbox("C-Tier",value=True)
-                show_review_d = st.checkbox("D-Tier",value=True)
-                show_review_e = st.checkbox("E-Tier",value=True)
-                show_review_f = st.checkbox("F-Tier",value=True)
-                show_review_drop = st.checkbox("Drop",value=False)
+                show_review_not_checked = st.checkbox("Not Checked",value=False, on_change=reset_page_actress)
+                show_review_s = st.checkbox("S-Tier",value=True, on_change=reset_page_actress)
+                show_review_a = st.checkbox("A-Tier",value=True, on_change=reset_page_actress)
+                show_review_b = st.checkbox("B-Tier",value=True, on_change=reset_page_actress)
+                show_review_c = st.checkbox("C-Tier",value=True, on_change=reset_page_actress)
+                show_review_d = st.checkbox("D-Tier",value=True, on_change=reset_page_actress)
+                show_review_e = st.checkbox("E-Tier",value=True, on_change=reset_page_actress)
+                show_review_f = st.checkbox("F-Tier",value=True, on_change=reset_page_actress)
+                show_review_drop = st.checkbox("Drop",value=False, on_change=reset_page_actress)
         
         st.markdown("---")
         st.subheader("Management")
@@ -3235,10 +3233,13 @@ def complex_actress(conn):
         
         search_container = st.container(horizontal=True, vertical_alignment='bottom')
 
+        if st.session_state.scroll_to_here:
+            scroll_to_here(0,key='here')  # Scroll to the top of the page
+            st.session_state.scroll_to_here = False
         with search_container:
             search_query = st.text_input("🔍 Search actress by Name (Alphabet / Kanji):", 
-                            placeholder="Type name to search...", key='search_bar')
-            if st.button('Clear'):
+                            placeholder="Type name to search...", key='search_bar', on_change=reset_page_actress)
+            if st.button('Clear', on_click=reset_page_actress):
                 st.session_state.search_reset = True
                 st.rerun()
 
@@ -3259,10 +3260,6 @@ def complex_actress(conn):
             status_conditions.append(filtered_df['Status'].str.lower() == 'problem')
         
         review_conditions = []
-        if show_review_pass:
-            review_conditions.append(filtered_df['Review'].str.lower() == 'pass')
-        if show_review_goat:
-            review_conditions.append(filtered_df['Review'].str.lower() == 'goat')
         if show_review_drop:
             review_conditions.append(filtered_df['Review'].str.lower() == 'drop')
         if show_review_not_checked:
@@ -3299,12 +3296,71 @@ def complex_actress(conn):
         
         final_mask = status_mask & review_mask
         filtered_df = filtered_df[final_mask]
-        df = df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
 
+        filtered_df = filtered_df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=False)
 
+        actress_per_page = 3 * 10
+    
+        total_actress_pages = max(1, (len(filtered_df) + actress_per_page - 1) // actress_per_page)
+        st.markdown('---')
+        if 'actress_page' not in st.session_state:
+            st.session_state.actress_page = 1
+
+        def set_page(p):
+            st.session_state.actress_page = p
+        st.markdown(
+            f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Page {st.session_state.actress_page}</div>",
+            unsafe_allow_html=True
+        )
+
+        if total_actress_pages <= 6:
+            with st.container(key='page_button', horizontal=True, horizontal_alignment='center'):
+                for i in range(1, total_actress_pages + 1):
+                    st.button(
+                        str(i),
+                        key=f'page_top_{i}',
+                        disabled=(i == st.session_state.actress_page),
+                        on_click=set_page,
+                        args=(i,)
+                    )
+        else:
+            with st.container(key='page_button_top', horizontal=True, horizontal_alignment='center'):
+                st.button('⬅️',key='previous_top', disabled=(st.session_state.actress_page == 1), on_click=set_page, args=(st.session_state.actress_page-1,))
+                
+                start_page = max(1, st.session_state.actress_page - 1)  
+                end_page = min(total_actress_pages, st.session_state.actress_page + 2)  
+                
+                pages_to_show = range(start_page, end_page + 1)
+                
+                if len(pages_to_show) < 4:
+                    if start_page == 1:
+                        pages_to_show = range(1, min(5, total_actress_pages + 1))
+                    else:
+                        pages_to_show = range(max(1, total_actress_pages - 3), total_actress_pages + 1)
+                
+                for i in pages_to_show:
+                    st.button(
+                        str(i),
+                        key=f'page_top_{i}',
+                        disabled=(i == st.session_state.actress_page),
+                        on_click=set_page,
+                        args=(i,)
+                    )
+                
+                st.button('➡️',key='next_top', disabled=(st.session_state.actress_page == total_actress_pages), on_click=set_page, args=(st.session_state.actress_page+1,))
+                
+        
+        page = st.session_state.actress_page
+        
+        start_idx = (page - 1) * actress_per_page # page = 2 / Start idx = 8
+        end_idx = min(start_idx + actress_per_page, len(filtered_df)) # end idx = 16
+        
+        st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} films")
+        
+        rows_to_display = filtered_df.iloc[start_idx:end_idx] #[8,15]
         if not search_query and not search_query.isspace() and not filtered_df.empty:
             with st.container(horizontal=True, horizontal_alignment='center'):
-                for idx in filtered_df.index:
+                for idx in rows_to_display.index:
                     actress = df.iloc[idx]    
                     try:
                         with st.container(width='content'):
@@ -3434,9 +3490,53 @@ def complex_actress(conn):
                             st.markdown(error_html, unsafe_allow_html=True)
         else:
             st.warning("No actresses match the selected filters.")
+        st.markdown('---')
+        if total_actress_pages <= 6:
+            with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
+                for i in range(1, total_actress_pages + 1):
+                    if st.button(
+                        str(i),
+                        key=f'page_bottom_{i}',
+                        disabled=(i == st.session_state.actress_page),
+                        on_click=set_page,
+                        args=(i,)
+                    ):
+                        st.session_state.scroll_to_here = True
+                        st.rerun()
+        else:
+            with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
+                if st.button('⬅️',key='previous_bottom', disabled=(st.session_state.actress_page == 1), on_click=set_page, args=(st.session_state.actress_page-1,)):
+                    st.session_state.scroll_to_here = True
+                    st.rerun()
+                
+                start_page = max(1, st.session_state.actress_page - 1)  
+                end_page = min(total_actress_pages, st.session_state.actress_page + 2)  
+                
+                pages_to_show = range(start_page, end_page + 1)
+                
+                if len(pages_to_show) < 4:
+                    if start_page == 1:
+                        pages_to_show = range(1, min(5, total_actress_pages + 1))
+                    else:
+                        pages_to_show = range(max(1, total_actress_pages - 3), total_actress_pages + 1)
+                
+                for i in pages_to_show:
+                    if st.button(
+                        str(i),
+                        key=f'page_bottom_{i}',
+                        disabled=(i == st.session_state.actress_page),
+                        on_click=set_page,
+                        args=(i,)
+                    ):
+                        st.session_state.scroll_to_here = True
+                        st.rerun()
+                
+                if st.button('➡️',key='next_bottom', disabled=(st.session_state.actress_page == total_actress_pages), on_click=set_page, args=(st.session_state.actress_page+1,)):
+                    st.session_state.scroll_to_here = True    
+                    st.rerun()
     else:
         st.info("No actress data available. Click 'Add New Actress' to get started!")
-
+    
     # CSS untuk styling card yang estetik
     st.markdown("""
     <style>

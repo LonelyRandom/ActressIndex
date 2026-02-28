@@ -6,6 +6,7 @@ from user_2 import simple_home, simple_actress, simple_film
 
 user_1 = st.secrets.indicators.USER_1
 user_2 = st.secrets.indicators.USER_2
+user_3 = st.secrets.indicators.USER_3
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -38,6 +39,8 @@ elif st.session_state.page == 'home':
     )
     if st.session_state.usn == user_1:
         page = complex_home(conn)
+    elif st.session_state.usn == user_3:
+        page = simple_home(conn)
     elif st.session_state.usn == user_2:
         page = simple_home(conn)
 
@@ -52,7 +55,9 @@ elif st.session_state.page == 'film':
         page_icon='🎬'
     )
     if st.session_state.usn == user_1:
-        page = complex_film(conn)
+        page = complex_film(conn,'Device 1')
+    elif st.session_state.usn == user_3:
+        page = complex_film(conn,'Device 2')
     elif st.session_state.usn == user_2:
         page = simple_film(conn)
 
@@ -67,7 +72,9 @@ elif st.session_state.page == 'actress':
         page_icon='🌟'
     )
     if st.session_state.usn == user_1:
-        page = complex_actress(conn)
+        page = complex_actress(conn, 'Device 1')
+    elif st.session_state.usn == user_3:
+        page = complex_actress(conn, 'Device 2')
     elif st.session_state.usn == user_2:
         page = simple_actress(conn)
 
