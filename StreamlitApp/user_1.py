@@ -2054,6 +2054,8 @@ def complex_actress(conn, device):
         st.session_state.delete_btn_actress = False
     if 'width_option' not in st.session_state:
         st.session_state.width_option = device
+    if 'scroll_to_here' not in st.session_state:
+        st.session_state.scroll_to_here = False
 
         
     # Fungsi untuk refresh data dari Google Sheets
