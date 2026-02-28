@@ -40,7 +40,7 @@ elif st.session_state.page == 'home':
     if st.session_state.usn == user_1:
         page = complex_home(conn)
     elif st.session_state.usn == user_3:
-        page = simple_home(conn)
+        page = complex_home(conn)
     elif st.session_state.usn == user_2:
         page = simple_home(conn)
 
