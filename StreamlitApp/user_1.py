@@ -2530,7 +2530,7 @@ def complex_actress(conn):
         with st.expander("### ✅ Watched Movies"):
             with st.container(horizontal=True):
                 for idx in film_watched_df.index:
-                    with st.container():
+                    with st.container(width=140):
                         st.markdown(f"""
                                 <div style="
                                     height: 200px;  /* Atur tinggi tetap */
@@ -2557,7 +2557,7 @@ def complex_actress(conn):
         with st.expander("### ❌ Unwatched Movies"):
             with st.container(horizontal=True):
                 for idx in film_not_watched_df.index:
-                    with st.container():
+                    with st.container(width=140):
                         st.markdown(f"""
                                 <div style="
                                     height: 200px;  /* Atur tinggi tetap */
