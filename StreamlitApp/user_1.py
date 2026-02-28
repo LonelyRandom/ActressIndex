@@ -2530,15 +2530,57 @@ def complex_actress(conn):
         with st.expander("### ✅ Watched Movies"):
             with st.container(horizontal=True):
                 for idx in film_watched_df.index:
-                    if st.button(film_watched_df['Code'][idx], key=f'{film_watched_df["Code"][idx]}', type='secondary', width='stretch'):
-                        st.session_state.actress_film_index = idx
-                        st.rerun()
+                    with st.container():
+                        st.markdown(f"""
+                                <div style="
+                                    height: 200px;  /* Atur tinggi tetap */
+                                    width: 100%;
+                                    overflow: hidden;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    margin-bottom: 10px;
+                                    border-radius: 5px;
+                                ">
+                                    <img src="{film_watched_df['Picture'][idx]}" 
+                                        style="
+                                            width: 100%;
+                                            height: 100%;
+                                            object-fit: cover;
+                                            object-position: center;
+                                        ">
+                                </div>
+                            """, unsafe_allow_html=True)
+                        if st.button(film_watched_df['Code'][idx], key=f'{film_watched_df["Code"][idx]}', type='secondary', width='stretch'):
+                            st.session_state.actress_film_index = idx
+                            st.rerun()
         with st.expander("### ❌ Unwatched Movies"):
             with st.container(horizontal=True):
                 for idx in film_not_watched_df.index:
-                    if st.button(film_not_watched_df['Code'][idx], key=f'{film_not_watched_df["Code"][idx]}', type='secondary', width='stretch'):
-                        st.session_state.actress_film_index = idx
-                        st.rerun()
+                    with st.container():
+                        st.markdown(f"""
+                                <div style="
+                                    height: 200px;  /* Atur tinggi tetap */
+                                    width: 100%;
+                                    overflow: hidden;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    margin-bottom: 10px;
+                                    border-radius: 5px;
+                                ">
+                                    <img src="{film_not_watched_df['Picture'][idx]}" 
+                                        style="
+                                            width: 100%;
+                                            height: 100%;
+                                            object-fit: cover;
+                                            object-position: center;
+                                        ">
+                                </div>
+                            """, unsafe_allow_html=True)
+                        if st.button(film_not_watched_df['Code'][idx], key=f'{film_not_watched_df["Code"][idx]}', type='secondary', width='stretch'):
+                            st.session_state.actress_film_index = idx
+                            st.rerun()
 
         st.markdown("---")
         
