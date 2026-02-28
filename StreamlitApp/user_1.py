@@ -2528,13 +2528,14 @@ def complex_actress(conn):
         st.markdown("---")
         st.markdown("### 🎬 Filmography")
         img_width = st.number_input('img widths', min_value=100)
+        img_height = st.number_input('img heights', min_value=100)
         with st.expander("### ✅ Watched Movies"):
             with st.container(horizontal=True):
                 for idx in film_watched_df.index:
                     with st.container(width=img_width):
                         st.markdown(f"""
                                 <div style="
-                                    height: 200px;  /* Atur tinggi tetap */
+                                    height: {img_height}px;  /* Atur tinggi tetap */
                                     width: 100%;
                                     overflow: hidden;
                                     display: flex;
@@ -2561,7 +2562,7 @@ def complex_actress(conn):
                     with st.container(width=img_width):
                         st.markdown(f"""
                                 <div style="
-                                    height: 200px;  /* Atur tinggi tetap */
+                                    height: {img_height}px;  /* Atur tinggi tetap */
                                     width: 100%;
                                     overflow: hidden;
                                     display: flex;
