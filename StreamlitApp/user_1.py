@@ -1253,6 +1253,10 @@ def complex_film(conn, device):
         st.subheader("Basic Information")
 
         edited_a = st.toggle('✨', value=film['A-Detector'])
+        if edited_a:
+            edited_a = True
+        else:
+            edited_a = False
         film_link = film['Link']
 
         if film_link == '--':
@@ -1701,19 +1705,30 @@ def complex_film(conn, device):
                 st.session_state.film_playlist = []
             new_tag = st.text_input('Tag', placeholder='Enter tag... (tag1, tag2, tag3, ..)', key='add_new_tag')
             if st.button('Save Tag', width='stretch'):
-                new_tags = []
-                new_tag = new_tag.split(', ')
+                if not new_tag.isspace() and new_tag:
+                    new_tags = []
+                    tag_error = False
+                    new_tag = new_tag.split(', ')
 
-                for tag in new_tag:
-                    new_tags.append([tag])
-                
-                new_tag_df = pd.DataFrame({'Tags': new_tag})
-                st.session_state.tag_df = pd.concat([tag_df, new_tag_df], ignore_index=True)
-                tags_worksheet().append_rows(new_tags)
-                st.session_state.reset_tag = True
-                st.rerun()
+                    for tag in new_tag:
+                        if tag in st.session_state.tag_df['Tags'].values:
+                            tag_error = True        
+                        else:
+                            new_tags.append([tag])
+
+                    if not tag_error:
+                        new_tag_df = pd.DataFrame({'Tags': new_tag})
+                        st.session_state.tag_df = pd.concat([tag_df, new_tag_df], ignore_index=True)
+                        tags_worksheet().append_rows(new_tags)
+                        st.session_state.reset_tag = True
+                        st.rerun()
+                    else:
+                        st.warning(f'{tag} already in Tags')
+                else:
+                    st.warning('Tag cannot be empty')
             
             opts = st.session_state.tag_df['Tags'].values
+
             test_new_tags = st.multiselect(
                 'Test Tags', 
                 options=opts, 
