@@ -889,10 +889,10 @@ def complex_home(conn):
             with st.container(horizontal=True):
                 with st.container(key='Actress Info 1', horizontal=False):
                     st.metric('Actress Count' , len(df_actress))
-                    st.metric('Pass',len(df_actress[df_actress['Review'] == 'Pass']))
+                    st.metric('Pass',len(df_actress[(df_actress['Review'] != 'Not Check') & (df_actress['Review'] != 'Drop')]))
                 with st.container(key='Actress Info 2', horizontal=False):
                     st.metric('Not Checked', len(df_actress[df_actress['Review'] == 'Not Checked']))
-                    st.metric('Goat', len(df_actress[df_actress['Review'] == 'Goat']))
+                    st.metric('Drop', len(df_actress[df_actress['Review'] == 'Drop']))
             if st.button('Go To Actress →'):
                 return 'actress'
     with right:
