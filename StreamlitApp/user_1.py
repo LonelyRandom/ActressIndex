@@ -684,29 +684,29 @@ def display_film_grid(df, tag_df):
         if st.button('Clear', on_click=reset_page, key='tag_clear'):
                 st.session_state.search_reset = True
                 st.rerun()
-        sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
-        # Filter data
-        if sort_type == '(A-Z)':
-            filtered_df = filtered_df.sort_values(by='Code', ascending=True)
+    sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
+    # Filter data
+    if sort_type == '(A-Z)':
+        filtered_df = filtered_df.sort_values(by='Code', ascending=True)
 
-        elif sort_type == '(Z-A)':
-            filtered_df = filtered_df.sort_values(by='Code', ascending=False)
+    elif sort_type == '(Z-A)':
+        filtered_df = filtered_df.sort_values(by='Code', ascending=False)
 
-        elif sort_type == 'Date Acs':
-            filtered_df['release_date'] = pd.to_datetime(
-                filtered_df['Release Date'],
-                format='%d/%m/%Y',
-                errors='coerce'
-            )
-            filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
+    elif sort_type == 'Date Acs':
+        filtered_df['release_date'] = pd.to_datetime(
+            filtered_df['Release Date'],
+            format='%d/%m/%Y',
+            errors='coerce'
+        )
+        filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
 
-        elif sort_type == 'Date Desc':
-            filtered_df['release_date'] = pd.to_datetime(
-                filtered_df['Release Date'],
-                format='%d/%m/%Y',
-                errors='coerce'
-            )
-            filtered_df = filtered_df.sort_values(by='release_date', ascending=False)
+    elif sort_type == 'Date Desc':
+        filtered_df['release_date'] = pd.to_datetime(
+            filtered_df['Release Date'],
+            format='%d/%m/%Y',
+            errors='coerce'
+        )
+        filtered_df = filtered_df.sort_values(by='release_date', ascending=False)
     if st.toggle('Date filter', key='date_filter'):
         with st.container(horizontal=True):
             select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_page)
