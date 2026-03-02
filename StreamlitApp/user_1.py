@@ -3475,7 +3475,7 @@ def complex_actress(conn, device):
                                             height: 100%;
                                             object-fit: cover;
                                         ">
-                                    <div class="review-badge review-{'-'.join(actress['Review'].lower().split(' '))}">
+                                    <div class="review-badge-gallery review-{'-'.join(actress['Review'].lower().split(' '))}">
                                         {actress['Review'].replace('-Tier','')}
                                     </div>
 
@@ -3615,7 +3615,7 @@ def complex_actress(conn, device):
             border: 4px solid transparent;
         }
 
-        .review-badge {
+        .review-badge-gallery {
             position: absolute;
             top: -5px;
             right: 8px;
