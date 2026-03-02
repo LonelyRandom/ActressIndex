@@ -2072,7 +2072,7 @@ def complex_actress(conn, device):
     if 'scroll_to_here' not in st.session_state:
         st.session_state.scroll_to_here = False
     if 'display_actress' not in st.session_state:
-        st.session_state.display_actress = 'Detailed' 
+        st.session_state.display_actress = 'Gallery' 
 
         
     # Fungsi untuk refresh data dari Google Sheets
