@@ -3267,7 +3267,11 @@ def complex_actress(conn, device):
             if st.button('Clear', on_click=reset_page_actress):
                 st.session_state.search_reset = True
                 st.rerun()
-        img_width = st.number_input('gallery width', min_value=70)
+
+        if device == 'Device 1':
+            img_width = 110
+        else:
+            img_width = 101
 
         # Filter DataFrame berdasarkan status
         filtered_df = df.copy()
