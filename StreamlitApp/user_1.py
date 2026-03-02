@@ -281,8 +281,31 @@ def display_film_card(df, tag_df):
             if st.button('Clear', on_click=reset_page, key='tag_clear'):
                 st.session_state.tags_reset = True
                 st.rerun()
+    
+    sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
     # Filter data
     filtered_df = df.copy()
+    if sort_type == '(A-Z)':
+        filtered_df = filtered_df.sort_values(by='Code', ascending=True)
+
+    elif sort_type == '(Z-A)':
+        filtered_df = filtered_df.sort_values(by='Code', ascending=False)
+
+    elif sort_type == 'Date Acs':
+        filtered_df['release_date'] = pd.to_datetime(
+            filtered_df['Release Date'],
+            format='%d/%m/%Y',
+            errors='coerce'
+        )
+        filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
+
+    elif sort_type == 'Date Desc':
+        filtered_df['release_date'] = pd.to_datetime(
+            filtered_df['Release Date'],
+            format='%d/%m/%Y',
+            errors='coerce'
+        )
+        filtered_df = filtered_df.sort_values(by='release_date', ascending=False)
     if st.toggle('Date filter', key='date_filter'):
         with st.container(horizontal=True):
             select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_page)
@@ -292,24 +315,24 @@ def display_film_card(df, tag_df):
                 errors='coerce'
             )
             selected_date = st.date_input('Filter by date:', key='calender_filter', min_value=filtered_df['filtered_date'].min(), on_change=reset_page)
-            if selected_date:
-                selected_date = pd.to_datetime(selected_date).date()
-                if select_date_type == 'Date':
-                    st.write(f'Filter by {select_date_type} : {selected_date}')
-                    filtered_df = filtered_df[
-                        filtered_df['filtered_date'].dt.date == selected_date
-                    ]
-                elif select_date_type == 'Month/Year':
-                    st.write(f'Filter by {select_date_type} : {selected_date.strftime("%B")} {selected_date.year}')
-                    filtered_df = filtered_df[
-                        (filtered_df['filtered_date'].dt.month == selected_date.month) &
-                        (filtered_df['filtered_date'].dt.year == selected_date.year)
-                    ]
-                elif select_date_type == 'Year':
-                    st.write(f'Filter by {select_date_type} : {selected_date.year}')
-                    filtered_df = filtered_df[
-                        filtered_df['filtered_date'].dt.year == selected_date.year
-                    ]
+        if selected_date:
+            selected_date = pd.to_datetime(selected_date).date()
+            if select_date_type == 'Date':
+                st.write(f'Filter by {select_date_type} : {selected_date}')
+                filtered_df = filtered_df[
+                    filtered_df['filtered_date'].dt.date == selected_date
+                ]
+            elif select_date_type == 'Month/Year':
+                st.write(f'Filter by {select_date_type} : {selected_date.strftime("%B")} {selected_date.year}')
+                filtered_df = filtered_df[
+                    (filtered_df['filtered_date'].dt.month == selected_date.month) &
+                    (filtered_df['filtered_date'].dt.year == selected_date.year)
+                ]
+            elif select_date_type == 'Year':
+                st.write(f'Filter by {select_date_type} : {selected_date.year}')
+                filtered_df = filtered_df[
+                    filtered_df['filtered_date'].dt.year == selected_date.year
+                ]
     
     if search_name:
         if search_by == 'Code':
@@ -392,7 +415,13 @@ def display_film_card(df, tag_df):
                 )
             
             st.button('➡️',key='next_top', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,))
-            
+        with st.container(horizontal=True):
+            if st.button('First Page', width='stretch', disabled=(st.session_state.film_page == 1), on_click=set_page, args=(1,)):
+                st.session_state.scroll_to_here = True
+                st.rerun()
+            if st.button('Last Page', width='stretch', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(total_pages,)):
+                st.session_state.scroll_to_here = True
+                st.rerun()
     
     page = st.session_state.film_page
     
@@ -655,6 +684,29 @@ def display_film_grid(df, tag_df):
         if st.button('Clear', on_click=reset_page, key='tag_clear'):
                 st.session_state.search_reset = True
                 st.rerun()
+        sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
+        # Filter data
+        if sort_type == '(A-Z)':
+            filtered_df = filtered_df.sort_values(by='Code', ascending=True)
+
+        elif sort_type == '(Z-A)':
+            filtered_df = filtered_df.sort_values(by='Code', ascending=False)
+
+        elif sort_type == 'Date Acs':
+            filtered_df['release_date'] = pd.to_datetime(
+                filtered_df['Release Date'],
+                format='%d/%m/%Y',
+                errors='coerce'
+            )
+            filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
+
+        elif sort_type == 'Date Desc':
+            filtered_df['release_date'] = pd.to_datetime(
+                filtered_df['Release Date'],
+                format='%d/%m/%Y',
+                errors='coerce'
+            )
+            filtered_df = filtered_df.sort_values(by='release_date', ascending=False)
     if st.toggle('Date filter', key='date_filter'):
         with st.container(horizontal=True):
             select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_page)
