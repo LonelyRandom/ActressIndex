@@ -1751,6 +1751,9 @@ def complex_film(conn, device):
             return 'home'
         st.markdown('---')
         with st.expander('Gacha'):
+            # if device == 'Device 2':
+            img_width_percentage = st.number_input('width %')
+            img_height = st.number_input('height px', min_value=100)
             actress_gacha = st.multiselect('Actress Filter', key='new_actresses', options=ACTRESS_OPTS)
             gacha_df = df.copy()
             if actress_gacha:
@@ -1774,8 +1777,8 @@ def complex_film(conn, device):
                 st.markdown(f"""
                     <div class="centered-container">
                         <div style="
-                            height: 225px;
-                            width: 70%;
+                            height: {img_height}px;
+                            width: {img_width_percentage}%;
                             overflow: hidden;
                             display: flex;
                             justify-content: center;
