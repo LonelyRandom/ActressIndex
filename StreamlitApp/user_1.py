@@ -1750,6 +1750,54 @@ def complex_film(conn, device):
             st.session_state.first_load_film = True
             return 'home'
         st.markdown('---')
+        with st.expander('Gacha'):
+            actress_gacha = st.multiselect('Actress Filter', key='new_actresses', options=ACTRESS_OPTS)
+            gacha_df = df.copy()
+            if actress_gacha:
+                pattern = '|'.join([f'(?:^|, ){a}(?:,|$)' for a in actress_gacha])
+                gacha_df = gacha_df[(gacha_df['Actress Name'].str.contains(pattern, na=False, regex=True)) & (gacha_df['Info'] == 'Not Watched')]
+            else:
+                gacha_df = gacha_df[gacha_df['Info'] == 'Not Watched']
+            if st.button('Gacha', width='stretch'):
+                random_row = gacha_df.sample(n=1)
+                st.subheader('Result')
+                st.markdown("""
+                    <style>
+                    .centered-container {
+                        display: flex;
+                        justify-content: center;
+                        width: 100%;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(f"""
+                    <div class="centered-container">
+                        <div style="
+                            height: 225px;
+                            width: 70%;
+                            overflow: hidden;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            margin-bottom: 10px;
+                            border-radius: 5px;
+                        ">
+                            <img src="{random_row['Picture'].values[0]}" 
+                                style="
+                                    width: 100%;
+                                    height: 100%;
+                                    object-fit: cover;
+                                    object-position: center;
+                                ">
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+                st.markdown(f"<h3 style='text-align: center;'>{random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
+                st.write('**Title :**', random_row['Title'].values[0])
+                st.write('**Actress :**', random_row['Actress Name'].values[0])
+                st.write('**Review :**', random_row['Info'].values[0])
+
         with st.expander('Add Tags'):
             if st.session_state.get('reset_tag', False):
                 st.session_state.reset_tag = False
