@@ -1751,9 +1751,13 @@ def complex_film(conn, device):
             return 'home'
         st.markdown('---')
         with st.expander('Gacha'):
-            # if device == 'Device 2':
-            img_width_percentage = st.number_input('width %')
-            img_height = st.number_input('height px', min_value=100)
+            if device == 'Device 1':
+                img_width_percentage = 45
+                img_height = 216
+            else:
+                img_width_percentage = 40
+                img_height = 176
+
             actress_gacha = st.multiselect('Actress Filter', key='new_actresses', options=ACTRESS_OPTS)
             gacha_df = df.copy()
             if actress_gacha:
