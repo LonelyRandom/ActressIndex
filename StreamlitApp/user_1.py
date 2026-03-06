@@ -570,7 +570,7 @@ def reset_calender_page():
     """Reset halaman ke 1"""
     st.session_state.calender_page = 1
 
-def display_film_calender(conn):
+def display_film_calender(df, conn):
     if 'calender_data' not in st.session_state:
         st.session_state.calender_data = conn.read(worksheet='Calender Scrap', usecols=list(range(5)))
 
@@ -642,23 +642,28 @@ def display_film_calender(conn):
         mask = filtered_df['Code'].str.contains(calender_search, case=False, na=False)
         filtered_df = filtered_df[mask].copy()
 
-    def reset_edit_mode():
-        st.session_state['edit_mode'] = False
+    def set_save_edit():
         conn.update(worksheet='Calender Scrap', data=calender_df)
         st.session_state.calender_data = calender_df
+        st.success('✅ Succesfully update data!')
 
     def set_all_drop():
-        st.session_state['edit_mode'] = False
         calender_df.loc[calender_df['Flag'] == 'Not Checked', 'Flag'] = 'Drop'
         conn.update(worksheet='Calender Scrap', data=calender_df)
         st.session_state.calender_data = calender_df
+        st.success('✅ Succesfully drop all not checked data!')
+    
+    def set_match():
+        calender_df.loc[calender_df['Code'].isin(df['Code'].values), 'Flag'] = 'Pass'
+        conn.update(worksheet='Calender Scrap', data=calender_df)
+        st.session_state.calender_data = calender_df
+        st.success('✅ Succesfully match data!')
 
-    is_edit = st.checkbox('Edit Mode', key='edit_mode')
 
-    if is_edit:
-        with st.container(horizontal=True):
-            st.button('Save edit', on_click=reset_edit_mode,width='stretch', type='primary')
-            st.button('Drop All', on_click=set_all_drop, width='stretch')
+    st.button('Save edit',width='stretch', type='primary', on_click=set_save_edit)
+    with st.container(horizontal=True):
+        st.button('Drop All', on_click=set_all_drop, width='stretch')
+        st.button('Match', on_click=set_match, width='stretch')
     if st.session_state.scroll_to_here:
         scroll_to_here(0,key='here')  # Scroll to the top of the page
         st.session_state.scroll_to_here = False
@@ -742,32 +747,22 @@ def display_film_calender(conn):
                     film = rows_to_display.iloc[i]
                     real_index = rows_to_display.index[i]
 
-                    if not is_edit:
-                        if film['Flag'] == 'Pass':
-                            cap = '🟢 Pass'
-                        elif film['Flag'] == 'Drop':
-                            cap = '🔴 Drop'
-                        else:
-                            cap = '⚪ Not Checked'
-                        st.image(film['Picture'], caption=cap)
-                        st.link_button(film['Code'], film['Link'], width='stretch', type='primary')
+                    if film['Flag'] == 'Not Checked':
+                        flag_idx = 2
+                    elif film['Flag'] == 'Drop':
+                        flag_idx = 1
                     else:
-                        if film['Flag'] == 'Not Checked':
-                            flag_idx = 2
-                        elif film['Flag'] == 'Drop':
-                            flag_idx = 1
-                        else:
-                            flag_idx = 0
-                        st.image(film['Picture'], caption=film['Code'])
-                        edit_flag = st.radio('Flag', options=['✅ Pass','❌ Drop','❔ Not Yet'], index=flag_idx, key=f'{film["Code"]}_radio', horizontal=False)
-                        st.link_button('Detail', film['Link'], type='primary', width='stretch')
-                        if edit_flag == '✅ Pass':
-                            edit_flag = 'Pass'
-                        elif edit_flag == '❌ Drop':
-                            edit_flag = 'Drop'
-                        else:
-                            edit_flag = 'Not Checked'
-                        calender_df.at[real_index, 'Flag'] = edit_flag
+                        flag_idx = 0
+                    st.image(film['Picture'], caption=film['Code'])
+                    edit_flag = st.radio('Flag', options=['✅ Pass','❌ Drop','❔ Not Yet'], index=flag_idx, key=f'{film["Code"]}_radio', horizontal=False)
+                    st.link_button('Detail', film['Link'], type='primary', width='stretch')
+                    if edit_flag == '✅ Pass':
+                        edit_flag = 'Pass'
+                    elif edit_flag == '❌ Drop':
+                        edit_flag = 'Drop'
+                    else:
+                        edit_flag = 'Not Checked'
+                    calender_df.at[real_index, 'Flag'] = edit_flag
                     st.markdown('---')
         st.markdown('---')
         if total_calender_pages <= 6:
@@ -2172,7 +2167,7 @@ def complex_film(conn, device):
     elif display_mode == "Simple":
         display_film_grid(filtered_df, tag_df)
     elif display_mode == "Calender Scrap":
-        display_film_calender(conn)
+        display_film_calender(df, conn)
     else:  # Table View
         filtered_df = values_handling(filtered_df, 'film')
         filtered_df = initial_load(filtered_df, 'film')
