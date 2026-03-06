@@ -613,7 +613,7 @@ def display_film_calender(df, conn):
         )
         selected_date = st.date_input('Filter by date:', key='calender_filter', min_value=filtered_df['filtered_date'].min(), on_change=reset_calender_page)
 
-    selected_flag = st.selectbox('Flag', options=['All', 'Pass','Drop', 'Not Checked'], width='stretch')
+    selected_flag = st.selectbox('Flag', options=['All', 'Pass','Drop', 'Not Checked'], width='stretch', on_change=reset_calender_page)
     if selected_date:
         selected_date = pd.to_datetime(selected_date).date()
         if select_date_type == 'Date':
@@ -677,7 +677,7 @@ def display_film_calender(df, conn):
     
     if not filtered_df.empty:
         st.markdown(
-            f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Page {st.session_state.film_page}</div>",
+            f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Page {st.session_state.calender_page}</div>",
             unsafe_allow_html=True
         )
 
