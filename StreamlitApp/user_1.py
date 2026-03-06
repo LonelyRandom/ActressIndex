@@ -587,10 +587,22 @@ def display_film_calender(conn):
         image_width = 115
     else:
         image_width = 106
+    
+    if st.session_state.get('calender_search_reset', False):
+        st.session_state.calender_search_reset = False
+        st.session_state.calender_search_bar = ''
 
     calender_df = st.session_state.calender_data
 
     filtered_df = calender_df.copy()
+
+    with st.container(horizontal=True, vertical_alignment='bottom'):
+        calender_search = st.text_input("🔍 Search (Actress Name / Code):", 
+                                  placeholder="Name or Code...", 
+                                  key='calender_search_bar', on_change=reset_page)
+        if st.button('Clear', on_click=reset_calender_page):
+            st.session_state.calender_search_reset = True
+            st.rerun()
     
     with st.container(horizontal=True):
         select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_calender_page)
@@ -624,23 +636,36 @@ def display_film_calender(conn):
     if selected_flag != 'All':
         filtered_df = filtered_df[filtered_df['Flag'] == selected_flag]
 
+    if calender_search:
+        calender_search = calender_search.split(' ')
+        calender_search = '-'.join(calender_search)
+        mask = filtered_df['Code'].str.contains(calender_search, case=False, na=False)
+        filtered_df = filtered_df[mask].copy()
+
     def reset_edit_mode():
         st.session_state['edit_mode'] = False
+        conn.update(worksheet='Calender Scrap', data=calender_df)
+        st.session_state.calender_data = calender_df
+
+    def set_all_drop():
+        st.session_state['edit_mode'] = False
+        calender_df.loc[calender_df['Flag'] == 'Not Checked', 'Flag'] = 'Drop'
         conn.update(worksheet='Calender Scrap', data=calender_df)
         st.session_state.calender_data = calender_df
 
     is_edit = st.checkbox('Edit Mode', key='edit_mode')
 
     if is_edit:
-        st.button('Save edit', on_click=reset_edit_mode,width='stretch', type='primary')
-
+        with st.container(horizontal=True):
+            st.button('Save edit', on_click=reset_edit_mode,width='stretch', type='primary')
+            st.button('Drop All', on_click=set_all_drop, width='stretch')
     if st.session_state.scroll_to_here:
         scroll_to_here(0,key='here')  # Scroll to the top of the page
         st.session_state.scroll_to_here = False
     
     st.markdown('---')
     
-    total_calender_pages = max(1, (len(filtered_df) + 30 - 1) // 30)
+    total_calender_pages = max(1, (len(filtered_df) + 60 - 1) // 60)
 
     def set_calender_page(p):
         st.session_state.calender_page = p
@@ -704,8 +729,8 @@ def display_film_calender(conn):
                 
         page = st.session_state.calender_page
         
-        start_idx = (page - 1) * 30 
-        end_idx = min(start_idx + 30, len(filtered_df)) 
+        start_idx = (page - 1) * 60 
+        end_idx = min(start_idx + 60, len(filtered_df)) 
         st.markdown("---")
         st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} films")
         
