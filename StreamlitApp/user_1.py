@@ -566,6 +566,190 @@ def display_single_card(device, image_multiplier,actress, card_id):
             st.session_state.viewing_film_index = card_id
             st.session_state.editing_film_index = None
             st.rerun()
+def reset_calender_page():
+    """Reset halaman ke 1"""
+    st.session_state.calender_page = 1
+
+def display_film_calender(conn):
+    if 'calender_data' not in st.session_state:
+        st.session_state.calender_data = conn.read(worksheet='Calender Scrap', usecols=list(range(5)))
+
+    if 'calender_page' not in st.session_state:
+        st.session_state.calender_page = 1
+    
+    if 'width_option' not in st.session_state:
+        st.session_state.width_option = 'Device 1'
+    
+    if 'edit_mode' not in st.session_state:
+        st.session_state.edit_mode = False
+
+    if st.session_state.width_option == 'Device 1':
+        image_width = 115
+    else:
+        image_width = 106
+
+    calender_df = st.session_state.calender_data
+
+    filtered_df = calender_df.copy()
+    
+    with st.container(horizontal=True):
+        select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_calender_page)
+        filtered_df['filtered_date'] = pd.to_datetime(
+            filtered_df['Month'],
+            format='%d/%m/%Y',
+            errors='coerce'
+        )
+        selected_date = st.date_input('Filter by date:', key='calender_filter', min_value=filtered_df['filtered_date'].min(), on_change=reset_calender_page)
+
+    selected_flag = st.selectbox('Flag', options=['All', 'Pass','Drop', 'Not Checked'], width='stretch')
+    if selected_date:
+        selected_date = pd.to_datetime(selected_date).date()
+        if select_date_type == 'Date':
+            st.write(f'Filter by {select_date_type} : {selected_date.strftime("%d %B %Y")}')
+            filtered_df = filtered_df[
+                filtered_df['filtered_date'].dt.date == selected_date
+            ]
+        elif select_date_type == 'Month/Year':
+            st.write(f'Filter by {select_date_type} : {selected_date.strftime("%B %Y")}')
+            filtered_df = filtered_df[
+                (filtered_df['filtered_date'].dt.month == selected_date.month) &
+                (filtered_df['filtered_date'].dt.year == selected_date.year)
+            ]
+        elif select_date_type == 'Year':
+            st.write(f'Filter by {select_date_type} : {selected_date.year}')
+            filtered_df = filtered_df[
+                filtered_df['filtered_date'].dt.year == selected_date.year
+            ]
+    
+    if selected_flag != 'All':
+        filtered_df = filtered_df[filtered_df['Flag'] == selected_flag]
+
+    def reset_edit_mode():
+        st.session_state['edit_mode'] = False
+        conn.update(worksheet='Calender Scrap', data=calender_df)
+        st.session_state.calender_data = calender_df
+
+    is_edit = st.checkbox('Edit Mode', key='edit_mode')
+
+    if is_edit:
+        st.button('Save edit', on_click=reset_edit_mode,width='stretch', type='primary')
+
+    if st.session_state.scroll_to_here:
+        scroll_to_here(0,key='here')  # Scroll to the top of the page
+        st.session_state.scroll_to_here = False
+    
+    st.markdown('---')
+    
+    total_calender_pages = max(1, (len(filtered_df) + 30 - 1) // 30)
+
+    def set_calender_page(p):
+        st.session_state.calender_page = p
+    
+    if not filtered_df.empty:
+        st.markdown(
+            f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Page {st.session_state.film_page}</div>",
+            unsafe_allow_html=True
+        )
+
+        if total_calender_pages <= 6:
+            with st.container(key='page_button', horizontal=True, horizontal_alignment='center'):
+                for i in range(1, total_calender_pages + 1):
+                    if st.button(
+                        str(i),
+                        key=f'page_top_{i}',
+                        disabled=(i == st.session_state.calender_page),
+                        on_click=set_calender_page,
+                        args=(i,)
+                    ):
+                        st.session_state.scroll_to_here = True
+        else:
+            with st.container(key='page_button_top', horizontal=True, horizontal_alignment='center'):
+                if st.button('⬅️',key='previous_top', disabled=(st.session_state.calender_page == 1), on_click=set_calender_page, args=(st.session_state.calender_page-1,)):
+                    st.session_state.scroll_to_here = True
+                    st.rerun()
+                
+                start_page = max(1, st.session_state.calender_page - 1)  
+                end_page = min(total_calender_pages, st.session_state.calender_page + 2)  
+                
+                pages_to_show = range(start_page, end_page + 1)
+                
+                if len(pages_to_show) < 4:
+                    if start_page == 1:
+                        pages_to_show = range(1, min(5, total_calender_pages + 1))
+                    else:
+                        pages_to_show = range(max(1, total_calender_pages - 3), total_calender_pages + 1)
+                
+                for i in pages_to_show:
+                    if st.button(
+                        str(i),
+                        key=f'page_top_{i}',
+                        disabled=(i == st.session_state.calender_page),
+                        on_click=set_calender_page,
+                        args=(i,)
+                    ):
+                        st.session_state.scroll_to_here = True
+                        st.rerun()
+                
+                if st.button('➡️',key='next_top', disabled=(st.session_state.calender_page == total_calender_pages), on_click=set_calender_page, args=(st.session_state.calender_page+1,)):
+                    st.session_state.scroll_to_here = True
+                    st.rerun()
+
+            with st.container(horizontal=True):
+                if st.button('First Page', width='stretch', disabled=(st.session_state.calender_page == 1), on_click=set_calender_page, args=(1,)):
+                    st.session_state.scroll_to_here = True
+                    st.rerun()
+                if st.button('Last Page', width='stretch', disabled=(st.session_state.calender_page == total_calender_pages), on_click=set_calender_page, args=(total_calender_pages,)):
+                    st.session_state.scroll_to_here = True
+                    st.rerun()
+                
+        page = st.session_state.calender_page
+        
+        start_idx = (page - 1) * 30 
+        end_idx = min(start_idx + 30, len(filtered_df)) 
+        st.markdown("---")
+        st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} films")
+        
+        rows_to_display = filtered_df.iloc[start_idx:end_idx] 
+
+        with st.container(horizontal=True, horizontal_alignment='center'):
+            for i in range(len(rows_to_display)):
+                with st.container(width=image_width):
+                    film = rows_to_display.iloc[i]
+                    real_index = rows_to_display.index[i]
+
+                    if not is_edit:
+                        if film['Flag'] == 'Pass':
+                            cap = '🟢 Pass'
+                        elif film['Flag'] == 'Drop':
+                            cap = '🔴 Drop'
+                        else:
+                            cap = '⚪ Not Checked'
+                        st.image(film['Picture'], caption=cap)
+                        st.link_button(film['Code'], film['Link'], width='stretch', type='primary')
+                    else:
+                        if film['Flag'] == 'Not Checked':
+                            flag_idx = 2
+                        elif film['Flag'] == 'Drop':
+                            flag_idx = 1
+                        else:
+                            flag_idx = 0
+                        st.image(film['Picture'], caption=film['Code'])
+                        edit_flag = st.radio('Flag', options=['✅ Pass','❌ Drop','❔ Not Yet'], index=flag_idx, key=f'{film["Code"]}_radio', horizontal=False)
+                        st.link_button('Detail', film['Link'], type='primary', width='stretch')
+                        if edit_flag == '✅ Pass':
+                            edit_flag = 'Pass'
+                        elif edit_flag == '❌ Drop':
+                            edit_flag = 'Drop'
+                        else:
+                            edit_flag = 'Not Checked'
+                        calender_df.at[real_index, 'Flag'] = edit_flag
+                    st.markdown('---')
+    else:
+        st.info('No Match Filtered')
+
+
+    
+
     
 def reset_page():
     """Reset halaman ke 1"""
@@ -819,9 +1003,6 @@ def display_film_grid(df, tag_df):
                     st.session_state.scroll_to_here = True
                     st.rerun()
                 
-
-                
-        
         page = st.session_state.film_page
         
         start_idx = (page - 1) * 30 
@@ -1372,9 +1553,9 @@ def complex_film(conn, device):
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
 
         if edited_info == 'Watched' or edited_info == 'Goat':
-            if 'Not Listed' not in film['Actress Name'] and 'Many' not in film['Actress Name']:
+            if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
                 new_review = []
-                actress_list = film['Actress Name'].split(', ')
+                actress_list = selected_actress
                 matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
 
                 for i in matching_actresses.index:
@@ -1515,9 +1696,10 @@ def complex_film(conn, device):
                 ]
 
                 if edited_info != 'Not Watched':
-                    for review in new_review:
-                        actress_worksheet().update(f'A{int(review[0]+2)}', review[1])
-                        actress_df.at[review[0], 'Review'] = review[1]
+                    if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
+                        for review in new_review:
+                            actress_worksheet().update(f'A{int(review[0]+2)}', review[1])
+                            actress_df.at[review[0], 'Review'] = review[1]
                 
                 film_worksheet().update(f"A{row}:K{row}", [new_values])
 
@@ -1869,7 +2051,7 @@ def complex_film(conn, device):
         st.header("⚙️ Display Settings")
         display_mode = st.radio(
             "View Mode",
-            ["Detailed", "Simple", "Not Watched"],
+            ["Detailed", "Simple", "Not Watched", "Calender Scrap"],
             on_change=reset_page,
             horizontal=False,
             key='film_layout'
@@ -1918,6 +2100,8 @@ def complex_film(conn, device):
         display_film_card(filtered_df, tag_df)
     elif display_mode == "Simple":
         display_film_grid(filtered_df, tag_df)
+    elif display_mode == "Calender Scrap":
+        display_film_calender(conn)
     else:  # Table View
         filtered_df = values_handling(filtered_df, 'film')
         filtered_df = initial_load(filtered_df, 'film')
