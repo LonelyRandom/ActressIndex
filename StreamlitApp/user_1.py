@@ -769,8 +769,54 @@ def display_film_calender(conn):
                             edit_flag = 'Not Checked'
                         calender_df.at[real_index, 'Flag'] = edit_flag
                     st.markdown('---')
+        st.markdown('---')
+        if total_calender_pages <= 6:
+            with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
+                for i in range(1, total_calender_pages + 1):
+                    if st.button(
+                        str(i),
+                        key=f'page_bottom_{i}',
+                        disabled=(i == st.session_state.calender_page),
+                        on_click=set_calender_page,
+                        args=(i,)
+                    ):
+                        st.session_state.scroll_to_here = True
+                        st.rerun()
+        else:
+            with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
+                if st.button('⬅️',key='previous_bottom', disabled=(st.session_state.calender_page == 1), on_click=set_calender_page, args=(st.session_state.calender_page-1,)):
+                    st.session_state.scroll_to_here = True
+                    st.rerun()
+                
+                start_page = max(1, st.session_state.calender_page - 1)  
+                end_page = min(total_calender_pages, st.session_state.calender_page + 2)  
+                
+                pages_to_show = range(start_page, end_page + 1)
+                
+                if len(pages_to_show) < 4:
+                    if start_page == 1:
+                        pages_to_show = range(1, min(5, total_calender_pages + 1))
+                    else:
+                        pages_to_show = range(max(1, total_calender_pages - 3), total_calender_pages + 1)
+                
+                for i in pages_to_show:
+                    if st.button(
+                        str(i),
+                        key=f'page_bottom_{i}',
+                        disabled=(i == st.session_state.calender_page),
+                        on_click=set_calender_page,
+                        args=(i,)
+                    ):
+                        st.session_state.scroll_to_here = True
+                        st.rerun()
+                
+                if st.button('➡️',key='next_bottom', disabled=(st.session_state.calender_page == total_calender_pages), on_click=set_calender_page, args=(st.session_state.calender_page+1,)):
+                    st.session_state.scroll_to_here = True    
+                    st.rerun()             
     else:
-        st.info('No Match Filtered')
+        st.info('No film match the filter')
+    if st.button('⬆️ Back to top', width='stretch'):
+        st.session_state.scroll_to_here = True                   
 
 
     
