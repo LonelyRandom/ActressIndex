@@ -658,12 +658,40 @@ def display_film_calender(df, conn):
         conn.update(worksheet='Calender Scrap', data=calender_df)
         st.session_state.calender_data = calender_df
         st.success('✅ Succesfully match data!')
+    
+    def set_sent_data():
+        pass_data = calender_df[calender_df['Flag'] == 'Pass']
+        new_rows = []
+        for i in range(len(pass_data)):
+            data = pass_data.iloc[i]
+            if data['Code'] not in df['Code'].values:
+                new_rows.append([
+                    'Not Listed',
+                    data['Code'],
+                    '--',
+                    '--',
+                    '--',
+                    'No Tags',
+                    'Not Watched',
+                    0,
+                    '--',
+                    '--',
+                    False
+                ])
+        
+        new_row_df = pd.DataFrame(new_rows, columns=df.columns)
+        final_df = pd.concat([df,new_row_df], ignore_index=True)
+        conn.update(worksheet='NCode', data=final_df)
+        st.success('✅ Succesfully sent data to database!')        
+            
 
 
     st.button('Save edit',width='stretch', type='primary', on_click=set_save_edit)
     with st.container(horizontal=True):
         st.button('Drop All', on_click=set_all_drop, width='stretch')
         st.button('Match', on_click=set_match, width='stretch')
+    st.subheader('Sent "Pass" to database?')
+    st.button('Send ⏭️', on_click=set_sent_data, width='stretch')
     if st.session_state.scroll_to_here:
         scroll_to_here(0,key='here')  # Scroll to the top of the page
         st.session_state.scroll_to_here = False
