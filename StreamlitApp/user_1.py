@@ -331,8 +331,8 @@ def display_film_card(df, tag_df):
         img_card_height = 215
         img_card_width = 115
     else:
-        img_card_height = st.number_input('img luar', min_value=100)
-        img_card_width = st.number_input('width img yang luar', min_value=100)
+        img_card_height = 106
+        img_card_width = 201
     
     if search_name:
         if search_by == 'Code':
