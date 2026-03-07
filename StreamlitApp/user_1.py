@@ -328,10 +328,11 @@ def display_film_card(df, tag_df):
                     filtered_df['filtered_date'].dt.year == selected_date.year
                 ]
     if st.session_state.width_option == 'Device 1':
+        img_card_height = 215
+        img_card_width = 115
+    else:
         img_card_height = st.number_input('img luar', min_value=100)
         img_card_width = st.number_input('width img yang luar', min_value=100)
-    else:
-        img_card_height = 210
     
     if search_name:
         if search_by == 'Code':
