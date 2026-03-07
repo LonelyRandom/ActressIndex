@@ -253,14 +253,8 @@ def display_film_card(df, tag_df):
         st.session_state.search_by = 'Actress'
         st.session_state.search_text = ''
     
-    if st.session_state.width_option == 'Device 1':
-        image_width = 0.397
-        device = 1
-    else:
-        image_width = 0.366
-        device = 1.035
         
-    search_by = st.radio('Search By:', options=['Code', 'Actress'], horizontal=True, key='search_by', on_change=reset_page)
+    search_by = st.radio('Search By:', options=['Code', 'Actress', 'Title'], horizontal=True, key='search_by', on_change=reset_page)
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -333,14 +327,21 @@ def display_film_card(df, tag_df):
                 filtered_df = filtered_df[
                     filtered_df['filtered_date'].dt.year == selected_date.year
                 ]
+    if st.session_state.width_option == 'Device 1':
+        img_card_height = st.number_input('img luar', min_value=100)
+        img_card_width = st.number_input('width img yang luar', min_value=100)
+    else:
+        img_card_height = 210
     
     if search_name:
         if search_by == 'Code':
             search_name = search_name.split(' ')
             search_name = '-'.join(search_name)
             mask = filtered_df['Code'].str.contains(search_name, case=False, na=False)
-        else:
+        elif search_by == 'Actress':
             mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
+        else:
+            mask = filtered_df['Title'].str.contains(search_name, case=False, na=False)
 
         filtered_df = filtered_df[mask]
     
@@ -436,7 +437,7 @@ def display_film_card(df, tag_df):
         for i in range(0, len(rows_to_display)): # len = 8 // i = [0,8]
             actress = rows_to_display.iloc[i]
             real_index = rows_to_display.index[i]  # ⬅️ INI KUNCI
-            display_single_card(device, image_width, actress, real_index)
+            display_single_card(img_card_height, img_card_width, actress, real_index)
     st.markdown('---')
     if total_pages <= 6:
         with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
@@ -475,7 +476,7 @@ def display_film_card(df, tag_df):
     st.markdown('---')
     
 
-def display_single_card(device, image_multiplier,actress, card_id):
+def display_single_card(img_card_height, img_card_width, actress, card_id):
     """
     Menampilkan single card untuk satu aktris
     """
@@ -493,33 +494,43 @@ def display_single_card(device, image_multiplier,actress, card_id):
             style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
             margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
-            height: {590*image_multiplier*device}px; display: flex; flex-direction: column;">
-            <!-- Status Badge -->
-            <div style="position: absolute; top: 12px; right: 7px;">
-                <span style="background: {status_color}; color: white; padding: 4px 10px; 
-                        border-radius: 20px; font-size: 9px; font-weight: bold;">
-                    {actress['Info']}
-                </span>
-            </div>
-            <div style="position: absolute; top: 12px; left: 7px;">
-                <span style="background: #F4f186; color: white; padding: 4px 5px; 
-                        border-radius: 20px; font-size: 9px; font-weight: bold;">
-                    ⭐
-                </span>
-            </div>
+            height: {img_card_height}px; width: {img_card_width}px;display: flex; flex-direction: column;">
             <!-- Image Container -->
-            <div style="height:{340*image_multiplier}px; width:{233*image_multiplier}px;background:black; border-radius: 10px; margin: 0 auto 15px auto;border: 2px solid {status_color};">
+            <div style="
+                height: 100%;  /* Atur tinggi tetap */
+                width: 100%;
+                overflow: hidden;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-bottom: 10px;
+                border-radius: 10px;
+                border : 2.5px solid {status_color};
+            ">
                 <img src="{actress['Picture']}" 
-                        style="width: 100%; height: 100%; border-radius:10px"
-                        alt="{actress['Actress Name']}">
+                    style="
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        object-position: center;
+                    ">
             </div>
             <!-- Separator -->
             <div style="width: {50}px; height: {3}px; background: linear-gradient(90deg, {status_color}, #FFD166); 
-                    margin: 0 auto 15px auto; border-radius: 2px;"></div>
+                    margin: 0 auto 10px auto; border-radius: 2px;"></div>
             <!-- Code and Date -->
-            <div style="margin-bottom: 5px;">
+            <div>
                 <div style="display: flex; justify-content: center; margin-bottom: 1px;">
-                    <span style="color: #e74c3c; font-weight: bold;font-size: 15px;">{actress['Code']}</span>
+                    <span style="
+                        background: linear-gradient(90deg, {status_color}, #FFD700);
+                        color: white;
+                        padding: 2px 10px;
+                        border-radius: 12px;
+                        font-size: 9px;
+                        font-weight: bold;
+                    ">
+                        {actress['Info']}
+                    </span>
                 </div>
                 <div style="display: flex; justify-content: center;">
                     <span style="color: #3498db; font-size:11px;">{release_date}</span>
@@ -531,27 +542,43 @@ def display_single_card(device, image_multiplier,actress, card_id):
             style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
             margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
-            height: {590*image_multiplier*device}px; display: flex; flex-direction: column;">
-            <!-- Status Badge -->
-            <div style="position: absolute; top: 12px; right: 7px;">
-                <span style="background: {status_color}; color: white; padding: 4px 10px; 
-                        border-radius: 20px; font-size: 9px; font-weight: bold;">
-                    {actress['Info']}
-                </span>
-            </div>
+            height: {img_card_height}px; width: {img_card_width}px; display: flex; flex-direction: column;">
             <!-- Image Container -->
-            <div style="height:{340*image_multiplier}px; width:{233*image_multiplier}px;background:black; border-radius: 10px; margin: 0 auto 15px auto;border: 2px solid {status_color};">
+            <div style="
+                height: 100%;  /* Atur tinggi tetap */
+                width: 100%;
+                overflow: hidden;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-bottom: 10px;
+                border-radius: 10px;
+                border : 2.5px solid {status_color};
+            ">
                 <img src="{actress['Picture']}" 
-                        style="width: 100%; height: 100%; border-radius:10px"
-                        alt="{actress['Actress Name']}">
+                    style="
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        object-position: center;
+                    ">
             </div>
             <!-- Separator -->
             <div style="width: {50}px; height: {3}px; background: linear-gradient(90deg, {status_color}, #FFD166); 
                     margin: 0 auto 15px auto; border-radius: 2px;"></div>
             <!-- Code and Date -->
-            <div style="margin-bottom: 5px;">
+            <div>
                 <div style="display: flex; justify-content: center; margin-bottom: 1px;">
-                    <span style="color: #e74c3c; font-weight: bold;font-size: 15px;">{actress['Code']}</span>
+                    <span style="
+                        background: {status_color};
+                        color: white;
+                        padding: 2px 10px;
+                        border-radius: 12px;
+                        font-size: 9px;
+                        font-weight: bold;
+                    ">
+                        {actress['Info']}
+                    </span>
                 </div>
                 <div style="display: flex; justify-content: center;">
                     <span style="color: #3498db; font-size:11px;">{release_date}</span>
@@ -559,7 +586,7 @@ def display_single_card(device, image_multiplier,actress, card_id):
             </div>
         </div>"""
 
-    with st.container(width=int(292*image_multiplier)):
+    with st.container(width=img_card_width):
         st.markdown(card_html, unsafe_allow_html=True)
     
         if st.button("View Details",key=f'view_film_{card_id}',width='stretch', type='primary'):
@@ -904,7 +931,7 @@ def display_film_grid(df, tag_df):
         image_heigth = 151
         
     with st.container(horizontal=True):
-        search_by = st.radio('Search By :', options=['Code', 'Actress'], key='search_by', width='content', horizontal=False)    
+        search_by = st.radio('Search By :', options=['Code', 'Actress', 'Title'], key='search_by', width='content', horizontal=False)    
         filters = st.radio(
                 "Type :",
                 ["Watched", "Not Watched"],
@@ -1019,8 +1046,10 @@ def display_film_grid(df, tag_df):
             search_name = search_name.split(' ')
             search_name = '-'.join(search_name)
             mask = filtered_df['Code'].str.contains(search_name, case=False, na=False)
-        else:
+        elif search_by == 'Actress':
             mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
+        else:
+            mask = filtered_df['Title'].str.contains(search_name, case=False, na=False)
         filtered_df = filtered_df[mask].copy()
 
     if tags_filter:
@@ -2206,7 +2235,7 @@ def complex_film(conn, device):
             st.session_state.search_reset = False
             st.session_state.search_bar = ''
         
-        search_by = st.radio('Search By: ', options=['Code', 'Actress'], horizontal=True, key='search_by')
+        search_by = st.radio('Search By: ', options=['Code', 'Actress', 'Title'], horizontal=True, key='search_by')
         with st.container(horizontal=True, vertical_alignment='bottom'):
             search_term = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
             if st.button('Clear'):
@@ -2219,9 +2248,11 @@ def complex_film(conn, device):
                 search_term = search_term.split(' ')
                 search_term = '-'.join(search_term)
                 mask =  filtered_df['Code'].astype(str).str.contains(search_term, case=False, na=False)
-            else:
+            elif search_by == 'Actress':
                 mask = filtered_df['Actress Name'].str.contains(search_term, case=False, na=False)
-            
+            else:
+                mask = filtered_df['Title'].str.contains(search_term, case=False, na=False)
+
             filtered_df = filtered_df[mask]
 
         # Buat kolom baru dengan badge HTML/CSS
