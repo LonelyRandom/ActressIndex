@@ -253,6 +253,16 @@ def display_film_card(df, tag_df):
         st.session_state.search_by = 'Actress'
         st.session_state.search_text = ''
     
+    st.markdown(
+        """
+        <style>
+        button[data-testid="stBaseButton-primary"] p {
+            font-size: 13px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
         
     search_by = st.radio('Search By:', options=['Code', 'Actress', 'Title'], horizontal=True, key='search_by', on_change=reset_page)
     col1, col2, col3 = st.columns(3)
@@ -489,7 +499,6 @@ def display_single_card(img_card_height, img_card_width, actress, card_id):
         release_date = '?'
     else:
         release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y') if pd.notna(actress['Release Date']) else "Unknown"
-    
     if actress['A-Detector'] == 1:
         card_html = f"""<div class="actress-card" id="card_{card_id}" 
             style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
@@ -506,7 +515,7 @@ def display_single_card(img_card_height, img_card_width, actress, card_id):
                 align-items: center;
                 margin-bottom: 10px;
                 border-radius: 10px;
-                border : 2.5px solid {status_color};
+                border : 2px solid {status_color};
             ">
                 <img src="{actress['Picture']}" 
                     style="
@@ -554,7 +563,7 @@ def display_single_card(img_card_height, img_card_width, actress, card_id):
                 align-items: center;
                 margin-bottom: 10px;
                 border-radius: 10px;
-                border : 2.5px solid {status_color};
+                border : 2px solid {status_color};
             ">
                 <img src="{actress['Picture']}" 
                     style="
@@ -590,7 +599,7 @@ def display_single_card(img_card_height, img_card_width, actress, card_id):
     with st.container(width=img_card_width):
         st.markdown(card_html, unsafe_allow_html=True)
     
-        if st.button("View Details",key=f'view_film_{card_id}',width='stretch', type='primary'):
+        if st.button(actress['Code'],key=f'view_film_{card_id}',width='stretch', type='primary'):
             st.session_state.viewing_film_index = card_id
             st.session_state.editing_film_index = None
             st.rerun()
@@ -2064,7 +2073,7 @@ def complex_film(conn, device):
                 img_width_percentage = 40
                 img_height = 176
 
-            actress_gacha = st.multiselect('Actress Filter', key='new_actresses', options=ACTRESS_OPTS)
+            actress_gacha = st.multiselect('Actress Filter', key='new_actresses_gacha', options=ACTRESS_OPTS)
             gacha_df = df.copy()
             if actress_gacha:
                 pattern = '|'.join([f'(?:^|, ){a}(?:,|$)' for a in actress_gacha])
