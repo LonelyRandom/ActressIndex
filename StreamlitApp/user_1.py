@@ -609,7 +609,7 @@ def reset_calender_page():
 
 def display_film_calender(df, conn):
     if 'calender_data' not in st.session_state:
-        st.session_state.calender_data = conn.read(worksheet='Calender Scrap', usecols=list(range(5)))
+        st.session_state.calender_data = conn.read(worksheet='Calender Scrap', usecols=list(range(6)))
 
     if 'calender_page' not in st.session_state:
         st.session_state.calender_page = 1
@@ -698,6 +698,14 @@ def display_film_calender(df, conn):
     
     def set_sent_data():
         pass_data = calender_df[calender_df['Flag'] == 'Pass']
+        pass_data.map({
+            1 : True,
+            0 : False,
+            'TRUE': True,
+            'FALSE' : False,
+            '1' : True,
+            '0' : False
+        })
         new_rows = []
         for i in range(len(pass_data)):
             data = pass_data.iloc[i]
@@ -713,7 +721,7 @@ def display_film_calender(df, conn):
                     0,
                     '--',
                     '--',
-                    False
+                    data['A-Detector']
                 ])
         
         new_row_df = pd.DataFrame(new_rows, columns=df.columns)
@@ -819,7 +827,8 @@ def display_film_calender(df, conn):
                     else:
                         flag_idx = 0
                     st.image(film['Picture'], caption=film['Code'])
-                    edit_flag = st.radio('Flag', options=['✅ Pass','❌ Drop','❔ Not Yet'], index=flag_idx, key=f'{film["Code"]}_radio', horizontal=False)
+                    edit_flag = st.radio('Flag', options=['✅ Pass','❌ Drop','❔ IDK'], index=flag_idx, key=f'{film["Code"]}_radio', horizontal=True)
+                    edit_a = st.toggle('✨', key=f'{film["Code"]}_toggle', value=film['A-Detector'])
                     st.link_button('Detail', film['Link'], type='primary', width='stretch')
                     if edit_flag == '✅ Pass':
                         edit_flag = 'Pass'
@@ -828,6 +837,8 @@ def display_film_calender(df, conn):
                     else:
                         edit_flag = 'Not Checked'
                     calender_df.at[real_index, 'Flag'] = edit_flag
+                    calender_df.at[real_index, 'A-Detector'] = edit_a
+
                     st.markdown('---')
         st.markdown('---')
         if total_calender_pages <= 6:
