@@ -51,16 +51,16 @@ def initial_load(df, type):
                 df.at[idx,'Debut Period'] = '?'
         return df
     else:
-        for idx in df.index:
-            if df.at[idx, 'Release Date'] != '?':
-                if isinstance(df.at[idx,'Release Date'], str):
-                    release_date = datetime.strptime(df.at[idx,'Release Date'], '%d/%m/%Y').date()
-                    today = date.today()
+        copy_df = df.copy()
+        copy_df['Release Date'] = pd.to_datetime(copy_df['Release Date'], errors='coerce', dayfirst=True)
 
-                    # Bandingkan dengan tanggal hari ini
-                    if release_date < today:
-                        df.at[idx, 'Release Status'] = 1  # Sudah rilis
-                    else:
-                        df.at[idx, 'Release Status'] = 0.0  # Belum rilis
-        
+        today = pd.to_datetime(date.today())
+
+        for idx in copy_df.index:
+            if pd.notna(copy_df.at[idx, 'Release Date']):
+                if copy_df.at[idx, 'Release Date'] < today:
+                    df.at[idx, 'Release Status'] = 1
+                else:
+                    df.at[idx, 'Release Status'] = 0
+
         return df

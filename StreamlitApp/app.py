@@ -11,12 +11,12 @@ user_3 = st.secrets.indicators.USER_3
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 if 'page' not in st.session_state:
-    st.session_state.page = 'login'
-    # st.session_state.page = 'home'
+    # st.session_state.page = 'login'
+    st.session_state.page = 'home'
 
 if 'usn' not in st.session_state:
-    st.session_state.usn = None
-    # st.session_state.usn = 'vincent'
+    # st.session_state.usn = None
+    st.session_state.usn = 'zedkari'
 
 if 'check_login' not in st.session_state:
     st.session_state.check_login = None
