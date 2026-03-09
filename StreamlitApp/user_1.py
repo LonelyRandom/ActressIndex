@@ -2825,6 +2825,7 @@ def complex_actress(conn, device):
     def show_view_mode(index):
         actress = df.iloc[index]
         film_df = st.session_state.film_df
+        actress_film = film_df[film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])]
         film_watched_df = film_df[
             (film_df['Actress Name'].str.contains(
         actress['Name (Alphabet)'],
@@ -2976,7 +2977,7 @@ def complex_actress(conn, device):
                     st.write("Still Active")
         
         st.markdown("---")
-        st.markdown("### 🎬 Filmography")
+        st.markdown(f"### 🎬 Filmography - {len(actress_film)} Films")
         if st.session_state.width_option == 'Device 1':
             img_width = 140
             img_height = 199
