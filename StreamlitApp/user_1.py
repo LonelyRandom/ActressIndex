@@ -621,9 +621,17 @@ def display_film_calender(df, conn):
         st.session_state.edit_mode = False
 
     if st.session_state.width_option == 'Device 1':
-        image_width = 115
+        image_width = 181
+        btn_width = 40
+        btn_height = 45
+        date_size = 14
+        film_size = 9
     else:
-        image_width = 106
+        image_width = 168
+        btn_width = 36
+        btn_height = 35
+        date_size = 10
+        film_size = 7
     
     if st.session_state.get('calender_search_reset', False):
         st.session_state.calender_search_reset = False
@@ -686,11 +694,6 @@ def display_film_calender(df, conn):
             index = 5
         elif day_name == 'Sat':
             index = 6
-    btn_width = st.number_input('Button width', min_value=30)
-    btn_height = st.number_input('Button height', min_value=30)
-    date_size = st.number_input('Date Size', min_value=5)
-    film_size = st.number_input('film Size', min_value=5)
-    image_width = st.number_input('image width', min_value=100)
 
     with st.container(horizontal=True, width='stretch'):
         st.button('⬅️ Previous', width='stretch', on_click=set_month_year, args=(st.session_state.selected_date - relativedelta(months=1),))
