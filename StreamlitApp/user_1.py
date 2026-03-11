@@ -641,33 +641,110 @@ def display_film_calender(df, conn):
             st.session_state.calender_search_reset = True
             st.rerun()
     
-    with st.container(horizontal=True):
-        select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_calender_page)
-        filtered_df['filtered_date'] = pd.to_datetime(
-            filtered_df['Month'],
-            format='%d/%m/%Y',
-            errors='coerce'
-        )
-        selected_date = st.date_input('Filter by date:', key='calender_filter', min_value=filtered_df['filtered_date'].min(), on_change=reset_calender_page)
+    select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width='stretch', on_change=reset_calender_page)
+    filtered_df['filtered_date'] = pd.to_datetime(
+        filtered_df['Month'],
+        format='%d/%m/%Y',
+        errors='coerce'
+    )
+    if 'selected_date' not in st.session_state:
+        st.session_state.selected_date = date.today()
+    if 'show_date' not in st.session_state:
+        st.session_state.show_date = date.today()
+    if 'date_clicked' not in st.session_state:
+        st.session_state.date_clicked = False
 
-    selected_flag = st.selectbox('Flag', options=['All', 'Pass','Drop', 'Not Checked'], width='stretch', on_change=reset_calender_page)
-    if selected_date:
-        selected_date = pd.to_datetime(selected_date).date()
+    def set_month_year(p):
+        st.session_state.selected_date = p
+        st.session_state.calender_month = p.month
+        st.session_state.calender_year = p.year
+    def set_date(p):
+        st.session_state.show_date = p
+
+    today_date = st.session_state.selected_date
+    today_month = today_date.month
+    today_year = today_date.year
+    with st.container(horizontal=True):
+        calender_month = st.number_input('Month', min_value=1, max_value=12, value=today_month, key='calender_month')
+        calender_year = st.number_input('Year', min_value=2000, value=today_year, key='calender_year')
+    if calender_month and calender_year:
+        dates = date(calender_year, calender_month,1)
+        day_name = dates.replace(day=1).strftime("%a")
+        day_month = pd.to_datetime(dates).days_in_month
+
+        if day_name == 'Sun':
+            index= 0
+        elif day_name == 'Mon':
+            index = 1
+        elif day_name == 'Tue':
+            index = 2
+        elif day_name == 'Wed':
+            index = 3
+        elif day_name == 'Thu':
+            index = 4
+        elif day_name == 'Fri':
+            index = 5
+        elif day_name == 'Sat':
+            index = 6
+    btn_width = st.number_input('Button width', min_value=30)
+    btn_height = st.number_input('Button height', min_value=30)
+    date_size = st.number_input('Date Size', min_value=5)
+    film_size = st.number_input('film Size', min_value=5)
+    image_width = st.number_input('image width', min_value=100)
+
+    with st.container(horizontal=True, width='stretch'):
+        st.button('⬅️ Previous', width='stretch', on_click=set_month_year, args=(st.session_state.selected_date - relativedelta(months=1),))
+        st.button('➡️ Next', width='stretch', on_click=set_month_year, args=(st.session_state.selected_date + relativedelta(months=1),))
+    st.markdown(f"<h1 style='text-align: center; margin-bottom: 30px;'>{dates.strftime('%B')} {calender_year}</h1>", unsafe_allow_html=True)
+    with st.container(horizontal_alignment='center'):
+        with st.container(horizontal=True, width='stretch'):
+            st.button('Sun', type='tertiary', width=btn_width)
+            st.button('Mon', type='tertiary', width=btn_width)
+            st.button('Tue', type='tertiary', width=btn_width)
+            st.button('Wed', type='tertiary', width=btn_width)
+            st.button('Thu', type='tertiary', width=btn_width)
+            st.button('Fri', type='tertiary', width=btn_width)
+            st.button('Sat', type='tertiary', width=btn_width)
+
+            if index != 0:
+                for i in range(index):
+                    st.button(' ', width=btn_width, key=f'blank_{i}', type='tertiary', disabled=True)
+            
+            for i in range(1 ,day_month+1):
+                selected_date = date(calender_year, calender_month, i)
+                if len(filtered_df[filtered_df['filtered_date'].dt.date == selected_date]) > 0:
+                    film_date = len(filtered_df[filtered_df["filtered_date"].dt.date == selected_date])
+                    if st.button(f'{str(i)} :red[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),), disabled=(st.session_state.show_date == date(calender_year, calender_month, i))):
+                        st.session_state.date_clicked = True
+                else:
+                    st.button(str(i), width=btn_width, disabled=True, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),))
+            for i in range(1 ,day_month+1):
+                st.markdown(f"""<style>
+                span.stMarkdownColoredText {{
+                    font-size: {film_size}px !important;
+                }}
+                .st-key-calender_dates_{i} p {{
+                    font-size:{date_size}px !important;
+                    height: {btn_height}px;
+                }}
+                </style>""", unsafe_allow_html=True)
+            
+    selected_flag = st.selectbox('Flag', options=['All', 'Pass','Drop', 'Not Checked'], width='stretch', on_change=reset_calender_page, key='calender_flag')
+
+    if st.session_state.date_clicked:
         if select_date_type == 'Date':
-            st.write(f'Filter by {select_date_type} : {selected_date.strftime("%d %B %Y")}')
-            filtered_df = filtered_df[
-                filtered_df['filtered_date'].dt.date == selected_date
-            ]
+            st.write(f'Filter by {select_date_type} : {st.session_state.show_date.strftime("%d %B %Y")}')
+            filtered_df = filtered_df[filtered_df['filtered_date'].dt.date == st.session_state.show_date]
         elif select_date_type == 'Month/Year':
-            st.write(f'Filter by {select_date_type} : {selected_date.strftime("%B %Y")}')
+            st.write(f'Filter by {select_date_type} : {st.session_state.show_date.strftime("%B %Y")}')
             filtered_df = filtered_df[
-                (filtered_df['filtered_date'].dt.month == selected_date.month) &
-                (filtered_df['filtered_date'].dt.year == selected_date.year)
+                (filtered_df['filtered_date'].dt.month == st.session_state.show_date.month) &
+                (filtered_df['filtered_date'].dt.year == st.session_state.show_date.year)
             ]
         elif select_date_type == 'Year':
-            st.write(f'Filter by {select_date_type} : {selected_date.year}')
+            st.write(f'Filter by {select_date_type} : {st.session_state.show_date.year}')
             filtered_df = filtered_df[
-                filtered_df['filtered_date'].dt.year == selected_date.year
+                filtered_df['filtered_date'].dt.year == st.session_state.show_date.year
             ]
     
     if selected_flag != 'All':
@@ -2347,6 +2424,13 @@ def complex_film(conn, device):
                     st.write(filtered_df.iloc[row_index]['Title'])
     st.markdown("""
     <style>
+    ul[data-testid="stSelectboxVirtualDropdown"] li:nth-child(odd){
+        background-color:#202124 !important;
+    }
+
+    ul[data-testid="stSelectboxVirtualDropdown"] li:nth-child(even){
+        background-color:#2d2f31 !important;
+    }
     /* Hover effect untuk card */
     .actress-card:hover {
         transform: translateY(-5px) !important;
@@ -3977,6 +4061,14 @@ def complex_actress(conn, device):
     # CSS untuk styling card yang estetik
     st.markdown("""
     <style>
+        ul[data-testid="stSelectboxVirtualDropdown"] li:nth-child(odd){
+            background-color:#202124 !important;
+        }
+
+        ul[data-testid="stSelectboxVirtualDropdown"] li:nth-child(even){
+            background-color:#2d2f31 !important;
+        }
+
         /* Container untuk beberapa badge */
         .badge-stack {
             position: absolute;
