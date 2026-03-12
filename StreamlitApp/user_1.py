@@ -734,6 +734,15 @@ def display_film_calender(df, conn):
             
     selected_flag = st.selectbox('Flag', options=['All', 'Pass','Drop', 'Not Checked'], width='stretch', on_change=reset_calender_page, key='calender_flag')
 
+    if selected_flag != 'All':
+        filtered_df = filtered_df[filtered_df['Flag'] == selected_flag]
+
+    if calender_search:
+        calender_search = calender_search.split(' ')
+        calender_search = '-'.join(calender_search)
+        mask = filtered_df['Code'].str.contains(calender_search, case=False, na=False)
+        filtered_df = filtered_df[mask].copy()
+
     if st.session_state.date_clicked:
         if select_date_type == 'Date':
             st.write(f'Filter by {select_date_type} : {st.session_state.show_date.strftime("%d %B %Y")}')
@@ -750,14 +759,6 @@ def display_film_calender(df, conn):
                 filtered_df['filtered_date'].dt.year == st.session_state.show_date.year
             ]
     
-    if selected_flag != 'All':
-        filtered_df = filtered_df[filtered_df['Flag'] == selected_flag]
-
-    if calender_search:
-        calender_search = calender_search.split(' ')
-        calender_search = '-'.join(calender_search)
-        mask = filtered_df['Code'].str.contains(calender_search, case=False, na=False)
-        filtered_df = filtered_df[mask].copy()
 
     def set_save_edit():
         conn.update(worksheet='Calender Scrap', data=calender_df)
