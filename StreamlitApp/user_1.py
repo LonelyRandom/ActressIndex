@@ -661,6 +661,10 @@ def display_film_calender(df, conn):
         st.session_state.show_date = date.today()
     if 'date_clicked' not in st.session_state:
         st.session_state.date_clicked = False
+    selected_flag = st.selectbox('Flag', options=['All', 'Pass','Drop', 'Not Checked'], width='stretch', on_change=reset_calender_page, key='calender_flag')
+
+    if selected_flag != 'All':
+        filtered_df = filtered_df[filtered_df['Flag'] == selected_flag]
 
     def set_month_year(p):
         st.session_state.selected_date = p
@@ -732,10 +736,6 @@ def display_film_calender(df, conn):
                 }}
                 </style>""", unsafe_allow_html=True)
             
-    selected_flag = st.selectbox('Flag', options=['All', 'Pass','Drop', 'Not Checked'], width='stretch', on_change=reset_calender_page, key='calender_flag')
-
-    if selected_flag != 'All':
-        filtered_df = filtered_df[filtered_df['Flag'] == selected_flag]
 
     if calender_search:
         calender_search = calender_search.split(' ')
