@@ -1465,8 +1465,9 @@ def complex_film(conn, device):
         def reset_pic():
             st.session_state.prev_pic = 0
 
-        def set_prev_pic(pic):
-            st.session_state.prev_pic = pic
+        def set_prev_pic(pic, total):
+            if pic < total and pic >=0:
+                st.session_state.prev_pic = pic
 
 
         film = df.iloc[index]
@@ -1674,8 +1675,8 @@ def complex_film(conn, device):
 
                 with st.container(horizontal=True):
                     # Tombol navigasi
-                    st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,), on_click=set_prev_pic, width='stretch')
-                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,), on_click=set_prev_pic, width='stretch')
+                    st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1, count), on_click=set_prev_pic, width='stretch')
+                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1, count), on_click=set_prev_pic, width='stretch')
             else:
                 st.warning('Picture Unavailable')
 
@@ -2713,8 +2714,9 @@ def complex_actress(conn, device):
         def reset_pic():
             st.session_state.prev_pic = 0
 
-        def set_prev_pic(pic):
-            st.session_state.prev_pic = pic
+        def set_prev_pic(pic, total):
+            if pic < total and pic >=0:
+                st.session_state.prev_pic = pic
 
 
         with st.container(key='poster_code', horizontal_alignment='center'):
@@ -2951,8 +2953,8 @@ def complex_actress(conn, device):
 
                 with st.container(horizontal=True):
                     # Tombol navigasi
-                    st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,), on_click=set_prev_pic, width='stretch')
-                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,), on_click=set_prev_pic, width='stretch')
+                    st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
+                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
             else:
                 st.warning('Picture Unavailable')
 
