@@ -2641,6 +2641,8 @@ def complex_actress(conn, device):
         st.session_state.viewing_index = None
     if "actress_film_index" not in st.session_state:
         st.session_state.actress_film_index = None
+    if "actress_edit_film_index" not in st.session_state:
+        st.session_state.actress_edit_film_index = None
     if "adding_new" not in st.session_state:
         st.session_state.adding_new = False
     if "is_simple" not in st.session_state:
@@ -2818,29 +2820,68 @@ def complex_actress(conn, device):
 
         st.markdown('### Release Date')
         st.write(release_date_text)
+        if st.session_state.actress_film_index != st.session_state.actress_edit_film_index:
+            st.markdown('### Status')
+            icons = ''
+            colors = ''
+            if film['Info'] == 'Goat':
+                icons = '🟣'
+                colors = 'violet'
+            elif film['Info'] == 'Watched':
+                icons = '🟢'
+                colors = 'green'
+            else:
+                icons = '🔴'
+                colors = 'red'
+                
+            with st.container(horizontal=True):
+                st.badge(label=film['Info'], icon=icons, color=colors)
+                if film['A-Detector'] == 1:
+                    st.badge(label='', icon='⭐', color='yellow')
 
-        st.markdown('### Status')
-        icons = ''
-        colors = ''
-        if film['Info'] == 'Goat':
-            icons = '🟣'
-            colors = 'violet'
-        elif film['Info'] == 'Watched':
-            icons = '🟢'
-            colors = 'green'
+            st.markdown('### Tags')
+            st.write(film['Tags'])
         else:
-            icons = '🔴'
-            colors = 'red'
-            
-        with st.container(horizontal=True):
-            st.badge(label=film['Info'], icon=icons, color=colors)
-            if film['A-Detector'] == 1:
-                st.badge(label='', icon='⭐', color='yellow')
+            tag_df = init_dataframe_tags(conn)
 
+            TAGS_OPTS = sorted(
+                tag_df['Tags']
+                .dropna()
+                .unique()
+                .tolist()
+            )
+            info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
 
-        st.markdown('### Tags')
-        st.write(film['Tags'])
+            edited_info = st.selectbox('Status', width='stretch',options=INFO_OPTS, index=info_index)
 
+            if film['Tags'] == 'No Tags':
+                tags = []
+            else:
+                tags = [
+                    j.strip() for j in film['Tags'].split(',')
+                    if j.strip() in TAGS_OPTS
+                ]
+
+            edited_selected_tags = st.multiselect(
+                'Tags', 
+                options=TAGS_OPTS, 
+                default=tags, 
+                key=f'film_Tags_{index}'
+            )
+
+            if edited_selected_tags:
+                edited_tags = ', '.join(edited_selected_tags)
+            else:
+                edited_tags = 'No Tags'
+
+            st.write(edited_tags)
+
+            edited_a = st.toggle('✨', value=film['A-Detector'])
+
+            if edited_a:
+                edited_a = True
+            else:
+                edited_a = False
         st.markdown('### Gallery')
         if st.checkbox('Show', on_change=reset_pic):
             if film['Preview Picture'] != 'No Pics' and film['Preview Picture'] != '--':
@@ -2906,9 +2947,38 @@ def complex_actress(conn, device):
             st.button('🔗 No Link Found!', type='primary', width='stretch')
         else:
             st.link_button("🎬 Preview", film['Link'], width='stretch', type='primary')
-        if st.button('❌ Close', width='stretch'):
-            st.session_state.actress_film_index = None
-            st.rerun()
+        if st.session_state.actress_film_index == st.session_state.actress_edit_film_index:
+            if st.button('💾 Save', width='stretch'):
+                row = index + 2
+                new_values = [
+                    film['Actress Name'],
+                    film['Code'],
+                    film['Title'],
+                    film['Release Date'],
+                    film['Picture'],
+                    edited_tags,
+                    edited_info,
+                    film['Release Status'],
+                    film['Link'],
+                    film['Preview Picture'],
+                    edited_a
+                ]
+
+                film_worksheet().update(f"A{row}:K{row}", [new_values])
+                st.session_state.film_df.loc[index] = new_values
+                st.session_state.film_df = values_handling(st.session_state.film_df,'film')
+                st.session_state.actress_edit_film_index = None
+                st.rerun()
+            if st.button('❌ Close Edit', width='stretch'):
+                st.session_state.actress_edit_film_index = None
+                st.rerun()
+        else:
+            if st.button('✏️ Edit', width='stretch'):
+                st.session_state.actress_edit_film_index = index
+                st.rerun()
+            if st.button('❌ Close', width='stretch'):
+                st.session_state.actress_film_index = None
+                st.rerun()
 
     def show_view_mode(index):
         actress = df.iloc[index]
@@ -4011,7 +4081,7 @@ def complex_actress(conn, device):
 
                                 </div>
                             """, unsafe_allow_html=True)
-                        if st.button(actress['Name (Alphabet)'], width='stretch', type='tertiary', key=f'{actress['Name (Alphabet)']}_{idx}'):
+                        if st.button(actress['Name (Alphabet)'], width='stretch', type='tertiary', key=f'{actress["Name (Alphabet)"]}_{idx}'):
                             st.session_state.viewing_index = idx
                             st.session_state.editing_index = None
                             st.rerun()
