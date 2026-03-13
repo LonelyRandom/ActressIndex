@@ -2709,8 +2709,8 @@ def complex_actress(conn, device):
         total_film = len(film_df)
         film = film_df.iloc[pos]
         with st.container(horizontal=True):
-            st.button('⬅️ Previous Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1, total_film), disabled=(st.session_state.position == 0))
-            st.button('➡️ Next Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position+1, total_film), disabled=(st.session_state.position == int(total_film)-1))
+            st.button('⬅️', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1, total_film), disabled=(st.session_state.position == 0))
+            st.button('➡️', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position+1, total_film), disabled=(st.session_state.position == int(total_film)-1))
         def reset_pic():
             st.session_state.prev_pic = 0
 
