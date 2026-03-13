@@ -2697,7 +2697,7 @@ def complex_actress(conn, device):
     
     def actress_view_film(index, film_df, pos): 
         def set_actress_film_page(p, q, total):
-            if p < total:
+            if p < total and p >= 0:
                 st.session_state.position = p
             if st.session_state.actress_film_index == st.session_state.actress_edit_film_index:
                 st.session_state.actress_film_index = q
