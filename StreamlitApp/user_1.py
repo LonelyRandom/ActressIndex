@@ -2696,8 +2696,9 @@ def complex_actress(conn, device):
             show_view_mode(index)
     
     def actress_view_film(index, film_df, pos): 
-        def set_actress_film_page(p, q):
-            st.session_state.position = p
+        def set_actress_film_page(p, q, total):
+            if p < total:
+                st.session_state.position = p
             if st.session_state.actress_film_index == st.session_state.actress_edit_film_index:
                 st.session_state.actress_film_index = q
                 st.session_state.actress_edit_film_index = q
@@ -2707,8 +2708,8 @@ def complex_actress(conn, device):
         pos = st.session_state.position
         film = film_df.iloc[pos]
         with st.container(horizontal=True):
-            st.button('⬅️ Previous Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1,film_df.index[st.session_state.position]), disabled=(st.session_state.position == 0))
-            st.button('➡️ Next Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position+1,film_df.index[st.session_state.position]), disabled=(st.session_state.position == int(total_film)-1))
+            st.button('⬅️ Previous Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1,film_df.index[st.session_state.position], total_film), disabled=(st.session_state.position == 0))
+            st.button('➡️ Next Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position+1,film_df.index[st.session_state.position], total_film), disabled=(st.session_state.position == int(total_film)-1))
         def reset_pic():
             st.session_state.prev_pic = 0
 
