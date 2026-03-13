@@ -779,7 +779,7 @@ def display_film_calender(df, conn):
     
     def set_sent_data():
         pass_data = calender_df[calender_df['Flag'] == 'Pass']
-        pass_data.map({
+        pass_data['A-Detector'].map({
             1 : True,
             0 : False,
             'TRUE': True,

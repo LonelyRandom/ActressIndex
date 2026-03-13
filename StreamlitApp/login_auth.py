@@ -50,9 +50,9 @@ def log_in(conn):
                     usn = username
                     page = 'home'
                 else:
-                    st.session_state.login_error = "❌ Password salah"
+                    st.session_state.login_error = "❌ Incorrect Password!"
             else:
-                st.session_state.login_error = "❌ Username tidak ditemukan"
+                st.session_state.login_error = "❌ Username not found!"
         
         # Tampilkan error jika ada
         if st.session_state.login_error:
