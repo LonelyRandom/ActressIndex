@@ -2707,9 +2707,6 @@ def complex_actress(conn, device):
         index = st.session_state.actress_film_index
         film_df = st.session_state.actress_film_data
         total_film = len(film_df)
-        st.write('film_df', film_df)
-        st.write('pos', pos)
-        st.write('index', index)
         film = film_df.iloc[pos]
         with st.container(horizontal=True):
             st.button('⬅️ Previous Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1, total_film), disabled=(st.session_state.position == 0))
