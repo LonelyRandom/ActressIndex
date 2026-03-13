@@ -2700,6 +2700,14 @@ def complex_actress(conn, device):
         def set_actress_film_page(p, total):
             if p < total and p >= 0:
                 st.session_state.position = p
+                reset_pic()
+        def reset_pic():
+            st.session_state.prev_pic = 0
+
+        def set_prev_pic(pic, total):
+            if pic < total and pic >=0:
+                st.session_state.prev_pic = pic
+
         pos = st.session_state.position
         if st.session_state.actress_film_index == st.session_state.actress_edit_film_index:
             st.session_state.actress_film_index = st.session_state.actress_film_data.index[pos]
@@ -2711,12 +2719,6 @@ def complex_actress(conn, device):
         with st.container(horizontal=True):
             st.button('⬅️', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1, total_film), disabled=(st.session_state.position == 0))
             st.button('➡️', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position+1, total_film), disabled=(st.session_state.position == int(total_film)-1))
-        def reset_pic():
-            st.session_state.prev_pic = 0
-
-        def set_prev_pic(pic, total):
-            if pic < total and pic >=0:
-                st.session_state.prev_pic = pic
 
 
         with st.container(key='poster_code', horizontal_alignment='center'):
