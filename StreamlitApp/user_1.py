@@ -2588,6 +2588,14 @@ def complex_film(conn, device):
 def complex_actress(conn, device):
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Actress List</h1>", unsafe_allow_html=True)
 
+    tag_df = init_dataframe_tags(conn)
+
+    TAGS_OPTS = sorted(
+        tag_df['Tags']
+        .dropna()
+        .unique()
+        .tolist()
+    )
     if 'initial' not in st.session_state:
         st.session_state.initial = False
     if 'delete_btn_actress' not in st.session_state:
@@ -2643,6 +2651,10 @@ def complex_actress(conn, device):
         st.session_state.actress_film_index = None
     if "actress_edit_film_index" not in st.session_state:
         st.session_state.actress_edit_film_index = None
+    if "actress_film_data" not in st.session_state:
+        st.session_state.actress_film_data = None
+    if "position" not in st.session_state:
+        st.session_state.position = None
     if "adding_new" not in st.session_state:
         st.session_state.adding_new = False
     if "is_simple" not in st.session_state:
@@ -2679,19 +2691,30 @@ def complex_actress(conn, device):
         if st.session_state.editing_index == index:
             show_edit_mode(index)
         elif st.session_state.actress_film_index:
-            actress_view_film(st.session_state.actress_film_index)
+            actress_view_film(st.session_state.actress_film_index, st.session_state.actress_film_data, st.session_state.position)
         else:
             show_view_mode(index)
     
-    def actress_view_film(index):
+    def actress_view_film(index, film_df, pos): 
+        def set_actress_film_page(p, q):
+            st.session_state.position = p
+            if st.session_state.actress_film_index == st.session_state.actress_edit_film_index:
+                st.session_state.actress_film_index = q
+                st.session_state.actress_edit_film_index = q
+        index = st.session_state.actress_film_index
+        film_df = st.session_state.actress_film_data
+        total_film = len(film_df)
+        pos = st.session_state.position
+        film = film_df.iloc[pos]
+        with st.container(horizontal=True):
+            st.button('⬅️ Previous Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1,film_df.index[st.session_state.position-1]), disabled=(st.session_state.position == 0))
+            st.button('➡️ Next Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position+1,film_df.index[st.session_state.position+1]), disabled=(st.session_state.position == total_film-1))
         def reset_pic():
             st.session_state.prev_pic = 0
 
         def set_prev_pic(pic):
             st.session_state.prev_pic = pic
 
-
-        film = st.session_state.film_df.iloc[index]
 
         with st.container(key='poster_code', horizontal_alignment='center'):
             st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
@@ -2842,14 +2865,6 @@ def complex_actress(conn, device):
             st.markdown('### Tags')
             st.write(film['Tags'])
         else:
-            tag_df = init_dataframe_tags(conn)
-
-            TAGS_OPTS = sorted(
-                tag_df['Tags']
-                .dropna()
-                .unique()
-                .tolist()
-            )
             info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
 
             edited_info = st.selectbox('Status', width='stretch',options=INFO_OPTS, index=info_index)
@@ -2865,8 +2880,7 @@ def complex_actress(conn, device):
             edited_selected_tags = st.multiselect(
                 'Tags', 
                 options=TAGS_OPTS, 
-                default=tags, 
-                key=f'film_Tags_{index}'
+                default=tags
             )
 
             if edited_selected_tags:
@@ -2967,6 +2981,7 @@ def complex_actress(conn, device):
                 film_worksheet().update(f"A{row}:K{row}", [new_values])
                 st.session_state.film_df.loc[index] = new_values
                 st.session_state.film_df = values_handling(st.session_state.film_df,'film')
+                st.session_state.actress_film_data.iloc[pos] = new_values
                 st.session_state.actress_edit_film_index = None
                 st.rerun()
             if st.button('❌ Close Edit', width='stretch'):
@@ -3144,7 +3159,7 @@ def complex_actress(conn, device):
             img_height = 181
         with st.expander("### ✅ Watched Movies"):
             with st.container(horizontal=True):
-                for idx in film_watched_df.index:
+                for idx in range(len(film_watched_df)):
                     with st.container(width=img_width):
                         st.markdown(f"""
                                 <div style="
@@ -3157,7 +3172,7 @@ def complex_actress(conn, device):
                                     margin-bottom: 10px;
                                     border-radius: 5px;
                                 ">
-                                    <img src="{film_watched_df['Picture'][idx]}" 
+                                    <img src="{film_watched_df['Picture'].iloc[idx]}" 
                                         style="
                                             width: 100%;
                                             height: 100%;
@@ -3166,12 +3181,14 @@ def complex_actress(conn, device):
                                         ">
                                 </div>
                             """, unsafe_allow_html=True)
-                        if st.button(film_watched_df['Code'][idx], key=f'{film_watched_df["Code"][idx]}', type='secondary', width='stretch'):
-                            st.session_state.actress_film_index = idx
+                        if st.button(film_watched_df['Code'].iloc[idx], key=f'{film_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
+                            st.session_state.actress_film_index = film_watched_df.index[idx]
+                            st.session_state.position = idx
+                            st.session_state.actress_film_data = film_watched_df
                             st.rerun()
         with st.expander("### ❌ Unwatched Movies"):
             with st.container(horizontal=True):
-                for idx in film_not_watched_df.index:
+                for idx in range(len(film_not_watched_df)):
                     with st.container(width=img_width):
                         st.markdown(f"""
                                 <div style="
@@ -3184,7 +3201,7 @@ def complex_actress(conn, device):
                                     margin-bottom: 10px;
                                     border-radius: 5px;
                                 ">
-                                    <img src="{film_not_watched_df['Picture'][idx]}" 
+                                    <img src="{film_not_watched_df['Picture'].iloc[idx]}" 
                                         style="
                                             width: 100%;
                                             height: 100%;
@@ -3193,8 +3210,10 @@ def complex_actress(conn, device):
                                         ">
                                 </div>
                             """, unsafe_allow_html=True)
-                        if st.button(film_not_watched_df['Code'][idx], key=f'{film_not_watched_df["Code"][idx]}', type='secondary', width='stretch'):
-                            st.session_state.actress_film_index = idx
+                        if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
+                            st.session_state.actress_film_index = film_not_watched_df.index[idx]
+                            st.session_state.position = idx
+                            st.session_state.actress_film_data = film_not_watched_df
                             st.rerun()
 
         st.markdown("---")
