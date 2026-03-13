@@ -2692,25 +2692,28 @@ def complex_actress(conn, device):
         if st.session_state.editing_index == index:
             show_edit_mode(index)
         elif st.session_state.actress_film_index:
-            actress_view_film(st.session_state.actress_film_index, st.session_state.actress_film_data, st.session_state.position)
+            actress_view_film()
         else:
             show_view_mode(index)
     
-    def actress_view_film(index, film_df, pos): 
-        def set_actress_film_page(p, q, total):
+    def actress_view_film(): 
+        def set_actress_film_page(p, total):
             if p < total and p >= 0:
                 st.session_state.position = p
-            if st.session_state.actress_film_index == st.session_state.actress_edit_film_index:
-                st.session_state.actress_film_index = q
-                st.session_state.actress_edit_film_index = q
+        pos = st.session_state.position
+        if st.session_state.actress_film_index == st.session_state.actress_edit_film_index:
+            st.session_state.actress_film_index = st.session_state.actress_film_data.index[pos]
+            st.session_state.actress_edit_film_index = st.session_state.actress_film_data.index[pos]
         index = st.session_state.actress_film_index
         film_df = st.session_state.actress_film_data
         total_film = len(film_df)
-        pos = st.session_state.position
+        st.write('film_df', film_df)
+        st.write('pos', pos)
+        st.write('index', index)
         film = film_df.iloc[pos]
         with st.container(horizontal=True):
-            st.button('⬅️ Previous Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1,film_df.index[st.session_state.position], total_film), disabled=(st.session_state.position == 0))
-            st.button('➡️ Next Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position+1,film_df.index[st.session_state.position], total_film), disabled=(st.session_state.position == int(total_film)-1))
+            st.button('⬅️ Previous Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1, total_film), disabled=(st.session_state.position == 0))
+            st.button('➡️ Next Film', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position+1, total_film), disabled=(st.session_state.position == int(total_film)-1))
         def reset_pic():
             st.session_state.prev_pic = 0
 
