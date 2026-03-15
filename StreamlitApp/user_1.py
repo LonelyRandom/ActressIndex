@@ -161,8 +161,8 @@ def update_google_sheets(df,conn,type):
             data=df_to_update
         )
         
-        st.toast("✅ Google Sheets updated successfully!")
-        time.sleep(1)
+        st.toast("✅ Google Sheets Updated Successfully!")
+        time.sleep(.5)
         return True
     except:
         return False
@@ -448,7 +448,7 @@ def display_film_card(df, tag_df):
         for i in range(0, len(rows_to_display)): # len = 8 // i = [0,8]
             actress = rows_to_display.iloc[i]
             real_index = rows_to_display.index[i]  # ⬅️ INI KUNCI
-            display_single_card(img_card_height, img_card_width, actress, real_index)
+            display_single_card(img_card_height, img_card_width, actress, real_index, filtered_df, i, start_idx)
     st.markdown('---')
     if total_pages <= 6:
         with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
@@ -487,7 +487,7 @@ def display_film_card(df, tag_df):
     st.markdown('---')
     
 
-def display_single_card(img_card_height, img_card_width, actress, card_id):
+def display_single_card(img_card_height, img_card_width, actress, card_id, filtered_df, i, start_idx):
     """
     Menampilkan single card untuk satu aktris
     """
@@ -601,6 +601,8 @@ def display_single_card(img_card_height, img_card_width, actress, card_id):
     
         if st.button(actress['Code'],key=f'view_film_{card_id}',width='stretch', type='primary'):
             st.session_state.viewing_film_index = card_id
+            st.session_state.filtered_film_data = filtered_df
+            st.session_state.filtered_data_position = start_idx + i
             st.session_state.editing_film_index = None
             st.rerun()
 def reset_calender_page():
@@ -1238,47 +1240,48 @@ def display_film_grid(df, tag_df):
         rows_to_display = filtered_df.iloc[start_idx:end_idx] 
         with st.container(horizontal=True, horizontal_alignment='center'):
             for i in range(0, len(rows_to_display)):
-                with st.container(horizontal=True, width=image_width):
-                    with st.container():
-                        if i < len(rows_to_display):
-                            film = rows_to_display.iloc[i]
-                            real_index = rows_to_display.index[i]
+                with st.container(width=image_width):
+                    if i < len(rows_to_display):
+                        film = rows_to_display.iloc[i]
+                        real_index = rows_to_display.index[i]
 
-                            with st.container(horizontal_alignment='center', horizontal=True):
-                                if film['A-Detector'] == 1:
-                                    film['badge_color'] = 'yellow'
+                        with st.container(horizontal_alignment='center', horizontal=True):
+                            if film['A-Detector'] == 1:
+                                film['badge_color'] = 'yellow'
 
-                                if filters == 'Not Watched':
-                                    st.badge(film['is_release'], icon=film['badge_icon'], color=film['badge_color'])
-                                else:
-                                    st.badge(film['Info'], icon=film['badge_icon'], color=film['badge_color'])
+                            if filters == 'Not Watched':
+                                st.badge(film['is_release'], icon=film['badge_icon'], color=film['badge_color'])
+                            else:
+                                st.badge(film['Info'], icon=film['badge_icon'], color=film['badge_color'])
 
-                            # Tambahkan wrapper dengan fixed height
-                            st.markdown(f"""
-                                <div style="
-                                    height: {image_heigth}px;  /* Atur tinggi tetap */
-                                    width: 100%;
-                                    overflow: hidden;
-                                    display: flex;
-                                    justify-content: center;
-                                    align-items: center;
-                                    margin-bottom: 10px;
-                                    border-radius: 5px;
-                                ">
-                                    <img src="{film['Picture']}" 
-                                        style="
-                                            width: 100%;
-                                            height: 100%;
-                                            object-fit: cover;
-                                            object-position: center;
-                                        ">
-                                </div>
-                            """, unsafe_allow_html=True)
+                        # Tambahkan wrapper dengan fixed height
+                        st.markdown(f"""
+                            <div style="
+                                height: {image_heigth}px;  /* Atur tinggi tetap */
+                                width: 100%;
+                                overflow: hidden;
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                margin-bottom: 10px;
+                                border-radius: 5px;
+                            ">
+                                <img src="{film['Picture']}" 
+                                    style="
+                                        width: 100%;
+                                        height: 100%;
+                                        object-fit: cover;
+                                        object-position: center;
+                                    ">
+                            </div>
+                        """, unsafe_allow_html=True)
 
-                            if st.button(f'{film["Code"]}', key=f'film_edit_{real_index}', width='stretch', type='primary'):
-                                st.session_state.viewing_film_index = film['original_index']
-                                st.rerun()
-                            st.space('small')
+                        if st.button(f'{film["Code"]}', key=f'film_edit_{real_index}', width='stretch', type='primary'):
+                            st.session_state.viewing_film_index = film['original_index']
+                            st.session_state.filtered_film_data = filtered_df
+                            st.session_state.filtered_data_position = start_idx + i
+                            st.rerun()
+                        st.space('small')
         st.markdown('---')
         if total_pages <= 6:
             with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
@@ -1425,6 +1428,10 @@ def complex_film(conn, device):
         st.session_state.film_layout = 'Detailed'
     if 'width_option' not in st.session_state:
         st.session_state.width_option = device
+    if 'filtered_film_data' not in st.session_state:
+        st.session_state.filtered_film_data = None
+    if 'filtered_data_position' not in st.session_state:
+        st.session_state.filtered_data_position = None
 
     if st.session_state.scroll_to_top:
         scroll_to_here(0,key='top')  # Scroll to the top of the page
@@ -1448,29 +1455,41 @@ def complex_film(conn, device):
         .tolist()
     )
 
+    def reset_pic():
+        st.session_state.prev_pic = 0
+    
+    def set_prev_pic(pic, total):
+        if pic < total and pic >=0:
+            st.session_state.prev_pic = pic
+
     @st.dialog("🎬 Film Details", width='small')
     def show_film_details():
         index = st.session_state.viewing_film_index
+        def set_film_data(p, total):
+            if p < total and p >= 0:
+                st.session_state.filtered_data_position = p
+                st.session_state.prev_pic = 0
+        
+        filtered_data = st.session_state.filtered_film_data
+        pos = st.session_state.filtered_data_position
+        with st.container(horizontal=True):
+            st.button('⬅️', width='stretch', disabled=(st.session_state.filtered_data_position==0), on_click=set_film_data, args=(st.session_state.filtered_data_position-1,len(filtered_data)))
+            st.button('➡️', width='stretch', disabled=(st.session_state.filtered_data_position==len(filtered_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(filtered_data)))
+
+        film = filtered_data.iloc[pos]
+        idx = filtered_data.index[pos]
 
         if index is None or index >= len(df):
             st.warning("No film selected")
             st.stop()
         
         if st.session_state.editing_film_index == index:
-            show_edit_film(index)
+            show_edit_film(film, idx)
         else:
-            show_view_film(index)
+            show_view_film(film)
 
-    def show_view_film(index):
-        def reset_pic():
-            st.session_state.prev_pic = 0
+    def show_view_film(film):
 
-        def set_prev_pic(pic, total):
-            if pic < total and pic >=0:
-                st.session_state.prev_pic = pic
-
-
-        film = df.iloc[index]
 
         with st.container(key='poster_code', horizontal_alignment='center'):
             st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
@@ -1500,7 +1519,7 @@ def complex_film(conn, device):
             with st.container(horizontal=True, horizontal_alignment=is_center):
                 for idx in matching_actresses.index:
                     actress_name = matching_actresses['Name (Alphabet)'][idx]
-                    container_key = f"{actress_name}_{index}"
+                    container_key = f"{actress_name}_{st.session_state.filtered_data_position}_{idx}"
 
                     with st.container(width=80, key=container_key):
                         # Display image as circle using HTML
@@ -1688,19 +1707,20 @@ def complex_film(conn, device):
             st.link_button("🎬 Preview", film['Link'], width='stretch', type='primary')
         with st.container(key='view_film_edit_container_button', horizontal=True):
             if st.button('✏️ Edit', width='stretch', key='edited'):
-                st.session_state.editing_film_index = index
+                st.session_state.editing_film_index = st.session_state.filtered_data_position
+                st.session_state.viewing_film_index = st.session_state.filtered_data_position
+                st.toast('✏️ Edit Mode!')
+                time.sleep(.5)
                 st.rerun()
             if st.button('❌ Close', width='stretch'):
                 st.session_state.viewing_film_index = None
                 st.session_state.editing_film_index = None
+                st.toast('❌ Close View Mode!')
+                time.sleep(.5)
                 st.rerun()
 
-    def show_edit_film(index):
-        df = st.session_state.film_df
-        film = df.iloc[index]
-
+    def show_edit_film(film, index):
         info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
-
         with st.container(horizontal_alignment='center'): 
             st.markdown(f"### ✏️ Editing: {film['Code']}")
             st.image(film['Picture'], width=250)
@@ -1813,11 +1833,69 @@ def complex_film(conn, device):
             edited_tags = 'No Tags'
 
         st.write(edited_tags)
+
+        st.markdown('### Gallery')
+        if st.checkbox('Show', on_change=reset_pic):
+            if film['Preview Picture'] != 'No Pics' and film['Preview Picture'] != '--':
+
+                if 'prev_pic' not in st.session_state:  
+                    st.session_state.prev_pic = 0
+                
+                pics = film['Preview Picture'].split(', ')
+                count = len(pics)
+
+                st.markdown(
+                    """
+                    <style>
+                    div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
+
+                    .img-fit {
+                        margin-top: -13px; 
+                        padding-top: 0; 
+                        display: flex;             /* gunakan flexbox */
+                        justify-content: center;   /* horizontal center */
+                        align-items: center;       /* vertical center jika container tinggi ditentukan */
+                        background-color: #ffffff;
+                        border-radius: 5px;
+                        margin-bottom: 15px;
+                    }
+
+                    .img-fit img {
+                        max-width: 100%;
+                        height: 400px;
+                        width: auto;
+                        object-fit: contain;
+                        display: none;  /* default hidden semua gambar */
+                    }
+
+                    .img-fit img.active {
+                        display: block; /* hanya gambar active yang terlihat */
+                    }
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                # HTML untuk semua gambar, preload semuanya
+                img_html = '<div class="img-fit">'
+                for i, pic in enumerate(pics):
+                    active_class = 'active' if i == st.session_state.prev_pic else ''
+                    img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
+                img_html += '</div>'
+
+                st.markdown(img_html, unsafe_allow_html=True)
+
+
+                with st.container(horizontal=True):
+                    # Tombol navigasi
+                    st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
+                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
+            else:
+                st.warning('Picture Unavailable')
+
         # Tombol aksi
         if 'delete_btn' not in st.session_state:
             st.session_state.delete_btn = False
-        
-
 
         with st.container(horizontal=True):
             if st.button("💾 Save", width='stretch', type="primary", key=f"save_{index}"):
@@ -1904,7 +1982,6 @@ def complex_film(conn, device):
                 else:
                     final_picture_url = film['Picture']
                 
-
                 # Update data di DataFrame
                 row = index + 2
                 new_values = [
@@ -1930,16 +2007,18 @@ def complex_film(conn, device):
                 film_worksheet().update(f"A{row}:K{row}", [new_values])
 
                 df.loc[index] = new_values
+                st.session_state.filtered_film_data.iloc[st.session_state.filtered_data_position] = new_values
 
                 st.session_state.film_df = values_handling(df,'film')
                 st.session_state.editing_film_index = None
-                st.toast("✅ Data edited successfully!")
-                time.sleep(1)
+                st.toast("✅ Data Edited Successfully!")
+                time.sleep(.5)
                 st.rerun()
         
             if st.button('❌ Close', width='stretch'):
                 st.session_state.viewing_film_index = None
-                st.session_state.editing_film_index = None
+                st.toast('❌ Close Edit Mode!')
+                time.sleep(.5)
                 st.rerun()
 
         if st.session_state.delete_btn == False:
@@ -1975,7 +2054,7 @@ def complex_film(conn, device):
     
         st.session_state.editing_film_index = None
         st.session_state.viewing_film_index = None
-        st.toast("✅ Data deleted successfully!")
+        st.toast("✅ Data Deleted Successfully!")
         time.sleep(1)
         st.rerun()
 
@@ -2143,7 +2222,7 @@ def complex_film(conn, device):
                         df = pd.concat([df, new_row_df], ignore_index=True)
 
                         st.session_state.film_df = values_handling(df,'film')
-                        st.toast("✅ Data added successfully!")
+                        st.toast("✅ Data Added Successfully!")
                         time.sleep(1)
                         st.rerun()
                 else:
@@ -2988,16 +3067,24 @@ def complex_actress(conn, device):
                 st.session_state.film_df = values_handling(st.session_state.film_df,'film')
                 st.session_state.actress_film_data.iloc[pos] = new_values
                 st.session_state.actress_edit_film_index = None
+                st.toast("✅ Data Edited Successfully!")
+                time.sleep(.5)
                 st.rerun()
             if st.button('❌ Close Edit', width='stretch'):
                 st.session_state.actress_edit_film_index = None
+                st.toast('❌ Close Edit Mode!')
+                time.sleep(.5)
                 st.rerun()
         else:
             if st.button('✏️ Edit', width='stretch'):
                 st.session_state.actress_edit_film_index = index
+                st.toast('✏️ View Mode!')
+                time.sleep(.5)
                 st.rerun()
             if st.button('❌ Close', width='stretch'):
                 st.session_state.actress_film_index = None
+                st.toast('❌ Close View Mode!')
+                time.sleep(.5)
                 st.rerun()
 
     def show_view_mode(index):
