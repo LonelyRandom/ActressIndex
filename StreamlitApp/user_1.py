@@ -1477,8 +1477,8 @@ def complex_film(conn, device):
             st.button('➡️', width='stretch', disabled=(st.session_state.filtered_data_position==len(filtered_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(filtered_data)))
 
         film = filtered_data.iloc[pos]
-        idx = filtered_data.index[pos]
-
+        idx = filtered_data['original_index'].iloc[pos]
+   
         if index is None or index >= len(df):
             st.warning("No film selected")
             st.stop()
@@ -1998,6 +1998,23 @@ def complex_film(conn, device):
                     edited_a
                 ]
 
+                filter_values = [
+                    film['original_index'],
+                    edited_actress,
+                    edited_code,
+                    edited_title,
+                    edited_release_date,
+                    final_picture_url,
+                    edited_tags,
+                    edited_info,
+                    edited_status,
+                    edited_link,
+                    film['Preview Picture'],
+                    edited_a,
+                    film['badge_icon'],
+                    film['badge_color']
+                ]
+
                 if edited_info != 'Not Watched':
                     if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
                         for review in new_review:
@@ -2007,7 +2024,7 @@ def complex_film(conn, device):
                 film_worksheet().update(f"A{row}:K{row}", [new_values])
 
                 df.loc[index] = new_values
-                st.session_state.filtered_film_data.iloc[st.session_state.filtered_data_position] = new_values
+                st.session_state.filtered_film_data.iloc[st.session_state.filtered_data_position] = filter_values
 
                 st.session_state.film_df = values_handling(df,'film')
                 st.session_state.editing_film_index = None
