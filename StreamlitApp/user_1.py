@@ -1070,13 +1070,6 @@ def display_film_grid(df, tag_df):
             0: 'red'
         }).fillna('grey')
 
-    
-    # Reset index dan simpan index asli dalam kolom baru
-    filtered_df = filtered_df.reset_index(drop=False)  # ini akan membuat kolom 'index' dengan index asli
-    # Rename kolom index agar tidak bentrok
-    filtered_df = filtered_df.rename(columns={'index': 'original_index'})
-    
-
     with st.container(horizontal=True, vertical_alignment='bottom'):
         search_name = st.text_input("🔍 Search (Actress Name / Code):", 
                                   placeholder="Name or Code...", 
@@ -1168,7 +1161,8 @@ def display_film_grid(df, tag_df):
     def set_page(p):
         st.session_state.film_page = p
     
-    
+    filtered_df_data = filtered_df.copy()
+    filtered_df_data = filtered_df_data.drop(columns=['original_index', 'badge_color', 'badge_icon', 'is_release'], errors='ignore')
     if st.session_state.scroll_to_here:
         scroll_to_here(0,key='here')  # Scroll to the top of the page
         st.session_state.scroll_to_here = False
@@ -1277,8 +1271,8 @@ def display_film_grid(df, tag_df):
                         """, unsafe_allow_html=True)
 
                         if st.button(f'{film["Code"]}', key=f'film_edit_{real_index}', width='stretch', type='primary'):
-                            st.session_state.viewing_film_index = film['original_index']
-                            st.session_state.filtered_film_data = filtered_df
+                            st.session_state.viewing_film_index = real_index
+                            st.session_state.filtered_film_data = filtered_df_data
                             st.session_state.filtered_data_position = start_idx + i
                             st.rerun()
                         st.space('small')
@@ -1477,7 +1471,7 @@ def complex_film(conn, device):
             st.button('➡️', width='stretch', disabled=(st.session_state.filtered_data_position==len(filtered_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(filtered_data)))
 
         film = filtered_data.iloc[pos]
-        idx = filtered_data['original_index'].iloc[pos]
+        idx = filtered_data.index[pos]
    
         if index is None or index >= len(df):
             st.warning("No film selected")
@@ -1998,23 +1992,6 @@ def complex_film(conn, device):
                     edited_a
                 ]
 
-                filter_values = [
-                    film['original_index'],
-                    edited_actress,
-                    edited_code,
-                    edited_title,
-                    edited_release_date,
-                    final_picture_url,
-                    edited_tags,
-                    edited_info,
-                    edited_status,
-                    edited_link,
-                    film['Preview Picture'],
-                    edited_a,
-                    film['badge_icon'],
-                    film['badge_color']
-                ]
-
                 if edited_info != 'Not Watched':
                     if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
                         for review in new_review:
@@ -2024,7 +2001,7 @@ def complex_film(conn, device):
                 film_worksheet().update(f"A{row}:K{row}", [new_values])
 
                 df.loc[index] = new_values
-                st.session_state.filtered_film_data.iloc[st.session_state.filtered_data_position] = filter_values
+                st.session_state.filtered_film_data.iloc[st.session_state.filtered_data_position] = new_values
 
                 st.session_state.film_df = values_handling(df,'film')
                 st.session_state.editing_film_index = None
