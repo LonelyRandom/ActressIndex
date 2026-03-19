@@ -342,7 +342,7 @@ def display_film_card(df, tag_df):
     else:
         img_card_height = 202
         img_card_width = 106
-        actress_width = 101
+        actress_width = 76
     
     if search_name:
         if search_by == 'Code':
@@ -1102,7 +1102,7 @@ def display_film_grid(df, tag_df):
     else:
         image_width = 106
         image_heigth = 151
-        actress_width = 71
+        actress_width = 76
         
     with st.container(horizontal=True):
         search_by = st.radio('Search By :', options=['Code', 'Actress', 'Title'], key='search_by', width='content', horizontal=False)    
