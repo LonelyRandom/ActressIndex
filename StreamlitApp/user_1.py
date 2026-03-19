@@ -69,9 +69,6 @@ def tags_worksheet():
 
 REVIEW_OPTS = [
     'Not Checked',
-    'Pass',
-    'Goat',
-    'Drop',
     'S-Tier',
     'A-Tier',
     'B-Tier',
@@ -79,6 +76,7 @@ REVIEW_OPTS = [
     'D-Tier',
     'E-Tier',
     'F-Tier'
+    'Drop',
 ]
 
 STATUS_OPTS = [
@@ -340,9 +338,11 @@ def display_film_card(df, tag_df):
     if st.session_state.width_option == 'Device 1':
         img_card_height = 215
         img_card_width = 115
+        actress_width = 80
     else:
         img_card_height = 202
         img_card_width = 106
+        actress_width = 101
     
     if search_name:
         if search_by == 'Code':
@@ -448,8 +448,12 @@ def display_film_card(df, tag_df):
         for i in range(0, len(rows_to_display)): # len = 8 // i = [0,8]
             actress = rows_to_display.iloc[i]
             real_index = rows_to_display.index[i]  # ⬅️ INI KUNCI
-            display_single_card(img_card_height, img_card_width, actress, real_index, filtered_df, i, start_idx)
+            display_single_card('main', img_card_height, img_card_width, actress, real_index, filtered_df, i, start_idx)
     st.markdown('---')
+    st.markdown(
+        f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Page {st.session_state.film_page}</div>",
+        unsafe_allow_html=True
+    )
     if total_pages <= 6:
         with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
             for i in range(1, total_pages + 1):
@@ -485,9 +489,67 @@ def display_film_card(df, tag_df):
                 )
             st.button('➡️', key='next_bottom', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,))
     st.markdown('---')
+    actress_df = st.session_state.actress_df.copy()
+    if 'random_actress' not in st.session_state:
+        st.session_state.random_actress = None
+        filtered_actress = actress_df[(actress_df['Review']!='Not Checked') & (actress_df['Review']!='Drop')]
+        st.session_state.random_actress = filtered_actress.sample(n=8)
+    
+    random_df = st.session_state.random_actress.copy()
+    st.markdown(
+        f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Actress Recommendation</div>",
+        unsafe_allow_html=True
+    )
+    with st.container(horizontal=True):
+        for idx in random_df.index:
+            with st.container(width=actress_width, key=f'bottom_actress_recommendation_{idx}'):
+                # Display image as circle using HTML
+                st.markdown(f"""
+                    <div style="
+                        width: {actress_width}px;
+                        height: {actress_width}px;
+                        border-radius: 50%;
+                        overflow: hidden;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        margin: 0 auto 8px auto;
+                        background: white;
+                    ">
+                        <img src="{random_df['Picture'][idx]}" 
+                            style="
+                                width: 100%;
+                                height: 100%;
+                                object-fit: cover;
+                            ">
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                # Button
+                if st.button(random_df['Name (Alphabet)'][idx], width='stretch', type='tertiary', key=f"{random_df['Name (Alphabet)'][idx]}_{idx}", on_click=reset_page):
+                    st.session_state.search_text = random_df['Name (Alphabet)'][idx]
+                    st.session_state.set_search = True
+                    st.session_state.scroll_to_top = True
+                    st.rerun()
+    st.markdown('---')
+    st.markdown(
+        f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Film Recommendation</div>",
+        unsafe_allow_html=True
+    )
+    if 'random_film' not in st.session_state:
+        filtered_film = df.copy()
+        st.session_state.random_film = filtered_film.sample(n=6)
+    random_film = st.session_state.random_film
+    with st.container(horizontal=True):
+        for i in range(len(random_film)):
+            actress = random_film.iloc[i]
+            real_index = random_film.index[i] 
+            display_single_card('recommend', img_card_height, img_card_width, actress, real_index, random_film, i, 0)
+    st.markdown('---')
+
     
 
-def display_single_card(img_card_height, img_card_width, actress, card_id, filtered_df, i, start_idx):
+def display_single_card(keys, img_card_height, img_card_width, actress, card_id, filtered_df, i, start_idx):
     """
     Menampilkan single card untuk satu aktris
     """
@@ -598,13 +660,20 @@ def display_single_card(img_card_height, img_card_width, actress, card_id, filte
 
     with st.container(width=img_card_width):
         st.markdown(card_html, unsafe_allow_html=True)
-    
-        if st.button(actress['Code'],key=f'view_film_{card_id}',width='stretch', type='primary'):
-            st.session_state.viewing_film_index = card_id
-            st.session_state.filtered_film_data = filtered_df
-            st.session_state.filtered_data_position = start_idx + i
-            st.session_state.editing_film_index = None
-            st.rerun()
+        if keys == 'main':
+            if st.button(actress['Code'],key=f'view_film_{card_id}',width='stretch', type='primary'):
+                st.session_state.viewing_film_index = card_id
+                st.session_state.filtered_film_data = filtered_df
+                st.session_state.filtered_data_position = start_idx + i
+                st.session_state.editing_film_index = None
+                st.rerun()
+        else:
+            if st.button(actress['Code'],key=f'recommend_film_{card_id}',width='stretch', type='primary'):
+                st.session_state.viewing_film_index = card_id
+                st.session_state.filtered_film_data = filtered_df
+                st.session_state.filtered_data_position = start_idx + i
+                st.session_state.editing_film_index = None
+                st.rerun()
 def reset_calender_page():
     """Reset halaman ke 1"""
     st.session_state.calender_page = 1
@@ -979,7 +1048,6 @@ def display_film_calender(df, conn):
 def reset_page():
     """Reset halaman ke 1"""
     st.session_state.film_page = 1
-
 def reset_page_actress():
     """Reset halaman ke 1"""
     st.session_state.actress_page = 1
@@ -1030,9 +1098,11 @@ def display_film_grid(df, tag_df):
     if st.session_state.width_option == 'Device 1':
         image_width = 115
         image_heigth = 164
+        actress_width = 80
     else:
         image_width = 106
         image_heigth = 151
+        actress_width = 71
         
     with st.container(horizontal=True):
         search_by = st.radio('Search By :', options=['Code', 'Actress', 'Title'], key='search_by', width='content', horizontal=False)    
@@ -1319,7 +1389,105 @@ def display_film_grid(df, tag_df):
                 
                 if st.button('➡️',key='next_bottom', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(st.session_state.film_page+1,)):
                     st.session_state.scroll_to_here = True    
-                    st.rerun()             
+                    st.rerun() 
+        st.markdown('---')
+        actress_df = st.session_state.actress_df.copy()
+        if 'random_actress' not in st.session_state:
+            st.session_state.random_actress = None
+            filtered_actress = actress_df[(actress_df['Review']!='Not Checked') & (actress_df['Review']!='Drop')]
+            st.session_state.random_actress = filtered_actress.sample(n=8)
+        
+        random_df = st.session_state.random_actress.copy()
+        st.markdown(
+            f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Actress Recommendation</div>",
+            unsafe_allow_html=True
+        )
+        with st.container(horizontal=True):
+            for idx in random_df.index:
+                with st.container(width=actress_width, key=f'bottom_actress_recommendation_{idx}'):
+                    # Display image as circle using HTML
+                    st.markdown(f"""
+                        <div style="
+                            width: {actress_width}px;
+                            height: {actress_width}px;
+                            border-radius: 50%;
+                            overflow: hidden;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            margin: 0 auto 8px auto;
+                            background: white;
+                        ">
+                            <img src="{random_df['Picture'][idx]}" 
+                                style="
+                                    width: 100%;
+                                    height: 100%;
+                                    object-fit: cover;
+                                ">
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Button
+                    if st.button(random_df['Name (Alphabet)'][idx], width='stretch', type='tertiary', key=f"recommend_{random_df['Name (Alphabet)'][idx]}_{idx}", on_click=reset_page):
+                        st.session_state.search_text = random_df['Name (Alphabet)'][idx]
+                        st.session_state.set_search = True
+                        st.session_state.scroll_to_top = True
+                        st.rerun()
+        st.markdown('---')
+        st.markdown(
+            f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Film Recommendation</div>",
+            unsafe_allow_html=True
+        )
+        if 'random_film' not in st.session_state:
+            filtered_film = df.copy()
+            st.session_state.random_film = filtered_film.sample(n=6)
+        random_film = st.session_state.random_film
+        with st.container(horizontal=True):
+            for i in range(len(random_film)):
+                with st.container(width=image_width):
+                    if i < len(random_film):
+                        film = random_film.iloc[i]
+                        real_index = random_film.index[i]
+
+
+                        # Tambahkan wrapper dengan fixed height
+                        st.markdown(f"""
+                            <div style="
+                                height: {image_heigth}px;  /* Atur tinggi tetap */
+                                width: 100%;
+                                overflow: hidden;
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                margin-bottom: 10px;
+                                border-radius: 5px;
+                            ">
+                                <img src="{film['Picture']}" 
+                                    style="
+                                        width: 100%;
+                                        height: 100%;
+                                        object-fit: cover;
+                                        object-position: center;
+                                    ">
+                            </div>
+                        """, unsafe_allow_html=True)
+
+                        if film['A-Detector'] == 1:
+                            if st.button(f'⭐ {film["Code"]}', key=f'recommend_film_{real_index}', width='stretch', type='primary'):
+                                st.session_state.viewing_film_index = real_index
+                                st.session_state.filtered_film_data = random_film
+                                st.session_state.filtered_data_position = i
+                                st.rerun()
+                        else:
+                            if st.button(f'{film["Code"]}', key=f'recommend_film_{real_index}', width='stretch', type='primary'):
+                                st.session_state.viewing_film_index = real_index
+                                st.session_state.filtered_film_data = random_film
+                                st.session_state.filtered_data_position = i
+                                st.rerun()
+
+                        st.space('small')
+
+        st.markdown('---')            
     else:
         st.info('No film match the filter')
     if st.button('⬆️ Back to top', width='stretch'):
