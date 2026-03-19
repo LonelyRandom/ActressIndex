@@ -338,7 +338,7 @@ def display_film_card(df, tag_df):
     if st.session_state.width_option == 'Device 1':
         img_card_height = 215
         img_card_width = 115
-        actress_width = 85
+        actress_width = 83
     else:
         img_card_height = 202
         img_card_width = 106
@@ -1098,7 +1098,7 @@ def display_film_grid(df, tag_df):
     if st.session_state.width_option == 'Device 1':
         image_width = 115
         image_heigth = 164
-        actress_width = 85
+        actress_width = 83
     else:
         image_width = 106
         image_heigth = 151
