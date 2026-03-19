@@ -2449,10 +2449,14 @@ def complex_film(conn, device):
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
-                st.markdown(f"<h3 style='text-align: center;'>{random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
+                if random_row['A-Detector'].values[0] == True:
+                    st.markdown(f"<h3 style='text-align: center;'>⭐ {random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"<h3 style='text-align: center;'>{random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
                 st.write('**Title :**', random_row['Title'].values[0])
                 st.write('**Actress :**', random_row['Actress Name'].values[0])
                 st.write('**Review :**', random_row['Info'].values[0])
+                st.link_button('View Film', random_row['Link'].values[0], width='stretch', type='primary')
 
         with st.expander('Add Tags'):
             if st.session_state.get('reset_tag', False):
