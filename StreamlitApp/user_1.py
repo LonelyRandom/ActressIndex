@@ -574,7 +574,7 @@ def display_single_card(img_card_height, img_card_width, actress, card_id, filte
                     ">
             </div>
             <!-- Separator -->
-            <div style="width: {50}px; height: {3}px; background: linear-gradient(90deg, {status_color}, #FFD166); 
+            <div style="width: {50}px; height: {3}px; background: {status_color}; 
                     margin: 0 auto 15px auto; border-radius: 2px;"></div>
             <!-- Code and Date -->
             <div>
@@ -3484,7 +3484,8 @@ def complex_actress(conn, device):
         edited_debut_date = st.date_input(
             "Debut Date",
             value=debut_date,
-            key=f"debut_date_{index}"
+            key=f"debut_date_{index}",
+            min_value=date(1980,1,1)
         )
         debut_no_info = st.checkbox('No Info', value = (actress['Debut Date'] == '?'), key='debut check')
 
@@ -3577,7 +3578,7 @@ def complex_actress(conn, device):
                 key=f"height_{index}"
             )
 
-            if st.checkbox('No Info', value=(actress['Height (cm)'] == '?'), key='Height Check'):
+            if st.checkbox('No Info', value=(actress['Height (cm)'] == '? cm'), key='Height Check'):
                 edited_height = '?'
             else:
                 edited_height = str(edited_height) + ' cm'
@@ -4161,6 +4162,16 @@ def complex_actress(conn, device):
             with st.container(horizontal=True,horizontal_alignment='center'):
                 for idx in rows_to_display.index:
                     actress = df.iloc[idx]
+                    status = actress['Status']
+                    if status == 'Problem':
+                        status_text = 'orange'
+                    elif status == 'Retired':
+                        status_text = 'red'
+                    elif status == 'No Info':
+                        status_text = 'blue'
+                    else:
+                        status_text = 'gray'
+
                     with st.container(width=img_width+5):
                         st.markdown(f"""
                                 <div class="review-avatar review-{'-'.join(actress['Review'].lower().split(' '))}" style="
@@ -4183,13 +4194,18 @@ def complex_actress(conn, device):
                                     <div class="review-badge-gallery review-{'-'.join(actress['Review'].lower().split(' '))}">
                                         {actress['Review'].replace('-Tier','')}
                                     </div>
-
                                 </div>
                             """, unsafe_allow_html=True)
-                        if st.button(actress['Name (Alphabet)'], width='stretch', type='tertiary', key=f'{actress["Name (Alphabet)"]}_{idx}'):
-                            st.session_state.viewing_index = idx
-                            st.session_state.editing_index = None
-                            st.rerun()
+                        if status != 'Active':
+                            if st.button(f':{status_text}[{actress["Name (Alphabet)"]}]', width='stretch', type='tertiary', key=f'{actress["Name (Alphabet)"]}_{idx}'):
+                                st.session_state.viewing_index = idx
+                                st.session_state.editing_index = None
+                                st.rerun()
+                        else:
+                            if st.button(actress["Name (Alphabet)"], width='stretch', type='tertiary', key=f'{actress["Name (Alphabet)"]}_{idx}'):
+                                st.session_state.viewing_index = idx
+                                st.session_state.editing_index = None
+                                st.rerun()
         st.markdown('---')
         if total_actress_pages <= 6:
             with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
@@ -4339,6 +4355,36 @@ def complex_actress(conn, device):
             background: white;
             box-shadow: 0 3px 8px rgba(0,0,0,0.3);
             z-index: 20;
+        }
+        
+        .status-badge-gallery {
+            position: absolute;
+            top: -5px;
+            right: 75px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            z-index: 20;
+        }
+        
+        .status-active { 
+            background-color: #2ecc71 !important; 
+            color: #2c3e50 !important;
+        }
+        .status-retired { 
+            background-color: #e74c3c !important; 
+            color: #ffffff !important;
+        }
+        .status-active { 
+            background-color: #2ecc71 !important; 
+            color: #2c3e50 !important;
+        }
+        .status-active { 
+            background-color: #2ecc71 !important; 
+            color: #2c3e50 !important;
         }
 
         .review-s-tier { border-color: #FFD700 !important; }
