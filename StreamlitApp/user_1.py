@@ -435,6 +435,9 @@ def display_film_card(df, tag_df):
                 st.session_state.scroll_to_here = True
                 st.rerun()
     
+    filtered_df_data = filtered_df.copy()
+    filtered_df_data = filtered_df_data.drop(columns=['filtered_date'], errors='ignore')
+    
     page = st.session_state.film_page
     
     start_idx = (page - 1) * items_per_page # page = 2 / Start idx = 8
@@ -448,7 +451,7 @@ def display_film_card(df, tag_df):
         for i in range(0, len(rows_to_display)): # len = 8 // i = [0,8]
             actress = rows_to_display.iloc[i]
             real_index = rows_to_display.index[i]  # ⬅️ INI KUNCI
-            display_single_card('main', img_card_height, img_card_width, actress, real_index, filtered_df, i, start_idx)
+            display_single_card('main', img_card_height, img_card_width, actress, real_index, filtered_df_data, i, start_idx)
     st.markdown('---')
     st.markdown(
         f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Page {st.session_state.film_page}</div>",
@@ -1232,7 +1235,7 @@ def display_film_grid(df, tag_df):
         st.session_state.film_page = p
     
     filtered_df_data = filtered_df.copy()
-    filtered_df_data = filtered_df_data.drop(columns=['original_index', 'badge_color', 'badge_icon', 'is_release'], errors='ignore')
+    filtered_df_data = filtered_df_data.drop(columns=['original_index', 'badge_color', 'badge_icon', 'is_release', 'filtered_date'], errors='ignore')
     if st.session_state.scroll_to_here:
         scroll_to_here(0,key='here')  # Scroll to the top of the page
         st.session_state.scroll_to_here = False
