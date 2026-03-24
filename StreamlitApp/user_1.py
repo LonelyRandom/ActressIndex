@@ -2172,6 +2172,7 @@ def complex_film(conn, device):
                 film_worksheet().update(f"A{row}:K{row}", [new_values])
 
                 df.loc[index] = new_values
+                st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
                 st.session_state.filtered_film_data.iloc[st.session_state.filtered_data_position] = new_values
 
                 st.session_state.film_df = values_handling(df,'film')
