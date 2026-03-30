@@ -8,6 +8,7 @@ from value_handling import values_handling, initial_load
 from dateutil.relativedelta import relativedelta
 from streamlit_scroll_to_top import scroll_to_here
 import gspread
+import math
 from google.oauth2.service_account import Credentials
 
 @st.cache_resource
@@ -787,10 +788,11 @@ def display_film_calender(df, conn):
             st.button('Fri', type='tertiary', width=btn_width)
             st.button('Sat', type='tertiary', width=btn_width)
 
+        with st.container(horizontal=True, width='stretch'):
             if index != 0:
                 for i in range(index):
                     st.button(' ', width=btn_width, key=f'blank_{i}', type='tertiary', disabled=True)
-            
+
             for i in range(1 ,day_month+1):
                 selected_date = date(calender_year, calender_month, i)
                 if len(filtered_df[filtered_df['filtered_date'].dt.date == selected_date]) > 0:
@@ -809,7 +811,7 @@ def display_film_calender(df, conn):
                     height: {btn_height}px;
                 }}
                 </style>""", unsafe_allow_html=True)
-            
+                
 
     if calender_search:
         calender_search = calender_search.split(' ')
@@ -870,7 +872,7 @@ def display_film_calender(df, conn):
                     data['Code'],
                     '--',
                     '?',
-                    st.secrets.indicators.PLACEHOLDER_POSTER,
+                    st.secrets.indicators.PLACEHOLDER_IMG_POSTER,
                     'No Tags',
                     'Not Watched',
                     0,
@@ -2166,10 +2168,9 @@ def complex_film(conn, device):
                 if edited_info != 'Not Watched':
                     if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
                         for review in new_review:
-                            actress_worksheet().update(f'A{int(review[0]+2)}', review[1])
                             actress_df.at[review[0], 'Review'] = review[1]
+                            actress_worksheet().update(f'A{int(review[0]+2)}', review[1])
                 
-                film_worksheet().update(f"A{row}:K{row}", [new_values])
 
                 df.loc[index] = new_values
                 st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
@@ -2178,6 +2179,7 @@ def complex_film(conn, device):
                 st.session_state.film_df = values_handling(df,'film')
                 st.session_state.editing_film_index = None
                 st.toast("✅ Data Edited Successfully!")
+                film_worksheet().update(f"A{row}:K{row}", [new_values])
                 time.sleep(.5)
                 st.rerun()
         
@@ -2214,14 +2216,14 @@ def complex_film(conn, device):
         df.drop(index, inplace=True)    
         df.reset_index(drop=True, inplace=True)
 
-        film_worksheet().delete_row(int(index)+2)
 
         st.session_state.film_df = values_handling(df,'film')
     
         st.session_state.editing_film_index = None
         st.session_state.viewing_film_index = None
         st.toast("✅ Data Deleted Successfully!")
-        time.sleep(1)
+        film_worksheet().delete_row(int(index)+2)
+        time.sleep(.5)
         st.rerun()
 
     @st.dialog("➕ Add New Film", width='small')
@@ -2380,16 +2382,14 @@ def complex_film(conn, device):
                             new_a
                         ]
 
-                        film_data = film_worksheet()
-
-                        film_data.append_row(new_row)
                         new_row_df = pd.DataFrame([new_row], columns=df.columns)
 
                         df = pd.concat([df, new_row_df], ignore_index=True)
 
                         st.session_state.film_df = values_handling(df,'film')
                         st.toast("✅ Data Added Successfully!")
-                        time.sleep(1)
+                        film_worksheet().append_row(new_row)
+                        time.sleep(.5)
                         st.rerun()
                 else:
                     st.error('Fill mandatory fields first! (*)')
@@ -3232,12 +3232,12 @@ def complex_actress(conn, device):
                     edited_a
                 ]
 
-                film_worksheet().update(f"A{row}:K{row}", [new_values])
                 st.session_state.film_df.loc[index] = new_values
                 st.session_state.film_df = values_handling(st.session_state.film_df,'film')
                 st.session_state.actress_film_data.iloc[pos] = new_values
                 st.session_state.actress_edit_film_index = None
                 st.toast("✅ Data Edited Successfully!")
+                film_worksheet().update(f"A{row}:K{row}", [new_values])
                 time.sleep(.5)
                 st.rerun()
             if st.button('❌ Close Edit', width='stretch'):
@@ -3845,12 +3845,14 @@ def complex_actress(conn, device):
                 edited_link
             ]
 
-            row = index + 2
-            actress_worksheet().update(f"A{row}:O{row}", [new_values])
 
             df.loc[index] = new_values
 
             st.session_state.actress_df = values_handling(df,'actress')  # Update session state
+            row = index + 2
+            st.toast('✅ Data Edited Euccessfully!')
+            actress_worksheet().update(f"A{row}:O{row}", [new_values])
+            time.sleep(.5)
             st.session_state.editing_index = None
             st.rerun()
             
@@ -3868,9 +3870,10 @@ def complex_actress(conn, device):
         df.drop(index, inplace=True)
         df.reset_index(drop=True, inplace=True)
         
-        actress_worksheet().delete_row(int(index)+2)
-
         st.session_state.actress_df = values_handling(df,'actress')  # Update session state
+        st.toast('✅ Data Delete Successfully!')
+        actress_worksheet().delete_row(int(index)+2)
+        time.sleep(.5)
         st.session_state.editing_index = None
         st.session_state.viewing_index = None
         st.rerun()
@@ -4044,12 +4047,14 @@ def complex_actress(conn, device):
                     st.warning(f"⚠️ Aktris '{new_kanji}' sudah ada di database!")
                     st.stop()
                 else:
-                    actress_worksheet().append_row(new_row)
                     new_row_df = pd.DataFrame([new_row], columns=df.columns)
                     
                     df = pd.concat([df, new_row_df], ignore_index=True)   
                     df = df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
                     st.session_state.actress_df = values_handling(df,'actress')  # Update session state
+                    st.toast('✅ Data Added Successfully!')
+                    actress_worksheet().append_row(new_row)
+                    time.sleep(.5)
                     st.session_state.adding_new = False
                     st.rerun()
             else:
