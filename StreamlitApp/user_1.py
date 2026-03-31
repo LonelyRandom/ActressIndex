@@ -4339,7 +4339,7 @@ def complex_actress(conn, device):
                             st.markdown(card_html, unsafe_allow_html=True)
                             
                         # Button container untuk View Details
-                            if st.button(name_text, key=f"view_{idx}", type='primary', width='stretch'):
+                            if st.button("View Details", key=f"view_{idx}", type='primary', width='stretch'):
                                 st.session_state.viewing_index = idx
                                 st.session_state.editing_index = None
                                 st.rerun()
