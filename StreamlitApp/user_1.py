@@ -682,6 +682,24 @@ def reset_calender_page():
     """Reset halaman ke 1"""
     st.session_state.calender_page = 1
 
+def set_calender_flag(index):
+    edit_flag = st.session_state.get(f'{index}_radio')
+    
+    if edit_flag == '🟢 P':
+        edit_flag = 'Pass'
+    elif edit_flag == '🔴 D':
+        edit_flag = 'Drop'
+    elif edit_flag == '🟡 U':
+        edit_flag = 'Unsure'
+    else:
+        edit_flag = 'Not Checked'
+    st.toast(f"{st.session_state.calender_data.at[index, 'Code']} Flag changed to {edit_flag}")
+    st.session_state.calender_data.at[index, 'Flag'] = edit_flag
+
+def set_calender_a(index):
+    st.toast(f"{st.session_state.calender_data.at[index, 'Code']} A-Detector {st.session_state.get(f'{index}_toggle')}")
+    st.session_state.calender_data.at[index, 'A-Detector'] = st.session_state.get(f'{index}_toggle')
+
 def display_film_calender(df, conn):
     if 'calender_data' not in st.session_state:
         st.session_state.calender_data = conn.read(worksheet='Calender Scrap', usecols=list(range(6)))
@@ -736,7 +754,7 @@ def display_film_calender(df, conn):
         st.session_state.show_date = date.today()
     if 'date_clicked' not in st.session_state:
         st.session_state.date_clicked = False
-    selected_flag = st.selectbox('Flag', options=['All', 'Pass','Drop', 'Not Checked'], width='stretch', on_change=reset_calender_page, key='calender_flag')
+    selected_flag = st.selectbox('Flag', options=['All', 'Pass','Drop', 'Not Checked', 'Unsure'], width='stretch', on_change=reset_calender_page, key='calender_flag')
 
     if selected_flag != 'All':
         filtered_df = filtered_df[filtered_df['Flag'] == selected_flag]
@@ -981,20 +999,13 @@ def display_film_calender(df, conn):
                         flag_idx = 2
                     elif film['Flag'] == 'Drop':
                         flag_idx = 1
+                    elif film['Flag'] == 'Unsure':
+                        flag_idx = 3
                     else:
                         flag_idx = 0
                     st.image(film['Picture'], caption=film['Code'])
-                    edit_flag = st.radio('Flag', options=['✅ Pass','❌ Drop','❔ IDK'], index=flag_idx, key=f'{film["Code"]}_radio', horizontal=True)
-                    edit_a = st.toggle('✨', key=f'{film["Code"]}_toggle', value=film['A-Detector'])
-                    st.link_button('Detail', film['Link'], type='primary', width='stretch')
-                    if edit_flag == '✅ Pass':
-                        edit_flag = 'Pass'
-                    elif edit_flag == '❌ Drop':
-                        edit_flag = 'Drop'
-                    else:
-                        edit_flag = 'Not Checked'
-                    calender_df.at[real_index, 'Flag'] = edit_flag
-                    calender_df.at[real_index, 'A-Detector'] = edit_a
+                    st.radio('Flag', options=['🟢 P','🔴 D','⚪️ ?', '🟡 U'], index=flag_idx, key=f'{real_index}_radio', horizontal=True, on_change=set_calender_flag, args=(real_index,))
+                    st.toggle('✨', key=f'{real_index}_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
 
                     st.markdown('---')
         st.markdown('---')
@@ -1712,7 +1723,7 @@ def complex_film(conn, device):
                         """, unsafe_allow_html=True)
                         
                         # Button
-                        if st.button(actress_name, width='stretch', type='tertiary', key=f"{actress_name}_{idx}_{idx}", on_click=reset_page):
+                        if st.button(actress_name, width='stretch', type='tertiary', key=f"{actress_name}_{idx}", on_click=reset_page):
                             st.session_state.viewing_film_index = None
                             st.session_state.editing_film_index = None
                             st.session_state.search_text = actress_name
@@ -2183,8 +2194,8 @@ def complex_film(conn, device):
                 time.sleep(.5)
                 st.rerun()
         
-            if st.button('❌ Close', width='stretch'):
-                st.session_state.viewing_film_index = None
+            if st.button('❌ Close Edit', width='stretch'):
+                st.session_state.editing_film_index = None
                 st.toast('❌ Close Edit Mode!')
                 time.sleep(.5)
                 st.rerun()
@@ -3024,7 +3035,7 @@ def complex_actress(conn, device):
                         """, unsafe_allow_html=True)
                         
                         # Button
-                        if st.button(actress_name, width='stretch', type='tertiary', key=f"{actress_name}_{idx}_{idx}", on_click=reset_page):
+                        if st.button(actress_name, width='stretch', type='tertiary', key=f"{actress_name}_{idx}", on_click=reset_page):
                             st.session_state.viewing_film_index = None
                             st.session_state.editing_film_index = None
                             st.session_state.search_text = actress_name
@@ -4281,11 +4292,14 @@ def complex_actress(conn, device):
             st.warning("No actresses match the selected filters.")
         
         if st.session_state.display_actress == 'Detailed':
+            film_df = st.session_state.film_df
             with st.container(horizontal=True, horizontal_alignment='center'):
                 for idx in rows_to_display.index:
                     actress = df.iloc[idx]    
+                    actress_film = film_df[film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])]
+                    watched_film = film_df[(film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])) & ((film_df['Info'] == 'Watched') | (film_df['Info'] == 'Goat'))]
                     try:
-                        with st.container(width='content'):
+                        with st.container(width='content', key=f'card_container_{idx}'):
                             cat_url = actress['Picture'] if pd.notna(actress['Picture']) else ""
                             name_text = actress['Name (Alphabet)'] if pd.notna(actress['Name (Alphabet)']) else ""
                             kanji_text = actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ""
@@ -4303,7 +4317,11 @@ def complex_actress(conn, device):
                                     <div class="cat-image-container">
                                         <img src="{cat_url}" class="cat-image review-{review_class}" width="150" height="150">
                                     </div>
-                                    <div class="card-divider"></div>"""
+                                    <div class="card-divider"></div>
+                                    <div class="total-badge">
+                                        {len(watched_film)}/{len(actress_film)} Watched
+                                    </div>
+                                    """
                             
                             if name_text and kanji_text:
                                 card_html += f"""<div class="cat-name">{name_text}</div>
@@ -4321,7 +4339,7 @@ def complex_actress(conn, device):
                             st.markdown(card_html, unsafe_allow_html=True)
                             
                         # Button container untuk View Details
-                            if st.button("View Details", key=f"view_{idx}", type='primary', width='stretch'):
+                            if st.button(name_text, key=f"view_{idx}", type='primary', width='stretch'):
                                 st.session_state.viewing_index = idx
                                 st.session_state.editing_index = None
                                 st.rerun()
@@ -4448,7 +4466,7 @@ def complex_actress(conn, device):
         /* Container untuk beberapa badge */
         .badge-stack {
             position: absolute;
-            top: 15px;
+            top: 5px;
             right: 10px;
             display: flex;
             flex-direction: column;
@@ -4467,6 +4485,17 @@ def complex_actress(conn, device):
             text-align: center;
             color: white;
             box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        
+        .total-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            text-align: center;
+            color: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            background-color: #ff8b8b !important;
         }
 
         /* Warna review */
