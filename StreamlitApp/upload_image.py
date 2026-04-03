@@ -5,9 +5,9 @@ import cloudinary.uploader
 # pip install cloudinary
 
 cloudinary.config(
-    cloud_name=st.secrets.cloudinary.CLOUDINARY_CLOUD_NAME,
-    api_key=st.secrets.cloudinary.CLOUDINARY_API_KEY,
-    api_secret=st.secrets.cloudinary.CLOUDINARY_API_SECRET
+    cloud_name=st.secrets["cloudinary"]["CLOUDINARY_CLOUD_NAME"],
+    api_key=st.secrets["cloudinary"]["CLOUDINARY_API_KEY"],
+    api_secret=st.secrets["cloudinary"]["CLOUDINARY_API_SECRET"]
 )
 
 def upload_to_database(uploaded_file, clean_name):
