@@ -1006,7 +1006,7 @@ def display_film_calender(df, conn):
                     st.image(film['Picture'], caption=film['Code'])
                     st.radio('Flag', options=['🟢 P','🔴 D','⚪️ ?', '🟡 U'], index=flag_idx, key=f'{real_index}_radio', horizontal=True, on_change=set_calender_flag, args=(real_index,))
                     st.toggle('✨', key=f'{real_index}_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
-                    st.link_button("View Details", film['Link'], width='stretch', type='primary')
+
                     st.markdown('---')
         st.markdown('---')
         if total_calender_pages <= 6:
@@ -1056,7 +1056,11 @@ def display_film_calender(df, conn):
         st.info('No film match the filter')
     if st.button('⬆️ Back to top', width='stretch'):
         st.session_state.scroll_to_here = True                   
-        
+
+
+    
+
+    
 def reset_page():
     """Reset halaman ke 1"""
     st.session_state.film_page = 1
@@ -1553,7 +1557,6 @@ def complex_home(conn):
         with st.container(horizontal=True):
             if st.button('Yes', width='stretch'):
                 st.session_state.clear()
-                st.logout()
                 return 'login'
             if st.button('No', width='stretch'):
                 st.session_state.log_out_btn = False
@@ -2555,7 +2558,6 @@ def complex_film(conn, device):
             with st.container(horizontal=True):
                 if st.button('Yes', width='stretch'):
                     st.session_state.clear()
-                    st.logout()
                     return 'login'
                 if st.button('No', width='stretch'):
                     st.session_state.log_out_btn = False
@@ -4127,7 +4129,6 @@ def complex_actress(conn, device):
             with st.container(horizontal=True):
                 if st.button('Yes', width='stretch'):
                     st.session_state.clear()
-                    st.logout()
                     return 'login'
                 if st.button('No', width='stretch'):
                     st.session_state.log_out_btn = False

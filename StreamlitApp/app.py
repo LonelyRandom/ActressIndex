@@ -1,13 +1,12 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-from login_auth import log_in_auth
+from login_auth import log_in
 from user_1 import complex_home, complex_actress, complex_film
 from user_2 import simple_home, simple_actress, simple_film
 
-user_1 = st.secrets["indicators"]["USER_1"]
-user_2 = st.secrets["indicators"]["USER_2"]
-user_3 = st.secrets["indicators"]["USER_3"]
-
+user_1 = st.secrets.indicators.USER_1
+user_2 = st.secrets.indicators.USER_2
+user_3 = st.secrets.indicators.USER_3
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -22,16 +21,13 @@ if 'check_login' not in st.session_state:
 
 if st.session_state.page == 'login':
     st.cache_data.clear()
-    is_logged_in, usn = log_in_auth()
-    st.session_state.check_login = is_logged_in
+    check_login, usn, page = log_in(conn)
+    st.session_state.check_login = check_login
+    st.session_state.usn = usn
+    st.session_state.page = page
 
-    if st.session_state.check_login:
-        st.session_state.usn = usn
-        st.session_state.page = 'home'
+    if check_login:
         st.rerun()
-    else:
-        # Tetap di login page, jangan rerun
-        st.stop()  
 
 elif st.session_state.page == 'home':
     st.set_page_config(
@@ -45,11 +41,6 @@ elif st.session_state.page == 'home':
         page = complex_home(conn)
     elif st.session_state.usn == user_2:
         page = simple_home(conn)
-    else:
-        st.session_state.page = 'login'
-        st.session_state.check_login = False
-        st.logout()
-        st.rerun()
 
     if not page is None:
         st.session_state.page = page
