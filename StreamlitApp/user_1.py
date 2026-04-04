@@ -10,6 +10,7 @@ from streamlit_scroll_to_top import scroll_to_here
 import gspread
 import math
 from google.oauth2.service_account import Credentials
+from st_copy import copy_button
 
 @st.cache_resource
 def get_gsheet_client():
@@ -1006,7 +1007,7 @@ def display_film_calender(df, conn):
                     st.image(film['Picture'], caption=film['Code'])
                     st.radio('Flag', options=['🟢 P','🔴 D','⚪️ ?', '🟡 U'], index=flag_idx, key=f'{real_index}_radio', horizontal=True, on_change=set_calender_flag, args=(real_index,))
                     st.toggle('✨', key=f'{real_index}_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
-
+                    st.link_button('Preview', film['Link'], width='stretch', type='primary')
                     st.markdown('---')
         st.markdown('---')
         if total_calender_pages <= 6:
@@ -4335,14 +4336,15 @@ def complex_actress(conn, device):
                             card_html += """</div>
                             </div>
                             """
-                            
                             st.markdown(card_html, unsafe_allow_html=True)
                             
-                        # Button container untuk View Details
+                            # Button container untuk View Details
                             if st.button("View Details", key=f"view_{idx}", type='primary', width='stretch'):
                                 st.session_state.viewing_index = idx
                                 st.session_state.editing_index = None
                                 st.rerun()
+                            copy_button(actress['Name (Kanji)'],key=f'copy_btn_{idx}', copied_label=f'Copied {actress["Name (Alphabet)"]}!')
+
                                     
                     except Exception as e:
                         # with col:
@@ -4533,7 +4535,7 @@ def complex_actress(conn, device):
             padding: 15px 15px;
             margin-bottom: 15px;
             border-radius: 15px;
-            border: 2px solid transparent;   /* ⬅ penting */
+            border: 2.5px solid transparent;   /* ⬅ penting */
             background: linear-gradient(135deg, #ffffff 0%, #e8ebee 100%);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
@@ -4624,7 +4626,7 @@ def complex_actress(conn, device):
             object-fit: cover;
             max-width: 115px;
             max-height: 115px;
-            border: 2px solid transparent;
+            border: 2.5px solid transparent;
         }
         .cat-name {
             font-weight: 700;
