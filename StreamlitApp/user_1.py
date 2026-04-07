@@ -816,8 +816,12 @@ def display_film_calender(df, conn):
                 selected_date = date(calender_year, calender_month, i)
                 if len(filtered_df[filtered_df['filtered_date'].dt.date == selected_date]) > 0:
                     film_date = len(filtered_df[filtered_df["filtered_date"].dt.date == selected_date])
-                    if st.button(f'{str(i)} :red[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),), disabled=(st.session_state.show_date == date(calender_year, calender_month, i))):
-                        st.session_state.date_clicked = True
+                    if selected_date == st.session_state.show_date:
+                        if st.button(f'{str(i)} :gray[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),), type='primary'):
+                            st.session_state.date_clicked = True
+                    else:
+                        if st.button(f'{str(i)} :red[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),)):
+                            st.session_state.date_clicked = True
                 else:
                     st.button(str(i), width=btn_width, disabled=True, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),))
             for i in range(1 ,day_month+1):
@@ -2536,13 +2540,19 @@ def complex_film(conn, device):
 
         st.markdown('---')
         st.header("⚙️ Display Settings")
-        display_mode = st.radio(
-            "View Mode",
-            ["Detailed", "Simple", "Not Watched", "Calender Scrap"],
-            on_change=reset_page,
-            horizontal=False,
-            key='film_layout'
-        )
+        with st.container(horizontal=True):
+            display_mode = st.radio(
+                "View Mode",
+                ["Detailed", "Simple", "Not Watched", "Calender Scrap"],
+                on_change=reset_page,
+                horizontal=False,
+                key='film_layout'
+            )
+
+            if display_mode != 'Calender Scrap':
+                tags_status = st.radio("Tags", ['All', 'Tags', 'No Tags'], on_change=reset_page, key='tag_film')
+            else:
+                tags_status = 'Invalid'
 
         st.markdown('---')
         show_a = st.toggle('✨')
@@ -2583,6 +2593,12 @@ def complex_film(conn, device):
     if show_a:
         filtered_df = filtered_df[filtered_df['A-Detector'] == 1]
     
+    if tags_status != 'Invalid' and tags_status != 'All':
+        if tags_status == 'Tags':
+            filtered_df = filtered_df[filtered_df['Tags'] != 'No Tags']
+        else:
+            filtered_df = filtered_df[filtered_df['Tags'] == 'No Tags']
+
     if display_mode == "Detailed":
         display_film_card(filtered_df, tag_df)
     elif display_mode == "Simple":
