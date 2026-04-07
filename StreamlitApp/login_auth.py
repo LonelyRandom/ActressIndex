@@ -1,9 +1,14 @@
 # login.py
 import streamlit as st
+import hashlib
+import time
 
-# Initialize connection - letakkan di luar fungsi
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
 
 def log_in(conn):    
+    if 'login_error' not in st.session_state:
+        st.session_state.login_error = None
     st.set_page_config(
         page_title="Actress Note - Login",
         page_icon="🔐",
@@ -25,15 +30,12 @@ def log_in(conn):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
 
-        with st.container():
-            login_button = st.button("Login", width="stretch")
+        login_button = st.button("Login", width="stretch", type="primary")
         
         # Inisialisasi status error di session state
-        if 'login_error' not in st.session_state:
-            st.session_state.login_error = None
         
         if login_button:
-            # Reset error state
+            pass_hash = hash_password(username+password)
             st.session_state.login_error = None
             
             user = st.session_state.login_data[
@@ -43,8 +45,9 @@ def log_in(conn):
             if not user.empty:
                 stored_password = user["Password"].iloc[0]
                 
-                if password == stored_password:
-                    st.success("Login berhasil!")
+                if pass_hash == stored_password:
+                    st.toast("✅ Login Success!")
+                    time.sleep(.5)
                     st.session_state.login_error = None
                     check_login = True
                     usn = username
