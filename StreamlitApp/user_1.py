@@ -3947,13 +3947,13 @@ def complex_actress(conn, device):
 
         if 'placeholder' not in pic_id.lower():
             delete_cloudinary_image(pic_id)
-
+        
         df.drop(index, inplace=True)
         df.reset_index(drop=True, inplace=True)
+        actress_worksheet().delete_row(int(index)+2)
         
         st.session_state.actress_df = values_handling(df,'actress')  # Update session state
         st.toast('✅ Data Delete Successfully!')
-        actress_worksheet().delete_row(int(index)+2)
         time.sleep(.5)
         st.session_state.editing_index = None
         st.session_state.viewing_index = None
@@ -4131,12 +4131,11 @@ def complex_actress(conn, device):
                     new_row_df = pd.DataFrame([new_row], columns=df.columns)
                     
                     df = pd.concat([df, new_row_df], ignore_index=True)   
-                    df = df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
                     st.session_state.actress_df = values_handling(df,'actress')  # Update session state
-                    st.toast('✅ Data Added Successfully!')
                     actress_worksheet().append_row(new_row)
-                    time.sleep(.5)
+                    st.toast('✅ Data Added Successfully!')
                     st.session_state.adding_new = False
+                    time.sleep(.5)
                     st.rerun()
             else:
                 st.error('Fill mandatory fields first! (*)') # Error disini
