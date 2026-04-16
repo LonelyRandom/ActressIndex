@@ -1860,7 +1860,7 @@ def complex_film(conn, device):
 
         st.markdown('### Gallery')
         if st.checkbox('Show', on_change=reset_pic):
-            if film['Preview Picture'] != 'No Pics' and film['Preview Picture'] != '--':
+            if film['Preview Picture'] != 'No Picture' and film['Preview Picture'] != '--':
                 if 'prev_pic' not in st.session_state:  
                     st.session_state.prev_pic = 0
                 
