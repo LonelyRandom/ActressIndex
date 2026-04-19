@@ -66,7 +66,6 @@ def log_in(conn):
         
         if login_button:
             pass_hash = hash_password(username+password)
-            st.write(pass_hash)
             st.session_state.login_error = None
             
             user = st.session_state.login_data[
