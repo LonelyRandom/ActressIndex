@@ -4326,10 +4326,10 @@ def complex_actress(conn, device):
         final_mask = status_mask & review_mask
         filtered_df = filtered_df[final_mask]
         if search_query and not search_query.isspace() and not filtered_df.empty:
-            search_lower = search_query.lower().strip()
+            search_lower = search_query.lower().strip().split()
             search_mask = (
-                filtered_df['Name (Alphabet)'].fillna('').str.lower().str.contains(search_lower, na=False) |
-                filtered_df['Name (Kanji)'].fillna('').str.contains(search_query.strip(), na=False)
+                filtered_df['Name (Alphabet)'].fillna('').str.lower().apply(lambda x: all(word in x for word in search_lower)) |
+                filtered_df['Name (Kanji)'].fillna('').apply(lambda x: all(word in x for word in search_lower))
             )
             filtered_df = filtered_df[search_mask]
         filtered_df = filtered_df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=False)
