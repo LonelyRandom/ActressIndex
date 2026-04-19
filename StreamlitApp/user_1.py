@@ -3233,7 +3233,7 @@ def complex_actress(conn, device):
                 edited_a = False
         st.markdown('### Gallery')
         if st.checkbox('Show', on_change=reset_pic):
-            if film['Preview Picture'] != 'No Pics' and film['Preview Picture'] != '--':
+            if film['Preview Picture'] != 'No Picture' and film['Preview Picture'] != '--':
 
                 if 'prev_pic' not in st.session_state:  
                     st.session_state.prev_pic = 0
@@ -3396,48 +3396,47 @@ def complex_actress(conn, device):
             # Info dasar dalam metrics
             st.markdown("### Basic Information")
             
-            info_col1, info_col2 = st.columns(2)
+            with st.container(horizontal=True):
+                with st.container():
+                    # Review
+                    review_text = actress['Review'] if pd.notna(actress['Review']) else "N/A"
+                    st.metric("Review", review_text)
+                    
+                    # Height
+                    height_text = actress['Height (cm)'] if pd.notna(actress['Height (cm)']) else "N/A"
+                    st.metric("Height", height_text)
+
+                with st.container():
+                    # Age
+                    age_text = actress['Age'] if pd.notna(actress['Age']) else ""
+                    if not age_text and pd.notna(actress['Birthdate']):
+                        calculated_age = calculate_age(actress['Birthdate'])
+                        if calculated_age:
+                            age_text = f"{calculated_age}"
+                    
+                    if age_text:
+                        st.metric("Age", f"{age_text} years")
+                
+                    # Size
+                    size_text = actress['Size'] if pd.notna(actress['Size']) else "N/A"
+                    st.metric("Size", size_text)
             
-            with info_col1:
-                # Review
-                review_text = actress['Review'] if pd.notna(actress['Review']) else "N/A"
-                st.metric("Review", review_text)
-                
-                # Age
-                age_text = actress['Age'] if pd.notna(actress['Age']) else ""
-                if not age_text and pd.notna(actress['Birthdate']):
-                    calculated_age = calculate_age(actress['Birthdate'])
-                    if calculated_age:
-                        age_text = f"{calculated_age}"
-                
-                if age_text:
-                    st.metric("Age", f"{age_text} years")
+            # Birthdate
+            if actress['Birthdate'] != '?':
+                birthdate_text = datetime.strptime(str(actress['Birthdate']), '%d/%m/%Y').date().strftime("%b, %d %Y")
+            else:
+                birthdate_text = '?'
 
-                # Birthdate
-                if actress['Birthdate'] != '?':
-                    birthdate_text = datetime.strptime(str(actress['Birthdate']), '%d/%m/%Y').date().strftime("%b, %d %Y")
-                else:
-                    birthdate_text = '?'
+            st.metric("Birthdate", str(birthdate_text))
 
-                st.metric("Birthdate", str(birthdate_text))
-            
-            with info_col2:
-                # Height
-                height_text = actress['Height (cm)'] if pd.notna(actress['Height (cm)']) else "N/A"
-                st.metric("Height", height_text)
-                
-                # Size
-                size_text = actress['Size'] if pd.notna(actress['Size']) else "N/A"
-                st.metric("Size", size_text)
-
-                # Status dengan badge warna
-                status_text = actress['Status'] if pd.notna(actress['Status']) else "Active"
-                if str(status_text).lower() == "active":
-                    st.metric("Status", f"🟢 {status_text}")
-                elif str(status_text).lower() == "retired":
-                    st.metric("Status", f"🔴 {status_text}")
-                else:
-                    st.metric("Status", f"⚪ {status_text}")
+            # Status dengan badge warna
+            status_text = actress['Status'] if pd.notna(actress['Status']) else "Active"
+            if str(status_text).lower() == "active":
+                st.metric("Status", f"🟢 {status_text}")
+            elif str(status_text).lower() == "retired":
+                st.metric("Status", f"🔴 {status_text}")
+            else:
+                st.metric("Status", f"⚪ {status_text}")
 
         st.markdown("---")
         
@@ -3500,7 +3499,7 @@ def complex_actress(conn, device):
         else:
             img_width = 127
             img_height = 181
-        with st.expander("### ✅ Watched Movies"):
+        with st.expander(f"### ✅ Watched Movies - :green[({len(film_watched_df)})]"):
             with st.container(horizontal=True):
                 for idx in range(len(film_watched_df)):
                     with st.container(width=img_width):
@@ -3523,13 +3522,28 @@ def complex_actress(conn, device):
                                             object-position: center;
                                         ">
                                 </div>
+                                <div style="
+                                    text-align: center;
+                                    font-size: 12px;
+                                    color: gray;
+                                    margin-bottom: 10px;
+                                ">
+                                    {datetime.strptime(film_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")}
+                                </div>
                             """, unsafe_allow_html=True)
-                        if st.button(film_watched_df['Code'].iloc[idx], key=f'{film_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
-                            st.session_state.actress_film_index = film_watched_df.index[idx]
-                            st.session_state.position = idx
-                            st.session_state.actress_film_data = film_watched_df
-                            st.rerun()
-        with st.expander("### ❌ Unwatched Movies"):
+                        if film_watched_df['A-Detector'].iloc[idx] == True:
+                            if st.button(f":yellow-background[{film_watched_df['Code'].iloc[idx]}]", key=f'{film_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
+                                st.session_state.actress_film_index = film_watched_df.index[idx]
+                                st.session_state.position = idx
+                                st.session_state.actress_film_data = film_watched_df
+                                st.rerun()
+                        else:
+                            if st.button(film_watched_df['Code'].iloc[idx], key=f'{film_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
+                                st.session_state.actress_film_index = film_watched_df.index[idx]
+                                st.session_state.position = idx
+                                st.session_state.actress_film_data = film_watched_df
+                                st.rerun()
+        with st.expander(f"### ❌ Unwatched Movies - :red[({len(film_not_watched_df)})]"):
             with st.container(horizontal=True):
                 for idx in range(len(film_not_watched_df)):
                     with st.container(width=img_width):
@@ -3552,12 +3566,27 @@ def complex_actress(conn, device):
                                             object-position: center;
                                         ">
                                 </div>
+                                <div style="
+                                    text-align: center;
+                                    font-size: 12px;
+                                    color: gray;
+                                    margin-bottom: 10px;
+                                ">
+                                    {datetime.strptime(film_not_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")}
+                                </div>
                             """, unsafe_allow_html=True)
-                        if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
-                            st.session_state.actress_film_index = film_not_watched_df.index[idx]
-                            st.session_state.position = idx
-                            st.session_state.actress_film_data = film_not_watched_df
-                            st.rerun()
+                        if film_not_watched_df['A-Detector'].iloc[idx] == True:
+                            if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
+                                st.session_state.actress_film_index = film_not_watched_df.index[idx]
+                                st.session_state.position = idx
+                                st.session_state.actress_film_data = film_not_watched_df
+                                st.rerun()
+                        else:
+                            if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
+                                st.session_state.actress_film_index = film_not_watched_df.index[idx]
+                                st.session_state.position = idx
+                                st.session_state.actress_film_data = film_not_watched_df
+                                st.rerun()
 
         st.markdown("---")
         
