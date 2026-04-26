@@ -5,6 +5,17 @@ import re
 from upload_image import upload_to_database, delete_cloudinary_image, rename_cloudinary_image
 import pandas as pd
 from dateutil.relativedelta import relativedelta
+import streamlit.components.v1 as components
+
+iframe_code ="""
+<iframe
+src="https://javhd.today/embed/316331/"
+frameborder="0"
+scrolling="no"
+width="100%"
+height="500">
+</iframe>
+"""
 
 STATUS_OPTS = [
     "Not Checked",
@@ -383,7 +394,10 @@ def simple_film(conn):
         mask = (filtered_df['Actress Name'].str.contains(search_name, case=False, na=False) | 
                 filtered_df['Code'].str.contains(search_name, case=False, na=False))
         filtered_df = filtered_df[mask]
-          
+
+    st.divider()
+    components.html(iframe_code, height=500)
+    st.divider()
     for row in range(n_rows):
         cols = st.columns(cards_per_row)
         
