@@ -996,7 +996,7 @@ def display_film_calender(df, conn):
 
         with st.container(horizontal=True, horizontal_alignment='center'):
             for i in range(len(rows_to_display)):
-                with st.container(width=image_width):
+                with st.container(width=image_width, horizontal_alignment='center'):
                     film = rows_to_display.iloc[i]
                     real_index = rows_to_display.index[i]
 
@@ -1008,7 +1008,11 @@ def display_film_calender(df, conn):
                         flag_idx = 3
                     else:
                         flag_idx = 0
-                    st.image(film['Picture'], caption=film['Code'])
+                    if pd.isna(film['Picture']):
+                        url = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
+                    else:
+                        url = film['Picture']
+                    st.image(url, caption=film['Code'], width=image_width)
                     st.radio('Flag', options=['🟢 P','🔴 D','⚪️ ?', '🟡 U'], index=flag_idx, key=f'{real_index}_radio', horizontal=True, on_change=set_calender_flag, args=(real_index,))
                     st.toggle('✨', key=f'{real_index}_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
                     st.link_button('Preview', film['Link'], width='stretch', type='primary')
@@ -1062,10 +1066,6 @@ def display_film_calender(df, conn):
     if st.button('⬆️ Back to top', width='stretch'):
         st.session_state.scroll_to_here = True                   
 
-
-    
-
-    
 def reset_page():
     """Reset halaman ke 1"""
     st.session_state.film_page = 1
