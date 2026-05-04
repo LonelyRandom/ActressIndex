@@ -3502,6 +3502,10 @@ def complex_actress(conn, device):
         with st.expander(f"### ✅ Watched Movies - :green[({len(film_watched_df)})]"):
             with st.container(horizontal=True):
                 for idx in range(len(film_watched_df)):
+                    if film_watched_df['Release Date'].iloc[idx] == '?':
+                        release = '?'
+                    else:
+                        release = datetime.strptime(film_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
                     with st.container(width=img_width):
                         st.markdown(f"""
                                 <div style="
@@ -3528,7 +3532,7 @@ def complex_actress(conn, device):
                                     color: gray;
                                     margin-bottom: 10px;
                                 ">
-                                    {datetime.strptime(film_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")}
+                                    {release}
                                 </div>
                             """, unsafe_allow_html=True)
                         if film_watched_df['A-Detector'].iloc[idx] == True:
@@ -3546,6 +3550,10 @@ def complex_actress(conn, device):
         with st.expander(f"### ❌ Unwatched Movies - :red[({len(film_not_watched_df)})]"):
             with st.container(horizontal=True):
                 for idx in range(len(film_not_watched_df)):
+                    if film_not_watched_df['Release Date'].iloc[idx] == '?':
+                        release = '?'
+                    else:
+                        release = datetime.strptime(film_not_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
                     with st.container(width=img_width):
                         st.markdown(f"""
                                 <div style="
@@ -3572,7 +3580,7 @@ def complex_actress(conn, device):
                                     color: gray;
                                     margin-bottom: 10px;
                                 ">
-                                    {datetime.strptime(film_not_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")}
+                                    {release}
                                 </div>
                             """, unsafe_allow_html=True)
                         if film_not_watched_df['A-Detector'].iloc[idx] == True:

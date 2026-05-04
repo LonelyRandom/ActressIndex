@@ -84,12 +84,12 @@ def log_in(conn):
                     page = 'home'
                     row = user.index[0]+ 2
                     if login_worksheet().update(f"C{row}", 0):
-                        st.session_state.login_data['Login Attempt'].iloc[user.index[0]] = 0
+                        st.session_state.login_data['Login Attempt'].loc[user.index[0]] = 0
                 else:
                     row = user.index[0]+ 2
                     st.session_state.login_error = "❌ Incorrect Password!"
                     if login_worksheet().update(f"C{row}", int(st.session_state.login_data['Login Attempt'].iloc[user.index[0]])+1):
-                        st.session_state.login_data['Login Attempt'].iloc[user.index[0]] += 1
+                        st.session_state.login_data['Login Attempt'].loc[user.index[0]] += 1
                     
                     if st.session_state.login_data['Login Attempt'].iloc[user.index[0]] == 2:
                         st.warning('You only have 1 more chance to gues the password!')
