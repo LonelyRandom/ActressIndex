@@ -766,6 +766,7 @@ def display_film_calender(df, conn):
         st.session_state.calender_year = p.year
     def set_date(p):
         st.session_state.show_date = p
+        st.session_state.calender_page = 1
 
     today_date = st.session_state.selected_date
     today_month = today_date.month
