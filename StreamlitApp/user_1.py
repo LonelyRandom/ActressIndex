@@ -561,44 +561,50 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
 
     # st.write(actress['Code'])
     status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E" if actress['Info'] == 'Drop' else "#9b59b6"
-    
+    card_html = ''
     if actress['Release Date'] == '?':
         release_date = '?'
     else:
         release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y') if pd.notna(actress['Release Date']) else "Unknown"
+    
+    if 'Downloaded' in actress['Tags']:
+        act_info = actress['Info'] + ' ✅'
+    else:
+        act_info = actress['Info']
+    card_html += f"""<div class="actress-card" id="card_{card_id}" 
+        style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
+        margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
+        height: {img_card_height}px; width: {img_card_width}px;display: flex; flex-direction: column;">
+        <!-- Image Container -->
+        <div style="
+            height: 100%;  /* Atur tinggi tetap */
+            width: 100%;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border : 2px solid {status_color};
+        ">
+            <img src="{actress['Picture']}" 
+                style="
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    object-position: center;
+                ">
+        </div>
+        <!-- Separator -->
+        <div style="width: {50}px; height: {3}px; background: linear-gradient(90deg, {status_color}, #FFD166); 
+                margin: 0 auto 10px auto; border-radius: 2px;"></div>
+        <!-- Code and Date -->
+        <div>
+            <div style="display: flex; justify-content: center; margin-bottom: 1px;">"""
+    
     if actress['A-Detector'] == 1:
-        card_html = f"""<div class="actress-card" id="card_{card_id}" 
-            style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
-            margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
-            height: {img_card_height}px; width: {img_card_width}px;display: flex; flex-direction: column;">
-            <!-- Image Container -->
-            <div style="
-                height: 100%;  /* Atur tinggi tetap */
-                width: 100%;
-                overflow: hidden;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin-bottom: 10px;
-                border-radius: 10px;
-                border : 2px solid {status_color};
-            ">
-                <img src="{actress['Picture']}" 
-                    style="
-                        width: 100%;
-                        height: 100%;
-                        object-fit: cover;
-                        object-position: center;
-                    ">
-            </div>
-            <!-- Separator -->
-            <div style="width: {50}px; height: {3}px; background: linear-gradient(90deg, {status_color}, #FFD166); 
-                    margin: 0 auto 10px auto; border-radius: 2px;"></div>
-            <!-- Code and Date -->
-            <div>
-                <div style="display: flex; justify-content: center; margin-bottom: 1px;">
-                    <span style="
+        card_html += f"""<span style="
                         background: linear-gradient(90deg, {status_color}, #FFD700);
                         color: white;
                         padding: 2px 10px;
@@ -606,47 +612,10 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
                         font-size: 9px;
                         font-weight: bold;
                     ">
-                        {actress['Info']}
-                    </span>
-                </div>
-                <div style="display: flex; justify-content: center;">
-                    <span style="color: #3498db; font-size:11px;">{release_date}</span>
-                </div>
-            </div>
-        </div>"""
+                        {act_info}
+                    </span>"""
     else:
-        card_html = f"""<div class="actress-card" id="card_{card_id}" 
-            style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
-            margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
-            height: {img_card_height}px; width: {img_card_width}px; display: flex; flex-direction: column;">
-            <!-- Image Container -->
-            <div style="
-                height: 100%;  /* Atur tinggi tetap */
-                width: 100%;
-                overflow: hidden;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin-bottom: 10px;
-                border-radius: 10px;
-                border : 2px solid {status_color};
-            ">
-                <img src="{actress['Picture']}" 
-                    style="
-                        width: 100%;
-                        height: 100%;
-                        object-fit: cover;
-                        object-position: center;
-                    ">
-            </div>
-            <!-- Separator -->
-            <div style="width: {50}px; height: {3}px; background: {status_color}; 
-                    margin: 0 auto 15px auto; border-radius: 2px;"></div>
-            <!-- Code and Date -->
-            <div>
-                <div style="display: flex; justify-content: center; margin-bottom: 1px;">
-                    <span style="
+        card_html += f"""<span style="
                         background: {status_color};
                         color: white;
                         padding: 2px 10px;
@@ -654,14 +623,15 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
                         font-size: 9px;
                         font-weight: bold;
                     ">
-                        {actress['Info']}
-                    </span>
-                </div>
-                <div style="display: flex; justify-content: center;">
-                    <span style="color: #3498db; font-size:11px;">{release_date}</span>
-                </div>
+                        {act_info}
+                    </span>"""
+
+    card_html += f"""</div>
+            <div style="display: flex; justify-content: center;">
+                <span style="color: #3498db; font-size:11px;">{release_date}</span>
             </div>
-        </div>"""
+        </div>
+    </div>"""
 
     with st.container(width=img_card_width):
         st.markdown(card_html, unsafe_allow_html=True)
@@ -1372,6 +1342,10 @@ def display_film_grid(df, tag_df):
                                 film['badge_color'] = 'yellow'
 
                             if filters == 'Not Watched':
+                                if 'Downloaded' in film['Tags']:
+                                    button_text = film['Code'] + ' ✅'
+                                else:
+                                    button_text = film['Code']
                                 st.badge(film['is_release'], icon=film['badge_icon'], color=film['badge_color'])
                             else:
                                 st.badge(film['Info'], icon=film['badge_icon'], color=film['badge_color'])
@@ -1398,7 +1372,7 @@ def display_film_grid(df, tag_df):
                             </div>
                         """, unsafe_allow_html=True)
 
-                        if st.button(f'{film["Code"]}', key=f'film_edit_{real_index}', width='stretch', type='primary'):
+                        if st.button(button_text, key=f'film_edit_{real_index}', width='stretch', type='primary'):
                             st.session_state.viewing_film_index = real_index
                             st.session_state.filtered_film_data = filtered_df_data
                             st.session_state.filtered_data_position = start_idx + i
@@ -3507,6 +3481,10 @@ def complex_actress(conn, device):
                         release = '?'
                     else:
                         release = datetime.strptime(film_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
+                    
+                    if film_watched_df['A-Detector'].iloc[idx] == True:
+                        release += ' 🟡'
+
                     with st.container(width=img_width):
                         st.markdown(f"""
                                 <div style="
@@ -3536,18 +3514,11 @@ def complex_actress(conn, device):
                                     {release}
                                 </div>
                             """, unsafe_allow_html=True)
-                        if film_watched_df['A-Detector'].iloc[idx] == True:
-                            if st.button(f":yellow-background[{film_watched_df['Code'].iloc[idx]}]", key=f'{film_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
-                                st.session_state.actress_film_index = film_watched_df.index[idx]
-                                st.session_state.position = idx
-                                st.session_state.actress_film_data = film_watched_df
-                                st.rerun()
-                        else:
-                            if st.button(film_watched_df['Code'].iloc[idx], key=f'{film_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
-                                st.session_state.actress_film_index = film_watched_df.index[idx]
-                                st.session_state.position = idx
-                                st.session_state.actress_film_data = film_watched_df
-                                st.rerun()
+                        if st.button(film_watched_df['Code'].iloc[idx], key=f'{film_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
+                            st.session_state.actress_film_index = film_watched_df.index[idx]
+                            st.session_state.position = idx
+                            st.session_state.actress_film_data = film_watched_df
+                            st.rerun()
         with st.expander(f"### ❌ Unwatched Movies - :red[({len(film_not_watched_df)})]"):
             with st.container(horizontal=True):
                 for idx in range(len(film_not_watched_df)):
@@ -3555,6 +3526,13 @@ def complex_actress(conn, device):
                         release = '?'
                     else:
                         release = datetime.strptime(film_not_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
+
+                    if film_not_watched_df['A-Detector'].iloc[idx] == True:
+                        release += ' 🟡'
+                    
+                    if 'Downloaded' in film_not_watched_df['Tags'].iloc[idx]:
+                        release += ' ✅'
+
                     with st.container(width=img_width):
                         st.markdown(f"""
                                 <div style="
@@ -3584,18 +3562,11 @@ def complex_actress(conn, device):
                                     {release}
                                 </div>
                             """, unsafe_allow_html=True)
-                        if film_not_watched_df['A-Detector'].iloc[idx] == True:
-                            if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
-                                st.session_state.actress_film_index = film_not_watched_df.index[idx]
-                                st.session_state.position = idx
-                                st.session_state.actress_film_data = film_not_watched_df
-                                st.rerun()
-                        else:
-                            if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
-                                st.session_state.actress_film_index = film_not_watched_df.index[idx]
-                                st.session_state.position = idx
-                                st.session_state.actress_film_data = film_not_watched_df
-                                st.rerun()
+                        if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
+                            st.session_state.actress_film_index = film_not_watched_df.index[idx]
+                            st.session_state.position = idx
+                            st.session_state.actress_film_data = film_not_watched_df
+                            st.rerun()
 
         st.markdown("---")
         
