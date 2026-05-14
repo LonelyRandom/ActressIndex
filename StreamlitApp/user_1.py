@@ -149,8 +149,9 @@ def load_data_film():
         film_data = film_worksheet().get_all_records()
         df = pd.DataFrame(film_data)
         st.write(df)
-        st.stop()
         df = values_handling(df, 'film')
+        st.write(df)
+        st.stop()
         df = initial_load(df, 'film')
         return df
     except Exception as e:
