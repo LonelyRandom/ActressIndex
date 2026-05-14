@@ -2693,11 +2693,7 @@ def complex_film(device):
             st.rerun()
         if st.button('Scrap', width='stretch'):
             st.session_state.start_scrap = True
-        
-        st.selectbox('Info', options=['Not Watched', 'Watched', 'Goat'], key='input_info')
-        st.space('small')
-        st.toggle('✨ A-Detector', key='input_a')
-        
+    
         st.markdown('---')
         st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
         st.markdown('---')
@@ -2794,6 +2790,19 @@ def complex_film(device):
                     film_link = soup.find("link", rel="canonical")
                     film_ref = film_link.get("href") if film_link else '--'
 
+                    if dvd_id in df["Code"].values:
+                        match_film_data = df[df["Code"] == dvd_id]
+
+                        tags = match_film_data["Tags"].iloc[0]
+                        info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in INFO_OPTS else 0
+                        a_index = match_film_data["A-Detector"].iloc[0]
+                    else:
+                        info_index = 0
+                        tags = 'No Tags'
+                        a_index = False
+                    st.selectbox('Info', options=['Not Watched', 'Watched', 'Goat'], key='input_info', index=info_index)
+                    st.space('small')
+                    st.toggle('✨ A-Detector', key='input_a', value=a_index)
                     if img_srcs:
                         st.space('small')
                         st.write(':yellow-background[Gallery:]')
@@ -2867,14 +2876,14 @@ def complex_film(device):
                     st.space('small')
                     st.write(':yellow-background[New Actress:]')
                     st.write(casts)
-
+                        
                     scrap_new.append([
                         actress_name,
                         dvd_id,
                         film_title,
                         formatted_date,
                         thumbnail,
-                        'No Tags',
+                        tags,
                         st.session_state.input_info,
                         release_status,
                         film_ref,
