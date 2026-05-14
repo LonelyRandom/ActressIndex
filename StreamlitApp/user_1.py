@@ -751,7 +751,7 @@ def display_film_calender(df):
         st.session_state.show_date = date.today()
     if 'date_clicked' not in st.session_state:
         st.session_state.date_clicked = False
-    selected_flag = st.selectbox('Flag', options=['🔵 All', '🟢 Pass','🔴 Drop', '⚪️ Not Checked', '😔 Unsure'], width='stretch', on_change=reset_calender_page, key='calender_flag')
+    selected_flag = st.selectbox('Flag', options=['🔵 All', '🟢 Pass','🔴 Drop', '⚪️ Not Checked', '🟡 Unsure'], width='stretch', on_change=reset_calender_page, key='calender_flag')
     selected_flag = selected_flag.split(" ",1)[1]
     if selected_flag != 'All':
         filtered_df = filtered_df[filtered_df['Flag'] == selected_flag]
