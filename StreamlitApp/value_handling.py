@@ -10,6 +10,23 @@ def values_handling(df, type):
         df['Birthdate'] = df['Birthdate'].astype(str)
         df['Debut Date'] = df['Debut Date'].astype(str)
         df['Retire Date'] = df['Retire Date'].astype(str)
+    elif type == 'calender':
+        df['A-Detector'] = df['A-Detector'].map({
+            1 : True,
+            0 : False,
+            'TRUE': True,
+            'FALSE' : False,
+            '1' : True,
+            '0' : False
+        })
+        df['is_Anchor'] = df['is_Anchor'].map({
+            1 : True,
+            0 : False,
+            'TRUE': True,
+            'FALSE' : False,
+            '1' : True,
+            '0' : False
+        })
     else:
         df['Release Date'] = df['Release Date'].astype(str)
         df['A-Detector'] = df['A-Detector'].map({
