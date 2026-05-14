@@ -2718,8 +2718,9 @@ def complex_film(device):
                 
                 if st.session_state.actress_new:
                     actress_worksheet().append_rows(st.session_state.actress_new)
-                    #  UNDER CONSTRUCTION
-                    st.session_state.actress_df = actress_df
+                    new_df = pd.DataFrame(st.session_atate.actress_new, columns=actress_df.columns)
+                    final_df = pd.concat([actress_df, new_df], ignore_index=True)
+                    st.session_state.actress_df = final_df
             else:
                 if st.session_state.scrap_new[0][3] in actress_df['Name (Kanji)'].values:
                     index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[0][3]].index
@@ -2833,7 +2834,7 @@ def complex_film(device):
                         tags = 'No Tags'
                         a_index = False
                     
-                    st.selectbox('Info', options=['Not Watched', 'Watched', 'Goat'], key='input_info', index=info_index)
+                    st.selectbox('Info', options=['🔴 Not Watched', '🟢 Watched', '🟣 Goat'], key='input_info', index=info_index)
                     st.space('small')
                     st.toggle('✨ A-Detector', value=a_index)
                     if img_srcs:
@@ -2917,7 +2918,7 @@ def complex_film(device):
                         formatted_date,
                         thumbnail,
                         tags,
-                        st.session_state.input_info,
+                        st.session_state.input_info[2:],
                         release_status,
                         film_ref,
                         img_srcs,
