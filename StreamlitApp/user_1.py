@@ -2686,6 +2686,7 @@ def complex_film(device):
             st.session_state.input_info = 'Not Watched'
             st.session_state.input_a = False
             st.session_state.prev_pic = 0
+            st.session_state.start_scrap = False
 
         st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Scrap Manual</h1>", unsafe_allow_html=True)
         st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar')
