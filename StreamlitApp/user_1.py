@@ -2718,7 +2718,7 @@ def complex_film(device):
                 
                 if st.session_state.actress_new:
                     actress_worksheet().append_rows(st.session_state.actress_new)
-                    new_df = pd.DataFrame(st.session_atate.actress_new, columns=actress_df.columns)
+                    new_df = pd.DataFrame(st.session_state.actress_new, columns=actress_df.columns)
                     final_df = pd.concat([actress_df, new_df], ignore_index=True)
                     st.session_state.actress_df = final_df
             else:
