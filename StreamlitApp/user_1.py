@@ -2685,6 +2685,7 @@ def complex_film(device):
             st.session_state.html_bar = ''
             st.session_state.input_info = 'Not Watched'
             st.session_state.input_a = False
+            st.session_state.prev_pic = 0
 
         st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Scrap Manual</h1>", unsafe_allow_html=True)
         st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar')
@@ -2695,7 +2696,9 @@ def complex_film(device):
             st.session_state.start_scrap = True
     
         st.markdown('---')
-        st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
+        with st.container(horizontal=True):
+            st.button('Show Scrap', width='stretch', key='show_scrap')
+            st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
         st.markdown('---')
 
         if st.session_state.save_scrap:
@@ -2713,6 +2716,13 @@ def complex_film(device):
             st.toast("✅ Scrap Saved Successfully!")
             time.sleep(.5)
             st.rerun()
+            
+        if st.session_state.show_scrap:
+            st.write("Isi Scrap Film")
+            st.write(st.session_state.scrap_new)
+            st.space("small")
+            st.write("Actress New")
+            st.write(st.session_state.actress_new)
 
         if st.session_state.html_bar:
             soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
@@ -2800,7 +2810,7 @@ def complex_film(device):
                         info_index = 0
                         tags = 'No Tags'
                         a_index = False
-                    st.selectbox('Info', options=['Not Watched', 'Watched', 'Goat'], key='input_info', index=info_index)
+                    st.selectbox('Info', options=['🔴 Not Watched', '🟢 Watched', '🟣 Goat'], key='input_info', index=info_index)
                     st.space('small')
                     st.toggle('✨ A-Detector', key='input_a', value=a_index)
                     if img_srcs:
