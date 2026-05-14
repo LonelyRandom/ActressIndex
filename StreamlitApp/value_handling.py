@@ -12,6 +12,14 @@ def values_handling(df, type):
         df['Retire Date'] = df['Retire Date'].astype(str)
     else:
         df['Release Date'] = df['Release Date'].astype(str)
+        df['A-Detector'] = df['A-Detector'].map({
+            1 : True,
+            0 : False,
+            'TRUE': True,
+            'FALSE' : False,
+            '1' : True,
+            '0' : False
+        })
         
     return df
 
