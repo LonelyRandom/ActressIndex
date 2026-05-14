@@ -2804,7 +2804,7 @@ def complex_film(device):
                         tags = match_film_data["Tags"].iloc[0]
                         info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in INFO_OPTS else 0
                 
-                        a_index = True if match_film_data["A-Detector"].iloc[0] == "TRUE" else False
+                        a_index = match_film_data["A-Detector"].iloc[0]
                     else:
                         info_index = 0
                         tags = 'No Tags'
@@ -2927,29 +2927,31 @@ def complex_film(device):
                         match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
                         idx = match_data.index
                     
-                    row = idx + 2
-                    new_value = [
-                        match_data['Review'].iloc[0],
-                        match_data['Picture'].iloc[0],
-                        match_data['Name (Alphabet)'].iloc[0],
-                        match_data['Name (Kanji)'].iloc[0],
-                        data['DOB'],
-                        data['Debut'],
-                        data['Cup'],
-                        measurement,
-                        data['Height'],
-                        match_data['Notes'].iloc[0],
-                        age,
-                        match_data['Debut Period'].iloc[0],
-                        match_data['Retire Date'].iloc[0],
-                        match_data['Status'].iloc[0],
-                        match_data['Page'].iloc[0],
-                    ]
-
-                    st.write(new_value)
-
-
-
+                        row = idx + 2
+                        new_value = [
+                            match_data['Review'].iloc[0],
+                            match_data['Picture'].iloc[0],
+                            match_data['Name (Alphabet)'].iloc[0],
+                            match_data['Name (Kanji)'].iloc[0],
+                            data['DOB'],
+                            data['Debut'],
+                            data['Cup'],
+                            measurement,
+                            data['Height'],
+                            match_data['Notes'].iloc[0],
+                            age,
+                            match_data['Debut Period'].iloc[0],
+                            match_data['Retire Date'].iloc[0],
+                            match_data['Status'].iloc[0],
+                            match_data['Page'].iloc[0],
+                        ]
+                    else:
+                        #  new_value = [
+                        #      'Not Checked',
+                        #      st.secrets.indicators.PLACEHOLDER_IMG,
+                        #      
+                        #  ]
+                        st.warning('⚠️ Actress not found in database!')
             else:
                 st.success('✅ HTML Detected! (Ready to scrap)')
         else:
