@@ -2925,7 +2925,8 @@ def complex_film(device):
                     }
 
                     age = calculate_age(data['DOB'])
-                    measurement = ' / '.join([f"{chr(65+i)}{num}" for i, num in enumerate(data["Measurements"].split("-"))])
+                    size_char = ['B','W','H']
+                    measurement = ' / '.join([f"{size_char[i]}{num}" for i, num in enumerate(data["Measurements"].split("-"))])
                     if data['JP'] in actress_df['Name (Kanji)'].values:
                         match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
                         idx = match_data.index
