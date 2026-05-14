@@ -4,6 +4,7 @@ import hashlib
 import time
 import gspread
 from google.oauth2.service_account import Credentials
+import pandas as pd
 
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
@@ -36,7 +37,7 @@ def login_worksheet():
 
     return worksheet
 
-def log_in(conn):    
+def log_in():    
     if 'login_error' not in st.session_state:
         st.session_state.login_error = None
     st.set_page_config(
@@ -46,7 +47,7 @@ def log_in(conn):
     )
     
     if 'login_data' not in st.session_state:
-        st.session_state.login_data = conn.read(worksheet="Login", usecols=list(range(3)))
+        st.session_state.login_data = pd.DataFrame(login_worksheet().get_all_records())
     
     # Default return values
     check_login = False

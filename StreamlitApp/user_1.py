@@ -11,6 +11,7 @@ import gspread
 import math
 from google.oauth2.service_account import Credentials
 from st_copy import copy_button
+from bs4 import BeautifulSoup
 
 @st.cache_resource
 def get_gsheet_client():
@@ -69,6 +70,22 @@ def tags_worksheet():
 
     return worksheet
 
+@st.cache_resource()
+def calendar_worksheet():
+    client = get_gsheet_client()
+
+    spreadsheet = client.open(
+        st.secrets["indicators"]["spred_title"]
+    )
+
+    worksheet = spreadsheet.worksheet(
+        st.secrets["indicators"]["USER_1_CALENDAR"]
+    )
+
+    return worksheet
+
+
+
 REVIEW_OPTS = [
     'Not Checked',
     'S-Tier',
@@ -116,9 +133,10 @@ PASS_OPTS = [
     'Drop'
 ]
 
-def load_data_actress(conn):
+def load_data_actress():
     try:
-        df = conn.read(worksheet="NList", usecols=list(range(15)))
+        actress_data = actress_worksheet().get_all_records()
+        df = pd.DataFrame(actress_data)
         df = values_handling(df,'actress')
         df = initial_load(df,'actress')
         return df
@@ -126,10 +144,10 @@ def load_data_actress(conn):
         st.write(f'Error load data: {e}', e)
         st.stop()
 
-def load_data_film(conn):
+def load_data_film():
     try:
-
-        df = conn.read(worksheet="NCode", usecols=list(range(11)))
+        film_data = film_worksheet().get_all_records()
+        df = pd.DataFrame(film_data)
 
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
@@ -137,40 +155,32 @@ def load_data_film(conn):
     except Exception as e:
         return pd.DataFrame()
     
-def load_data_tag(conn):
+def load_data_tag():
     try:
-        df = conn.read(worksheet="NTags", usecols=list(range(1)))
+        tag_data = tags_worksheet().get_all_records()
+        df = pd.DataFrame(tag_data)
         return df
     except Exception as e:
         return pd.DataFrame()
     
-def update_google_sheets(df,conn,type):
+def update_google_sheets(data, type, idx):
     try:
-        if not isinstance(df, pd.DataFrame):
-            st.error("Data must be a pandas DataFrame")
-            return False
-        
-        df_to_update = df.copy()
-        if type == 'actress':
-            sheet = 'NList'
+        if type == 'add':
+            actress_worksheet().append_row(data)
         else:
-            sheet = 'NCode'
+            row = idx + 2
+            actress_worksheet().update(f'J{row}:J{row}', data)
             
-        conn.update(
-            worksheet=sheet, 
-            data=df_to_update
-        )
-        
         st.toast("✅ Google Sheets Updated Successfully!")
         time.sleep(.5)
         return True
     except:
         return False
 
-def init_dataframe_actress(conn):
+def init_dataframe_actress():
     """Inisialisasi DataFrame di session state"""
     if "actress_df" not in st.session_state:
-        df = load_data_actress(conn)
+        df = load_data_actress()
         if df.empty:
             df = pd.DataFrame(columns=[
                 'Review', 'Picture', 'Name (Alphabet)', 'Name (Kanji)',
@@ -185,10 +195,10 @@ def init_dataframe_actress(conn):
     else:
         return st.session_state.actress_df
 
-def init_dataframe_film(conn):
+def init_dataframe_film():
     """Inisialisasi DataFrame di session state"""
     if "film_df" not in st.session_state:
-        df = load_data_film(conn)
+        df = load_data_film()
         if df.empty:
             df = pd.DataFrame(columns=[
                 'Actress', 'Code', 'Title', 'Release Date', 'Picture', 'Tags', 'Info',
@@ -201,10 +211,10 @@ def init_dataframe_film(conn):
     else:
         return st.session_state.film_df
 
-def init_dataframe_tags(conn):
+def init_dataframe_tags():
     """Inisialisasi DataFrame di session state"""
     if "tag_df" not in st.session_state:
-        df = load_data_tag(conn)
+        df = load_data_tag()
         if df.empty:
             df = pd.DataFrame(columns=[
                 'Tags'
@@ -215,6 +225,23 @@ def init_dataframe_tags(conn):
         return df
     else:
         return st.session_state.tag_df
+
+def calculate_age(birthdate_str):
+        try:
+            if not birthdate_str or pd.isna(birthdate_str):
+                return None
+                
+            # Handle format "30/09/1992"
+            if '/' in str(birthdate_str):
+                birth_date = datetime.strptime(str(birthdate_str), '%d/%m/%Y')
+            else:
+                birth_date = datetime.strptime(str(birthdate_str), '%B %d, %Y')
+            
+            today = datetime.now()
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            return age
+        except:
+            return None
 
 def display_film_card(df, tag_df):
     """
@@ -671,9 +698,9 @@ def set_calender_a(index):
     st.toast(f"{st.session_state.calender_data.at[index, 'Code']} A-Detector {st.session_state.get(f'{index}_toggle')}")
     st.session_state.calender_data.at[index, 'A-Detector'] = st.session_state.get(f'{index}_toggle')
 
-def display_film_calender(df, conn):
+def display_film_calender(df):
     if 'calender_data' not in st.session_state:
-        st.session_state.calender_data = conn.read(worksheet='Calender Scrap', usecols=list(range(6)))
+        st.session_state.calender_data = pd.DataFrame(calendar_worksheet().get_all_records())
 
     if 'calender_page' not in st.session_state:
         st.session_state.calender_page = 1
@@ -828,24 +855,51 @@ def display_film_calender(df, conn):
             filtered_df = filtered_df[
                 filtered_df['filtered_date'].dt.year == st.session_state.show_date.year
             ]
-    
-
     def set_save_edit():
-        conn.update(worksheet='Calender Scrap', data=calender_df)
+        start_row = 2
+        end_row = start_row + len(calender_df)
+        calendar_worksheet().update(f'A{start_row}:G{end_row}', calender_df.values.tolist())
         st.session_state.calender_data = calender_df
-        st.success('✅ Succesfully update data!')
+        st.toast('✅ Succesfully update data!')
+        time.sleep(.5)
 
     def set_all_drop():
         calender_df.loc[calender_df['Flag'] == 'Not Checked', 'Flag'] = 'Drop'
-        conn.update(worksheet='Calender Scrap', data=calender_df)
         st.session_state.calender_data = calender_df
-        st.success('✅ Succesfully drop all not checked data!')
+        batch_data = [
+            {
+                "range": f"E{row+2}",
+                "values": [['Drop']]
+            }
+            for row in calender_df[calender_df['Flag'] == 'Not Checked'].index.to_list()
+        ]
+        calendar_worksheet().batch_update(batch_data)
+        st.toast('✅ Succesfully drop all not checked data!')
+        time.sleep(.5)
+    
+    def set_this_drop():
+        calender_df.loc[calender_df['Month'] == st.session_state.show_date.strftime("%d/%m/%Y"), 'Flag'] = 'Drop'
+        st.session_state.calender_data = calender_df
+        batch_data = [
+            {
+                "range": f"E{row+2}",
+                "values": [['Drop']]
+            }
+            for row in calender_df[calender_df['Month'] == st.session_state.show_date.strftime("%d/%m/%Y")].index.to_list()
+        ]
+
+        calendar_worksheet().batch_update(batch_data)
+        st.toast('✅ Succesfully drop this months not checked data!')
+        time.sleep(.5)
     
     def set_match():
         calender_df.loc[calender_df['Code'].isin(df['Code'].values), 'Flag'] = 'Pass'
-        conn.update(worksheet='Calender Scrap', data=calender_df)
+        start_row = 2
+        end_row = start_row + len(calender_df)
+        calendar_worksheet().update(f'A{start_row}:G{end_row}', calender_df.values.tolist())
         st.session_state.calender_data = calender_df
-        st.success('✅ Succesfully match data!')
+        st.toast('✅ Succesfully match data!')
+        time.sleep(.5)
     
     def set_sent_data():
         pass_data = calender_df[calender_df['Flag'] == 'Pass']
@@ -869,7 +923,7 @@ def display_film_calender(df, conn):
                     st.secrets.indicators.PLACEHOLDER_IMG_POSTER,
                     'No Tags',
                     'Not Watched',
-                    0,
+                    '?',
                     '--',
                     '--',
                     data['A-Detector']
@@ -877,15 +931,17 @@ def display_film_calender(df, conn):
         
         new_row_df = pd.DataFrame(new_rows, columns=df.columns)
         final_df = pd.concat([df,new_row_df], ignore_index=True)
-        conn.update(worksheet='NCode', data=final_df)
-        st.success('✅ Succesfully sent data to database!')        
+        st.session_state.film_df = final_df
+        film_worksheet().append_rows(new_rows)
+        st.toast('✅ Succesfully sent data to database!')
+        time.sleep(.5)        
             
-
-
     st.button('Save edit',width='stretch', type='primary', on_click=set_save_edit)
+    st.button('Drop this month', width='stretch', on_click=set_this_drop)
     with st.container(horizontal=True):
         st.button('Drop All', on_click=set_all_drop, width='stretch')
         st.button('Match', on_click=set_match, width='stretch')
+    
     st.subheader('Sent "Pass" to database?')
     st.button('Send ⏭️', on_click=set_sent_data, width='stretch')
     if st.session_state.scroll_to_here:
@@ -1525,7 +1581,7 @@ def display_film_grid(df, tag_df):
     if st.button('⬆️ Back to top', width='stretch'):
         st.session_state.scroll_to_here = True                   
 
-def complex_home(conn):
+def complex_home():
     if 'log_out_btn' not in st.session_state:
         st.session_state.log_out_btn = False
     if 'first_load_film' not in st.session_state:
@@ -1534,8 +1590,8 @@ def complex_home(conn):
         st.session_state.first_load_actress = True
         
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
-    df_actress = init_dataframe_actress(conn)
-    df_film = init_dataframe_film(conn)
+    df_actress = init_dataframe_actress()
+    df_film = init_dataframe_film()
 
     left, right = st.columns(2)
     with left:
@@ -1604,7 +1660,7 @@ def complex_home(conn):
     """, unsafe_allow_html=True)
 
 
-def complex_film(conn, device):
+def complex_film(device):
     # Inisialisasi variabel kontrol
     if "editing_film_index" not in st.session_state:
         st.session_state.editing_film_index = None
@@ -1629,9 +1685,9 @@ def complex_film(conn, device):
         scroll_to_here(0,key='top')  # Scroll to the top of the page
         st.session_state.scroll_to_top = False  # Reset the state after scrolling
 
-    df = init_dataframe_film(conn)
-    actress_df = init_dataframe_actress(conn)
-    tag_df = init_dataframe_tags(conn)
+    df = init_dataframe_film()
+    actress_df = init_dataframe_actress()
+    tag_df = init_dataframe_tags()
 
     TAGS_OPTS = sorted(
         tag_df['Tags']
@@ -2101,41 +2157,39 @@ def complex_film(conn, device):
                 if ((edited_actress!='?')or(edited_actress_input!='?')):
                     if edited_actress_input!='?':
                         # Create edited row data
-                        edited_row = pd.DataFrame([{
-                            'Review': 'Not Checked',
-                            'Name (Alphabet)': edited_actress_name,
-                            'Name (Kanji)': edited_actress_kanji,
-                            'Picture': st.secrets.indicators.PLACEHOLDER_IMG,
-                            'Birthdate': '?',
-                            'Debut Date': '?',
-                            'Size': '?',
-                            'Measurement': '?',
-                            'Height (cm)': '? cm',
-                            'Notes': '--',
-                            'Age': '?',
-                            'Debut Period': '?',
-                            'Retire Date': '?',
-                            'Status': 'Active'
-                        }])
+                        edited_row = [
+                            'Not Checked',
+                            st.secrets.indicators.PLACEHOLDER_IMG,
+                            edited_actress_name,
+                            edited_actress_kanji,
+                            '?',
+                            '?',
+                            '?',
+                            '?',
+                            '? cm',
+                            '--',
+                            '?',
+                            '?',
+                            '?',
+                            'Active',
+                            '--'
+                        ]
 
-
+                        new_actress_df = pd.DataFrame([edited_row], columns=actress_df.columns)
                         # Add to DataFrame
-                        edited_name_kanji = edited_row['Name (Kanji)'].iloc[0]
+                        edited_name_kanji = new_actress_df['Name (Kanji)'].iloc[0]
                         df_actress = st.session_state.actress_df
 
                         if edited_name_kanji in df_actress['Name (Kanji)'].values:
                             st.warning(f"⚠️ Actress '{edited_name_kanji}' already exist in database with name!")
                             st.stop()
                         else:
-                            df_actress = pd.concat([df_actress, edited_row], ignore_index=True)   
+                            df_actress = pd.concat([df_actress, new_actress_df], ignore_index=True)   
                             df_actress = df_actress.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
                             # Update ke Google Sheets
-                            if update_google_sheets(df_actress,conn,'actress'):
-                                st.success("✅ edited actress added successfully to Google Sheets!")
-                                st.session_state.actress_df = values_handling(df_actress,'actress')  # Update session state
-                            else:
-                                st.error("❌ Failed to add edited actress to Google Sheets")
-                                st.stop()
+                            update_google_sheets(edited_row,'add',0)
+                            st.success("✅ edited actress added successfully to Google Sheets!")
+                            st.session_state.actress_df = values_handling(df_actress,'actress')  # Update session state
                         edited_actress = edited_actress_name
                 # kalau cuma ganti foto
                 if new_pic and (edited_code.upper() == film['Code']):
@@ -2341,41 +2395,40 @@ def complex_film(conn, device):
                 if new_code and ((new_actress!='?')or(new_actress_input!='?')) and new_title:
                     if new_actress_input!='?':
                         # Create new row data
-                        new_row = pd.DataFrame([{
-                            'Review': 'Not Checked',
-                            'Name (Alphabet)': new_actress_name,
-                            'Name (Kanji)': new_actress_kanji,
-                            'Picture': st.secrets.indicators.PLACEHOLDER_IMG,
-                            'Birthdate': '?',
-                            'Debut Date': '?',
-                            'Size': '?',
-                            'Measurement': '?',
-                            'Height (cm)': '? cm',
-                            'Notes': '--',
-                            'Age': '?',
-                            'Debut Period': '?',
-                            'Retire Date': '?',
-                            'Status': 'Active'
-                        }])
+                        new_row = [
+                            'Not Checked',
+                            st.secrets.indicators.PLACEHOLDER_IMG,
+                            new_actress_name,
+                            new_actress_kanji,
+                            '?',
+                            '?',
+                            '?',
+                            '?',
+                            '? cm',
+                            '--',
+                            '?',
+                            '?',
+                            '?',
+                            'Active',
+                            '--'
+                        ]
 
+                        new_row_df = pd.DataFrame([new_row], columns=actress_df.columns)
 
                         # Add to DataFrame
-                        new_name_kanji = new_row['Name (Kanji)'].iloc[0]
+                        new_name_kanji = new_row_df['Name (Kanji)'].iloc[0]
                         df_actress = st.session_state.actress_df
 
                         if new_name_kanji in df_actress['Name (Kanji)'].values:
                             st.warning(f"⚠️ Actress '{new_name_kanji}' already exist in database with name!")
                             st.stop()
                         else:
-                            df_actress = pd.concat([df_actress, new_row], ignore_index=True)   
+                            df_actress = pd.concat([df_actress, new_row_df], ignore_index=True)   
                             df_actress = df_actress.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=True)
                             # Update ke Google Sheets
-                            if update_google_sheets(df_actress,conn,'actress'):
-                                st.success("✅ New actress added successfully to Google Sheets!")
-                                st.session_state.actress_df = values_handling(df_actress,'actress')  # Update session state
-                            else:
-                                st.error("❌ Failed to add new actress to Google Sheets")
-                                st.stop()
+                            update_google_sheets(new_row,'add',0)
+                            st.success("✅ New actress added successfully to Google Sheets!")
+                            st.session_state.actress_df = values_handling(df_actress,'actress')  # Update session state
                         new_actress = new_actress_name
 
                     df = st.session_state.film_df
@@ -2549,7 +2602,7 @@ def complex_film(conn, device):
         with st.container(horizontal=True):
             display_mode = st.radio(
                 "View Mode",
-                ["Detailed", "Simple", "Not Watched", "Calender Scrap"],
+                ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"],
                 on_change=reset_page,
                 key='film_layout'
             )
@@ -2588,7 +2641,6 @@ def complex_film(conn, device):
     
     # Main
     st.space('small')
-    st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Film List</h1>", unsafe_allow_html=True)
     if st.session_state.viewing_film_index is not None:
         show_film_details()
     
@@ -2609,110 +2661,280 @@ def complex_film(conn, device):
             filtered_df = filtered_df[filtered_df['Tags'] == 'No Tags']
 
     if display_mode == "Detailed":
+        st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Film Detailed</h1>", unsafe_allow_html=True)
         display_film_card(filtered_df, tag_df)
     elif display_mode == "Simple":
+        st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Film Simple</h1>", unsafe_allow_html=True)
         display_film_grid(filtered_df, tag_df)
     elif display_mode == "Calender Scrap":
-        display_film_calender(df, conn)
+        st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Calendar Scrap</h1>", unsafe_allow_html=True)
+        display_film_calender(df)
     else:  # Table View
-        filtered_df = values_handling(filtered_df, 'film')
-        filtered_df = initial_load(filtered_df, 'film')
-        filtered_df = filtered_df.loc[filtered_df['Info'] == 'Not Watched'].copy() 
-
-        # Tambahkan search box
-        if st.session_state.get('search_reset', False):
-            st.session_state.search_reset = False
-            st.session_state.search_bar = ''
+        if 'scrap_new' not in st.session_state:
+            st.session_state.scrap_new = []
         
-        search_by = st.radio('Search By: ', options=['Code', 'Actress', 'Title'], horizontal=True, key='search_by')
-        with st.container(horizontal=True, vertical_alignment='bottom'):
-            search_term = st.text_input("🔍 Search (Actress Name / Code):", placeholder="Name or Code...", key='search_bar')
-            if st.button('Clear'):
-                st.session_state.search_reset = True
-                st.rerun()
+        if 'actress_new' not in st.session_state:
+            st.session_state.actress_new = []
+        
+        if 'start_scrap' not in st.session_state:
+            st.session_state.start_scrap = False
 
-        # Terapkan filter search jika ada input
-        if search_term:
-            if search_by == 'Code':
-                search_term = search_term.split(' ')
-                search_term = '-'.join(search_term)
-                mask =  filtered_df['Code'].astype(str).str.contains(search_term, case=False, na=False)
-            elif search_by == 'Actress':
-                mask = filtered_df['Actress Name'].str.contains(search_term, case=False, na=False)
+        scrap_new = []
+        if st.session_state.get('html_reset', False):
+            st.session_state.html_reset = False
+            st.session_state.html_bar = ''
+            st.session_state.input_info = 'Not Watched'
+            st.session_state.input_a = False
+
+        st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Scrap Manual</h1>", unsafe_allow_html=True)
+        st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar')
+        if st.button('Clear HTML', width='stretch', type='primary'):
+            st.session_state.html_reset = True
+            st.rerun()
+        if st.button('Scrap', width='stretch'):
+            st.session_state.start_scrap = True
+        
+        st.selectbox('Info', options=['Not Watched', 'Watched', 'Goat'], key='input_info')
+        st.space('small')
+        st.toggle('✨ A-Detector', key='input_a')
+        
+        st.markdown('---')
+        st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
+        st.markdown('---')
+
+        if st.session_state.save_scrap:
+            if st.session_state.scrap_new[0][1] in df['Code'].values:
+                index = df.loc[df['Code'] == st.session_state.scrap_new[0][1]].index
+                row = index + 2
+                film_worksheet().update(f'A{row}:K{row}', st.session_state.scrap_new)
             else:
-                mask = filtered_df['Title'].str.contains(search_term, case=False, na=False)
+                film_worksheet().append_rows(st.session_state.scrap_new)
 
-            filtered_df = filtered_df[mask]
+            if st.session_state.actress_new:
+                actress_worksheet().append_rows(st.session_state.actress_new)
 
-        # Buat kolom baru dengan badge HTML/CSS
-        filtered_df['Release'] = filtered_df['Release Status'].apply(
-            lambda x: '🟢 Yes' if x == 1 else '🔴 No' if x == 0 else '⚪ ?'
-        )
+            st.session_state.html_reset = True
+            st.toast("✅ Scrap Saved Successfully!")
+            time.sleep(.5)
+            st.rerun()
 
-        show_df = filtered_df[['Release', 'Code', 'Actress Name']]
+        if st.session_state.html_bar:
+            soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
+            if soup.find():
+                st.info('ℹ️ Scrapping Film')
+                s_type = 'film'
+            else:
+                st.info('ℹ️ Scrapping Cast')
+                s_type = 'cast'
+            if st.session_state.start_scrap:
+                if s_type == 'film':
+                    gallery = soup.find("div", id="gallery-wrapper")
+                    # ambil semua img di dalamnya
+                    img_tags = gallery.find_all("img")
 
-        selected = st.dataframe(
-            show_df,
-            width='stretch',
-            on_select="rerun",
-            selection_mode="single-row",
-            hide_index=True
-        )
+                    # ambil src
+                    img_srcs = ', '.join([img.get("src") for img in img_tags])
 
-        with st.container(horizontal=True):
-            with st.container(width='content'):
-                if selected:
-                    try:
-                        pics = filtered_df['Picture'].iloc[selected.selection.rows[0]]
-                    except:
-                        pics = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
 
-                st.markdown(f"""
-                    <div style="
-                        height: 250px;  /* Atur tinggi tetap */
-                        width: 175px;
-                        overflow: hidden;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        margin-bottom: 10px;
-                        border-radius: 5px;
-                    ">
-                        <img src="{pics}" 
-                            style="
-                                width: 100%;
-                                height: 100%;
-                                object-fit: cover;
-                                object-position: center;
-                            ">
-                    </div>
-                """, unsafe_allow_html=True)
+                    film_title = soup.find('h1').get_text(strip=True)
 
-            with st.container(width='stretch'):
-                if st.button('Edit', width='stretch'):
-                    if selected.selection.rows:
-                        row_index = selected.selection.rows[0]
-                        data_index = filtered_df.index[row_index]
-                        st.session_state.viewing_film_index = data_index
-                        st.session_state.editing_film_index = data_index
-                        show_film_details()
-                        st.rerun()
-                    else:
-                        st.error('No rows is selected on the dataframe!')
-                        st.stop()
+                    section = soup.find("div", class_="col-md-9")
+                    all_p = section.find_all("p")
 
-                if selected.selection.rows:
-                    row_index = selected.selection.rows[0]
-                    link_url = filtered_df.iloc[row_index]['Link']
-                    title = filtered_df.iloc[row_index]['Code']
-            
-                    # Tombol yang akan membuka di tab baru
-                    if link_url != '--':
-                        st.link_button(f"{title} Preview", link_url, width='stretch', type='primary')
-                    else:
-                        st.write('No link found!')
+                    for p in all_p:
+                        span = p.find("span")
 
-                    st.write(filtered_df.iloc[row_index]['Title'])
+                        if span and "DVD ID:" in span.text:
+                            dvd_id = p.get_text(strip=True).replace(span.get_text(strip=True), "").strip()
+                            st.markdown(f"# {dvd_id}")
+                        
+                        if span and "Release Date" in span.text:
+                            release_date = datetime.strptime(p.get_text(strip=True).replace(span.get_text(strip=True), "").strip(), "%d %b %Y")
+                            formatted_date = release_date.strftime("%d/%m/%Y")
+                            if release_date.date() <= datetime.today().date():
+                                release_status = 1
+                            else:
+                                release_status = 0
+
+                        if span and "Cast(s):" in span.text:
+                            casts = []
+                            actress_list = []
+
+                            for a in p.find_all("a"):
+                                cast = a.get_text(strip=True)
+                                kanji = re.findall(r'[\u3005\u3040-\u30FF\u4E00-\u9FFF]+', cast)
+                                latins = re.findall(r'[A-Za-z ]+', cast)
+                                latins = latins[0].split(' ')
+                                latin = latins[1] + ' ' + latins[0]
+
+                                if kanji not in actress_df['Name (Kanji)'].values:
+                                    casts.append([
+                                        'Not Checked',
+                                        st.secrets.indicators.PLACEHOLDER_IMG,
+                                        latin.strip(),
+                                        kanji[0].strip(),
+                                        '?',
+                                        '?',
+                                        '?',
+                                        '?',
+                                        '? cm',
+                                        '--',
+                                        '?',
+                                        '?',
+                                        '?',
+                                        'Active',
+                                        "https://javtrailers.com" + a.get("href")
+                                    ])
+
+                                actress_list.append(latin.strip())
+                            
+
+                    thumbnail = soup.find("div", id="thumbnailContainer").find("img").get("src")
+                    actress_name = ', '.join(actress_list)
+                    film_link = soup.find("link", rel="canonical")
+                    film_ref = film_link.get("href") if film_link else '--'
+
+                    if img_srcs:
+                        st.space('small')
+                        st.write(':yellow-background[Gallery:]')
+                        if 'prev_pic' not in st.session_state:  
+                            st.session_state.prev_pic = 0
+                        
+                        pics = [img.get("src") for img in img_tags]
+                        count = len(pics)
+
+                        st.markdown(
+                            """
+                            <style>
+                            div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
+
+                            .img-fit {
+                                margin-top: -13px; 
+                                padding-top: 0; 
+                                display: flex;             /* gunakan flexbox */
+                                justify-content: center;   /* horizontal center */
+                                align-items: center;       /* vertical center jika container tinggi ditentukan */
+                                background-color: #ffffff;
+                                border-radius: 5px;
+                                margin-bottom: 15px;
+                            }
+
+                            .img-fit img {
+                                max-width: 100%;
+                                height: 400px;
+                                width: auto;
+                                object-fit: contain;
+                                display: none;  /* default hidden semua gambar */
+                            }
+
+                            .img-fit img.active {
+                                display: block; /* hanya gambar active yang terlihat */
+                            }
+                            </style>
+                            """,
+                            unsafe_allow_html=True
+                        )
+
+                        # HTML untuk semua gambar, preload semuanya
+                        img_html = '<div class="img-fit">'
+                        for i, pic in enumerate(pics):
+                            active_class = 'active' if i == st.session_state.prev_pic else ''
+                            img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
+                        img_html += '</div>'
+
+                        st.markdown(img_html, unsafe_allow_html=True)
+
+
+                        with st.container(horizontal=True):
+                            # Tombol navigasi
+                            st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
+                            st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
+                    st.space('small')
+                    st.write(':yellow-background[Thumbnail:]')
+                    with st.container(horizontal_alignment='center'):
+                        st.image(thumbnail, width=180)
+                    st.space('small')
+                    st.write(f":yellow-background[Release Date:] {formatted_date} ({release_date})")
+                    st.space('small')
+                    st.write(':yellow-background[Link:]', film_ref)
+                    st.space('small')
+                    st.write(':yellow-background[Title:]', film_title)
+                    st.space('small')
+                    st.write(':yellow-background[Preview Image:]')
+                    st.write(img_srcs)
+                    st.space('small')
+                    st.write(':yellow-background[Actress Name:]', actress_name)
+                    st.space('small')
+                    st.write(':yellow-background[New Actress:]')
+                    st.write(casts)
+
+                    scrap_new.append([
+                        actress_name,
+                        dvd_id,
+                        film_title,
+                        formatted_date,
+                        thumbnail,
+                        'No Tags',
+                        st.session_state.input_info,
+                        release_status,
+                        film_ref,
+                        img_srcs,
+                        st.session_state.input_a
+                    ])
+
+                    st.session_state.actress_new = casts
+                    st.session_state.scrap_new = scrap_new
+                else:
+                    def extract_field(field, text):
+                        pattern = rf"{field}:\s*(.*?)\s*(?=\s*-\s*[A-Za-z ]+:|\n|$)"
+                        match = re.search(pattern, text)
+                        return match.group(1).strip() if match else None
+                    
+                    dob = extract_field("DOB", st.session_state.html_bar)
+                    debut = extract_field("Debut", st.session_state.html_bar)
+                    data = {
+                        "DOB": datetime.strptime(dob, "%Y-%m-%d").strftime("%d/%m/%Y") if dob != '?' else '?',
+                        "Debut": datetime.strptime(debut, "%Y-%m-%d").strftime("%d/%m/%Y") if debut != '?' else '?',
+                        "Measurements": extract_field("Measurements", st.session_state.html_bar),
+                        "Cup": extract_field("Cup", st.session_state.html_bar),
+                        "Height": extract_field("Height", st.session_state.html_bar),
+                        "JP": extract_field("JP", st.session_state.html_bar),
+                    }
+
+                    age = calculate_age(data['DOB'])
+                    if data['JP'] in actress_df['Name (Kanji)'].values:
+                        match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
+                        idx = match_data.index
+                    
+                    row = idx + 2
+                    new_value = [
+                        match_data['Review'].iloc[0],
+                        match_data['Picture'].iloc[0],
+                        match_data['Name (Alphabet)'].iloc[0],
+                        match_data['Name (Kanji)'].iloc[0],
+                        data['DOB'],
+                        data['Debut'],
+                        data['Cup'],
+                        data['Measurements'],
+                        data['Height'],
+                        match_data['Notes'].iloc[0],
+                        age,
+                        match_data['Debut Period'].iloc[0],
+                        match_data['Retire Date'].iloc[0],
+                        match_data['Status'].iloc[0],
+                        match_data['Page'].iloc[0],
+                    ]
+
+                    st.write(new_value)
+
+
+
+            else:
+                st.success('✅ HTML Detected! (Ready to scrap)')
+        else:
+            st.warning('⚠️ HTML Empty')
+
+
     st.markdown("""
     <style>
     ul[data-testid="stSelectboxVirtualDropdown"] li:nth-child(odd){
@@ -2872,10 +3094,10 @@ def complex_film(conn, device):
     </script>
     """, unsafe_allow_html=True)
 
-def complex_actress(conn, device):
+def complex_actress(device):
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Actress List</h1>", unsafe_allow_html=True)
 
-    tag_df = init_dataframe_tags(conn)
+    tag_df = init_dataframe_tags()
 
     TAGS_OPTS = sorted(
         tag_df['Tags']
@@ -2915,13 +3137,13 @@ def complex_actress(conn, device):
 
         
     # Fungsi untuk refresh data dari Google Sheets
-    def refresh_data(conn):
+    def refresh_data():
         """Refresh data dari Google Sheets ke session state"""
         try:
             with st.spinner("🔄 Refreshing data from Google Sheets..."):
                 # Load data baru
                 st.cache_data.clear()
-                df = load_data_actress(conn)
+                df = load_data_actress()
 
                 if not df.empty:
                     # Clear dan update session state
@@ -2946,7 +3168,7 @@ def complex_actress(conn, device):
 
     # Inisialisasi DataFrame
     if st.session_state.initial == False:
-        df = init_dataframe_actress(conn)
+        df = init_dataframe_actress()
 
     # Inisialisasi variabel kontrol
     if "editing_index" not in st.session_state:
@@ -2967,22 +3189,6 @@ def complex_actress(conn, device):
         st.session_state.is_simple = False
 
     # Fungsi untuk menghitung usia berdasarkan birthdate
-    def calculate_age(birthdate_str):
-        try:
-            if not birthdate_str or pd.isna(birthdate_str):
-                return None
-                
-            # Handle format "30/09/1992"
-            if '/' in str(birthdate_str):
-                birth_date = datetime.strptime(str(birthdate_str), '%d/%m/%Y')
-            else:
-                birth_date = datetime.strptime(str(birthdate_str), '%B %d, %Y')
-            
-            today = datetime.now()
-            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-            return age
-        except:
-            return None
         
 
     # Dialog untuk menampilkan detail lengkap
@@ -3607,11 +3813,8 @@ def complex_actress(conn, device):
                         edited_notes = f'{current_notes}\n - {personal_notes}'
                     df.at[index, 'Notes'] = edited_notes
                 
-                    if update_google_sheets(df,conn,'actress'):
-                        st.session_state.actress_df = values_handling(df,'actress')  # Update session state
-                    else:
-                        st.error("❌ Failed to update Google Sheets")
-                        st.stop()
+                    update_google_sheets(edited_notes,'edit',index)
+                    st.session_state.actress_df = values_handling(df,'actress')  # Update session state
                     st.rerun()
                 else:
                     st.warning('Note empty!')

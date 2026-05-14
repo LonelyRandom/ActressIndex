@@ -21,7 +21,7 @@ if 'check_login' not in st.session_state:
 
 if st.session_state.page == 'login':
     st.cache_data.clear()
-    check_login, usn, page = log_in(conn)
+    check_login, usn, page = log_in()
     st.session_state.check_login = check_login
     st.session_state.usn = usn
     st.session_state.page = page
@@ -36,11 +36,11 @@ elif st.session_state.page == 'home':
         page_icon='🏠'
     )
     if st.session_state.usn == user_1:
-        page = complex_home(conn)
+        page = complex_home()
     elif st.session_state.usn == user_3:
-        page = complex_home(conn)
+        page = complex_home()
     elif st.session_state.usn == user_2:
-        page = simple_home(conn)
+        page = simple_home()
 
     if not page is None:
         st.session_state.page = page
@@ -53,9 +53,9 @@ elif st.session_state.page == 'film':
         page_icon='🎬'
     )
     if st.session_state.usn == user_1:
-        page = complex_film(conn,'Device 1')
+        page = complex_film('Device 1')
     elif st.session_state.usn == user_3:
-        page = complex_film(conn,'Device 2')
+        page = complex_film('Device 2')
     elif st.session_state.usn == user_2:
         page = simple_film(conn)
 
@@ -70,9 +70,9 @@ elif st.session_state.page == 'actress':
         page_icon='🌟'
     )
     if st.session_state.usn == user_1:
-        page = complex_actress(conn, 'Device 1')
+        page = complex_actress('Device 1')
     elif st.session_state.usn == user_3:
-        page = complex_actress(conn, 'Device 2')
+        page = complex_actress('Device 2')
     elif st.session_state.usn == user_2:
         page = simple_actress(conn)
 
