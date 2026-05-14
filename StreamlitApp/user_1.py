@@ -2813,7 +2813,7 @@ def complex_film(device):
                         info_index = 0
                         tags = 'No Tags'
                         a_index = False
-                    st.write(a_index)
+                    
                     st.selectbox('Info', options=['Not Watched', 'Watched', 'Goat'], key='input_info', index=info_index)
                     st.space('small')
                     st.toggle('✨ A-Detector', value=a_index)
@@ -2925,6 +2925,7 @@ def complex_film(device):
                     }
 
                     age = calculate_age(data['DOB'])
+                    measurement = ' / '.join([f"{chr(65+i)}{num}" for i, num in enumerate(value.split("-"))]
                     if data['JP'] in actress_df['Name (Kanji)'].values:
                         match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
                         idx = match_data.index
@@ -2938,7 +2939,7 @@ def complex_film(device):
                         data['DOB'],
                         data['Debut'],
                         data['Cup'],
-                        data['Measurements'],
+                        measurement,
                         data['Height'],
                         match_data['Notes'].iloc[0],
                         age,
