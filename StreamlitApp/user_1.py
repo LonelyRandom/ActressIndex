@@ -1978,12 +1978,12 @@ def complex_film(device):
     
         
         st.subheader("Basic Information")
-        st.write(film['A-Detector'])
-        edited_a = st.toggle('✨', value=film['A-Detector'])
-        if edited_a:
-            edited_a = True
+        if film['A-Detector'] == 'TRUE':
+            value_a = True
         else:
-            edited_a = False
+            value_a = False
+        edited_a = st.toggle('✨', value=value_a)
+        
         film_link = film['Link']
 
         if film_link == '--':
