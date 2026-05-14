@@ -2675,6 +2675,10 @@ def complex_film(device):
         if 'start_scrap' not in st.session_state:
             st.session_state.start_scrap = False
 
+        if 's_type' not in st.session_state:
+            st.session_state.s_type = None
+
+
         scrap_new = []
         if st.session_state.get('html_reset', False):
             st.session_state.html_reset = False
@@ -2699,16 +2703,30 @@ def complex_film(device):
         st.markdown('---')
 
         if st.session_state.save_scrap:
-            if st.session_state.scrap_new[0][1] in df['Code'].values:
-                index = df.loc[df['Code'] == st.session_state.scrap_new[0][1]].index
-                row = index + 2
-                film_worksheet().update(f'A{row}:K{row}', st.session_state.scrap_new)
+            if st.session_state.s_type == "film":
+                if st.session_state.scrap_new[0][1] in df['Code'].values:
+                    index = df.loc[df['Code'] == st.session_state.scrap_new[0][1]].index
+                    df.loc[index] = st.session_state.scrap_new
+                    
+                    row = index + 2
+                    film_worksheet().update(f'A{row}:K{row}', st.session_state.scrap_new)
+                else:
+                    film_worksheet().append_rows(st.session_state.scrap_new)
+                    df.loc[len(df)] = st.session_state.scrap_new
+
+                st.session_state.film_df = df
+                
+                if st.session_state.actress_new:
+                    actress_worksheet().append_rows(st.session_state.actress_new)
+                    #  UNDER CONSTRUCTION
+                    st.session_state.actress_df = actress_df
             else:
-                film_worksheet().append_rows(st.session_state.scrap_new)
-
-            if st.session_state.actress_new:
-                actress_worksheet().append_rows(st.session_state.actress_new)
-
+                if st.session_state.scrap_new[0][3] in actress_df['Name (Kanji)'].values:
+                    index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[0][3]].index
+                    row = index + 2
+                    actress_worksheet().update(f'A{row}:O{row}', st.session_state.scrap_new)
+                else:
+                    actress_worksheet().append_rows(st.session_state.scrap_new)
             st.session_state.html_reset = True
             st.toast("✅ Scrap Saved Successfully!")
             time.sleep(.5)
@@ -2716,22 +2734,27 @@ def complex_film(device):
             
         elif st.session_state.show_scrap:
             st.session_state.start_scrap = False
-            st.write("Isi Scrap Film")
-            st.write(st.session_state.scrap_new)
-            st.space("small")
-            st.write("Actress New")
-            st.write(st.session_state.actress_new)
+            if st.session_state.s_type == "film":
+                st.write("Isi Scrap Film")
+                st.write(st.session_state.scrap_new)
+                st.space("small")
+                st.write("Actress New")
+                st.write(st.session_state.actress_new)
+            else:
+                st.write("Isi scrap Cast")
+                st.write(st.session_state.scrap_new)
+                
 
         if st.session_state.html_bar:
             soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
             if soup.find():
                 st.info('ℹ️ Scrapping Film')
-                s_type = 'film'
+                st.session_state.s_type = 'film'
             else:
                 st.info('ℹ️ Scrapping Cast')
-                s_type = 'cast'
+                st.session_state.s_type = 'cast'
             if st.session_state.start_scrap:
-                if s_type == 'film':
+                if st.session_state.s_type == 'film':
                     gallery = soup.find("div", id="gallery-wrapper")
                     # ambil semua img di dalamnya
                     img_tags = gallery.find_all("img")
@@ -2945,6 +2968,8 @@ def complex_film(device):
                             match_data['Status'].iloc[0],
                             match_data['Page'].iloc[0],
                         ]
+
+                        st.session_state.scrap_new = new_value
                     else:
                         #  new_value = [
                         #      'Not Checked',
