@@ -2806,11 +2806,12 @@ def complex_film(device):
                         tags = match_film_data["Tags"].iloc[0]
                         info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in INFO_OPTS else 0
                         a_index = match_film_data["A-Detector"].iloc[0]
+                        st.write(type(a_index))
                     else:
                         info_index = 0
                         tags = 'No Tags'
                         a_index = False
-                    st.selectbox('Info', options=['🔴 Not Watched', '🟢 Watched', '🟣 Goat'], key='input_info', index=info_index)
+                    st.selectbox('Info', options=['Not Watched', 'Watched', 'Goat'], key='input_info', index=info_index)
                     st.space('small')
                     st.toggle('✨ A-Detector', key='input_a', value=a_index)
                     if img_srcs:
