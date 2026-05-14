@@ -2806,15 +2806,8 @@ def complex_film(device):
 
                         tags = match_film_data["Tags"].iloc[0]
                         info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in INFO_OPTS else 0
-                        match_film_data['A-Detector'].map({
-                            1 : True,
-                            0 : False,
-                            'TRUE': True,
-                            'FALSE' : False,
-                            '1' : True,
-                            '0' : False
-                        })
-                        a_index = match_film_data["A-Detector"].iloc[0]
+                
+                        a_index = True if match_film_data["A-Detector"].iloc[0] == "TRUE" else False
                     else:
                         info_index = 0
                         tags = 'No Tags'
