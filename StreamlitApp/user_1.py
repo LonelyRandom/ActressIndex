@@ -2712,7 +2712,7 @@ def complex_film(device):
                     film_worksheet().update(f'A{row}:K{row}', st.session_state.scrap_new)
                 else:
                     film_worksheet().append_rows(st.session_state.scrap_new)
-                    df.loc[len(df)] = st.session_state.scrap_new
+                    df.loc[len(df)] = st.session_state.scrap_new[0]
 
                 st.session_state.film_df = df
                 
