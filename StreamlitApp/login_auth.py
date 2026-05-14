@@ -37,7 +37,7 @@ def login_worksheet():
 
     return worksheet
 
-def log_in():    
+def log_in_auth():    
     if 'login_error' not in st.session_state:
         st.session_state.login_error = None
     st.set_page_config(
