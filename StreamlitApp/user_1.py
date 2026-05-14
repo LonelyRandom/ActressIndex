@@ -699,7 +699,9 @@ def set_calender_a(index):
 
 def display_film_calender(df):
     if 'calender_data' not in st.session_state:
-        st.session_state.calender_data = pd.DataFrame(calendar_worksheet().get_all_records())
+        calender_data = pd.DataFrame(calendar_worksheet().get_all_records())
+        calebder_data = values_handling(calender_data, "calender")
+        st.session_state.calender_data = calender_data
 
     if 'calender_page' not in st.session_state:
         st.session_state.calender_page = 1
