@@ -2718,7 +2718,8 @@ def complex_film(device):
             time.sleep(.5)
             st.rerun()
             
-        if st.session_state.show_scrap:
+        elif st.session_state.show_scrap:
+            st.session_state.start_scrap = False
             st.write("Isi Scrap Film")
             st.write(st.session_state.scrap_new)
             st.space("small")
