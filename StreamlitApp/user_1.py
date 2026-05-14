@@ -877,14 +877,19 @@ def display_film_calender(df):
         time.sleep(.5)
     
     def set_this_drop():
-        calender_df.loc[calender_df['Month'] == st.session_state.show_date.strftime("%d/%m/%Y"), 'Flag'] = 'Drop'
+        filtered_df = filtered_df[
+                (filtered_df['filtered_date'].dt.month == st.session_state.show_date.month) &
+                (filtered_df['filtered_date'].dt.year == st.session_state.show_date.year)
+                ]
+        index = filtered_df.index.to_list()
+        calender_df.loc[index, 'Flag'] = 'Drop'
         st.session_state.calender_data = calender_df
         batch_data = [
             {
                 "range": f"E{row+2}",
                 "values": [['Drop']]
             }
-            for row in calender_df[calender_df['Month'] == st.session_state.show_date.strftime("%d/%m/%Y")].index.to_list()
+            for row in index
         ]
 
         calendar_worksheet().batch_update(batch_data)
