@@ -61,7 +61,14 @@ def initial_load(df, type):
     else:
         copy_df = df.copy()
         copy_df['Release Date'] = pd.to_datetime(copy_df['Release Date'], errors='coerce', dayfirst=True)
-
+        copy_df['A-Detector'] = copy_df['A-Detector'].map({
+            1 : True,
+            0 : False,
+            'TRUE': True,
+            'FALSE' : False,
+            '1' : True,
+            '0' : False
+        })
         today = pd.to_datetime(date.today())
 
         for idx in copy_df.index:
