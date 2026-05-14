@@ -755,7 +755,7 @@ def display_film_calender(df):
     st.write(selected_flag)
     st.write(selected_flag[2:])
     if selected_flag[2:] != 'All':
-        filtered_df = filtered_df[filtered_df['Flag'] == selected_flag[2:]]
+        filtered_df = filtered_df[filtered_df['Flag'] in str(selected_flag[2:])]
 
     def set_month_year(p):
         st.session_state.selected_date = p
