@@ -834,7 +834,7 @@ def display_film_calender(df):
                 }}
                 </style>""", unsafe_allow_html=True)
                 
-
+    
     if calender_search:
         calender_search = calender_search.split(' ')
         calender_search = '-'.join(calender_search)
