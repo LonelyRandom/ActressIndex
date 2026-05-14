@@ -148,7 +148,8 @@ def load_data_film():
     try:
         film_data = film_worksheet().get_all_records()
         df = pd.DataFrame(film_data)
-
+        st.write(df)
+        st.stop()
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
         return df
