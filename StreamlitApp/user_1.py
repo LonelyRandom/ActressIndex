@@ -2819,6 +2819,7 @@ def complex_film(device):
                         info_index = 0
                         tags = 'No Tags'
                         a_index = False
+                    st.write(a_index)
                     st.selectbox('Info', options=['Not Watched', 'Watched', 'Goat'], key='input_info', index=info_index)
                     st.space('small')
                     st.toggle('✨ A-Detector', value=a_index)
