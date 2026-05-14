@@ -1,6 +1,6 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-from login_auth import log_in
+from login_auth import log_in_auth
 from user_1 import complex_home, complex_actress, complex_film
 from user_2 import simple_home, simple_actress, simple_film
 
@@ -21,7 +21,7 @@ if 'check_login' not in st.session_state:
 
 if st.session_state.page == 'login':
     st.cache_data.clear()
-    check_login, usn, page = log_in()
+    check_login, usn, page = log_in_auth()
     st.session_state.check_login = check_login
     st.session_state.usn = usn
     st.session_state.page = page
