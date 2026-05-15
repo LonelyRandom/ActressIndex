@@ -694,7 +694,7 @@ def set_calender_flag(index):
     st.session_state.calender_data.at[index, 'Flag'] = edit_flag
 
 def set_calender_a(index):
-    st.toast(f"{st.session_state.calender_data.at[index, 'Code']} A-Detector {st.session_state.get(f'{index}_toggle')}")
+    st.toast(f"✨️ {st.session_state.calender_data.at[index, 'Code']} A-Detector {st.session_state.get(f'{index}_toggle')}")
     st.session_state.calender_data.at[index, 'A-Detector'] = st.session_state.get(f'{index}_toggle')
 
 def display_film_calender(df):
@@ -859,7 +859,7 @@ def display_film_calender(df):
     def set_save_edit():
         start_row = 2
         end_row = start_row + len(calender_df)
-        calendar_worksheet().update(f'A{start_row}:G{end_row}', calender_df.values.tolist())
+        calendar_worksheet().update(f'A{start_row}:G{end_row}', [calender_df.values.tolist()])
         st.session_state.calender_data = calender_df
         st.toast('✅ Succesfully update data!')
         time.sleep(.5)
