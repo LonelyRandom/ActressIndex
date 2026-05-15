@@ -2002,7 +2002,7 @@ def complex_film(device):
 
         with st.container(horizontal=True):
             st.markdown('### Tags')
-            if film['Status'] == 'Not Watched':
+            if film['Info'] == 'Not Watched':
                 if st.button('✅️', type='tertiary'):
                     row = idx + 2
                     if film['Tags'] == 'No Tags':
