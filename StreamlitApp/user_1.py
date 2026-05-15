@@ -2675,6 +2675,15 @@ def complex_film(device):
         st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Calendar Scrap</h1>", unsafe_allow_html=True)
         display_film_calender(df)
     else:  # Table View
+        def reset_scrap():
+            st.session_state.start_scrap = False
+            st.session_state.input_info = 'Not Watched'
+            st.session_state.input_a = False
+            st.session_state.prev_pic = 0
+
+        def background_text(text, color):
+            st.write(f':{color}-background[{text}]')
+
         if 'scrap_new' not in st.session_state:
             st.session_state.scrap_new = []
         
@@ -2696,9 +2705,10 @@ def complex_film(device):
             st.session_state.input_a = False
             st.session_state.prev_pic = 0
             st.session_state.start_scrap = False
+        
 
         st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Scrap Manual</h1>", unsafe_allow_html=True)
-        st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar')
+        st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar', on_change=reset_scrap)
         if st.button('Clear HTML', width='stretch', type='primary'):
             st.session_state.html_reset = True
             st.rerun()
@@ -2711,8 +2721,11 @@ def complex_film(device):
             st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
         st.markdown('---')
 
+        # ==============================
+        #         SAVE SCRAP
+        # ==============================
         if st.session_state.save_scrap:
-            if st.session_state.s_type == "film":
+            if st.session_state.s_type == "film": # Film
                 if st.session_state.scrap_new[0][1] in df['Code'].values:
                     index = df.loc[df['Code'] == st.session_state.scrap_new[0][1]].index
                     df.loc[index] = st.session_state.scrap_new[0]
@@ -2732,18 +2745,23 @@ def complex_film(device):
                     new_df = pd.DataFrame(st.session_state.actress_new, columns=actress_df.columns)
                     final_df = pd.concat([actress_df, new_df], ignore_index=True)
                     st.session_state.actress_df = final_df
-            else:
+                    
+            else: # Cast
                 if st.session_state.scrap_new[0][3] in actress_df['Name (Kanji)'].values:
                     index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[0][3]].index
                     row = index[0] + 2
                     actress_worksheet().update(f'A{row}:O{row}', st.session_state.scrap_new)
                 else:
                     actress_worksheet().append_rows(st.session_state.scrap_new)
+
             st.session_state.html_reset = True
             st.toast("✅ Scrap Saved Successfully!")
             time.sleep(.5)
             st.rerun()
-            
+        
+        # ========================
+        #      SHOW SCRAPPING
+        # ========================
         elif st.session_state.show_scrap:
             st.session_state.start_scrap = False
             if st.session_state.s_type == "film":
@@ -2755,26 +2773,19 @@ def complex_film(device):
             else:
                 st.write("Isi scrap Cast")
                 st.write(st.session_state.scrap_new)
-                
 
+        # =======================
+        #    START SCRAPPING
+        # =======================
         if st.session_state.html_bar:
             soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
             if soup.find():
-                st.info('ℹ️ Scrapping Film')
                 st.session_state.s_type = 'film'
             else:
-                st.info('ℹ️ Scrapping Cast')
                 st.session_state.s_type = 'cast'
+            
             if st.session_state.start_scrap:
                 if st.session_state.s_type == 'film':
-                    gallery = soup.find("div", id="gallery-wrapper")
-                    # ambil semua img di dalamnya
-                    img_tags = gallery.find_all("img")
-
-                    # ambil src
-                    img_srcs = ', '.join([img.get("src") for img in img_tags])
-
-
                     film_title = soup.find('h1').get_text(strip=True)
 
                     section = soup.find("div", class_="col-md-9")
@@ -2785,7 +2796,7 @@ def complex_film(device):
 
                         if span and "DVD ID:" in span.text:
                             dvd_id = p.get_text(strip=True).replace(span.get_text(strip=True), "").strip()
-                            st.markdown(f"# {dvd_id}")
+                            st.markdown(f"# :orange-background[{dvd_id}]")
                         
                         if span and "Release Date" in span.text:
                             release_date = datetime.strptime(p.get_text(strip=True).replace(span.get_text(strip=True), "").strip(), "%d %b %Y")
@@ -2834,6 +2845,7 @@ def complex_film(device):
                     film_ref = film_link.get("href") if film_link else '--'
 
                     if dvd_id in df["Code"].values:
+                        st.write(':blue-background[ℹ️ Film exist in database!]')
                         match_film_data = df[df["Code"] == dvd_id]
 
                         tags = match_film_data["Tags"].iloc[0]
@@ -2841,85 +2853,107 @@ def complex_film(device):
                 
                         a_index = match_film_data["A-Detector"].iloc[0]
                     else:
+                        st.write(':blue-background[ℹ️ New Film!]')
                         info_index = 0
                         tags = 'No Tags'
                         a_index = False
                     
-                    st.selectbox('Info', options=['🔴 Not Watched', '🟢 Watched', '🟣 Goat'], key='input_info', index=info_index)
+                    st.space('small')
+                    input_info = st.selectbox(':yellow-background[Info:]', options=['🔴 Not Watched', '🟢 Watched', '🟣 Goat'], key='input_info', index=info_index)
+                    input_info = input_info.split(' ',1)[1]
                     st.space('small')
                     input_a = st.toggle('✨ A-Detector', value=a_index)
-                    if img_srcs:
-                        st.space('small')
-                        st.write(':yellow-background[Gallery:]')
-                        if 'prev_pic' not in st.session_state:  
-                            st.session_state.prev_pic = 0
-                        
-                        pics = [img.get("src") for img in img_tags]
-                        count = len(pics)
-
-                        st.markdown(
-                            """
-                            <style>
-                            div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
-
-                            .img-fit {
-                                margin-top: -13px; 
-                                padding-top: 0; 
-                                display: flex;             /* gunakan flexbox */
-                                justify-content: center;   /* horizontal center */
-                                align-items: center;       /* vertical center jika container tinggi ditentukan */
-                                background-color: #ffffff;
-                                border-radius: 5px;
-                                margin-bottom: 15px;
-                            }
-
-                            .img-fit img {
-                                max-width: 100%;
-                                height: 400px;
-                                width: auto;
-                                object-fit: contain;
-                                display: none;  /* default hidden semua gambar */
-                            }
-
-                            .img-fit img.active {
-                                display: block; /* hanya gambar active yang terlihat */
-                            }
-                            </style>
-                            """,
-                            unsafe_allow_html=True
-                        )
-
-                        # HTML untuk semua gambar, preload semuanya
-                        img_html = '<div class="img-fit">'
-                        for i, pic in enumerate(pics):
-                            active_class = 'active' if i == st.session_state.prev_pic else ''
-                            img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
-                        img_html += '</div>'
-
-                        st.markdown(img_html, unsafe_allow_html=True)
-
-
-                        with st.container(horizontal=True):
-                            # Tombol navigasi
-                            st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
-                            st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
+                    
                     st.space('small')
-                    st.write(':yellow-background[Thumbnail:]')
+                    background_text('Gallery:', 'yellow')
+                    try:
+                        gallery = soup.find("div", id="gallery-wrapper")
+                        # ambil semua img di dalamnya
+                        img_tags = gallery.find_all("img")
+
+                        # ambil src
+                        img_srcs = ', '.join([img.get("src") for img in img_tags])
+                        if img_srcs:
+                            if 'prev_pic' not in st.session_state:  
+                                st.session_state.prev_pic = 0
+                            
+                            pics = [img.get("src") for img in img_tags]
+                            count = len(pics)
+
+                            st.markdown(
+                                """
+                                <style>
+                                div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
+
+                                .img-fit {
+                                    margin-top: -13px; 
+                                    padding-top: 0; 
+                                    display: flex;             /* gunakan flexbox */
+                                    justify-content: center;   /* horizontal center */
+                                    align-items: center;       /* vertical center jika container tinggi ditentukan */
+                                    background-color: #ffffff;
+                                    border-radius: 5px;
+                                    margin-bottom: 15px;
+                                }
+
+                                .img-fit img {
+                                    max-width: 100%;
+                                    height: 400px;
+                                    width: auto;
+                                    object-fit: contain;
+                                    display: none;  /* default hidden semua gambar */
+                                }
+
+                                .img-fit img.active {
+                                    display: block; /* hanya gambar active yang terlihat */
+                                }
+                                </style>
+                                """,
+                                unsafe_allow_html=True
+                            )
+
+                            # HTML untuk semua gambar, preload semuanya
+                            img_html = '<div class="img-fit">'
+                            for i, pic in enumerate(pics):
+                                active_class = 'active' if i == st.session_state.prev_pic else ''
+                                img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
+                            img_html += '</div>'
+
+                            st.markdown(img_html, unsafe_allow_html=True)
+
+
+                            with st.container(horizontal=True):
+                                # Tombol navigasi
+                                st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
+                                st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
+                    except Exception as e:
+                        st.error('Gallery Not Found! ❌')
+                        img_srcs = 'Not Found'
+
+                    st.space('small')
+                    background_text('Thumbnail:', 'yellow')
                     with st.container(horizontal_alignment='center'):
                         st.image(thumbnail, width=180)
                     st.space('small')
-                    st.write(f":yellow-background[Release Date:] {formatted_date} ({release_date})")
+                    background_text('Release Date:', 'yellow')
+                    st.write(f"{formatted_date} ({release_date.date()})")
                     st.space('small')
-                    st.write(':yellow-background[Link:]', film_ref)
+                    background_text('Link:', 'yellow')
+                    st.write(film_ref)
                     st.space('small')
-                    st.write(':yellow-background[Title:]', film_title)
+                    background_text('Title:', 'yellow')
+                    st.write(film_title)
                     st.space('small')
-                    st.write(':yellow-background[Preview Image:]')
-                    st.write(img_srcs)
+                    background_text('Preview Image:', 'yellow')
+                    if img_srcs != 'Not Found':
+                        st.write(img_srcs)
+                    else:
+                        st.error('Gallery Not Found! ❌')
                     st.space('small')
-                    st.write(':yellow-background[Actress Name:]', actress_name)
+                    background_text('Actress Name:', 'yellow')
+                    st.write(actress_name)
                     st.space('small')
-                    st.write(':yellow-background[New Actress:]')
+                    st.markdown('### :orange-background[New Actress:]')
                     st.write(casts)
                         
                     scrap_new.append([
@@ -2929,7 +2963,7 @@ def complex_film(device):
                         formatted_date,
                         thumbnail,
                         tags,
-                        st.session_state.input_info[2:],
+                        input_info,
                         release_status,
                         film_ref,
                         img_srcs,
@@ -2938,7 +2972,8 @@ def complex_film(device):
 
                     st.session_state.actress_new = casts
                     st.session_state.scrap_new = scrap_new
-                else:
+
+                else: # Cast
                     def extract_field(field, text):
                         pattern = rf"{field}:\s*(.*?)\s*(?=\s*-\s*[A-Za-z ]+:|\n|$)"
                         match = re.search(pattern, text)
@@ -2952,13 +2987,15 @@ def complex_film(device):
                         "Measurements": extract_field("Measurements", st.session_state.html_bar),
                         "Cup": extract_field("Cup", st.session_state.html_bar),
                         "Height": extract_field("Height", st.session_state.html_bar),
-                        "JP": extract_field("JP", st.session_state.html_bar),
+                        "JP": extract_field("JP", st.session_state.html_bar)
                     }
 
                     age = calculate_age(data['DOB'])
                     size_char = ['B','W','H']
                     measurement = ' / '.join([f"{size_char[i]}{num}" for i, num in enumerate(data["Measurements"].split("-"))])
+
                     if data['JP'] in actress_df['Name (Kanji)'].values:
+                        st.write(':blue-background[ℹ️ Actress found in database!]')
                         match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
                         idx = match_data.index
                     
@@ -2981,15 +3018,16 @@ def complex_film(device):
                             match_data['Page'].iloc[0],
                         ]
 
+                        st.write()
                         st.session_state.scrap_new = new_value
                     else:
-                        #  new_value = [
-                        #      'Not Checked',
-                        #      st.secrets.indicators.PLACEHOLDER_IMG,
-                        #      
-                        #  ]
-                        st.warning('⚠️ Actress not found in database!')
+                        st.error('Actress not found in database! ❌')                        
             else:
+                if soup.find():
+                    st.info('ℹ️ Scrapping Film')
+                else:
+                    st.info('ℹ️ Scrapping Cast')
+
                 st.success('✅ HTML Detected! (Ready to scrap)')
         else:
             st.warning('⚠️ HTML Empty')
