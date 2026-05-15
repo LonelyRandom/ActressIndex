@@ -2718,10 +2718,12 @@ def complex_film(device):
                     df.loc[index] = st.session_state.scrap_new[0]
                     
                     row = index + 2
-                    film_worksheet().update(f'A{row}:K{row}', st.session_state.scrap_new[0])
+                    film_worksheet().update(f'A{row}:K{row}', st.session_state.scrap_new)
+                    st.toast('ℹ Existing Film')
                 else:
                     film_worksheet().append_rows(st.session_state.scrap_new)
                     df.loc[len(df)] = st.session_state.scrap_new[0]
+                    st.toast('ℹ New Film')
 
                 st.session_state.film_df = df
                 
