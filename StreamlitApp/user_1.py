@@ -1411,6 +1411,7 @@ def display_film_grid(df, tag_df):
                                     button_text = film['Code']
                                 st.badge(film['is_release'], icon=film['badge_icon'], color=film['badge_color'])
                             else:
+                                button_text = film['Code']
                                 st.badge(film['Info'], icon=film['badge_icon'], color=film['badge_color'])
 
                         # Tambahkan wrapper dengan fixed height
