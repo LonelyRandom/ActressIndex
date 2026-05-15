@@ -242,6 +242,11 @@ def calculate_age(birthdate_str):
         except:
             return None
 
+def reset_search_by():
+    if st.session_state.search_by != 'Actress':
+        st.session_state.search_bar = ''
+    else:
+        st.session_state.search_bar = 'All'
 def display_film_card(df, tag_df):
     """
     Menampilkan DataFrame aktris dalam bentuk card yang menarik
@@ -249,8 +254,18 @@ def display_film_card(df, tag_df):
     Args:
         df: DataFrame dengan kolom: Actress Name, Code, Release Date, Picture, Tags, Status
     """
+
+    actress_df = init_dataframe_actress()
+
     TAGS_OPTS = sorted(
         tag_df['Tags']
+        .dropna()
+        .unique()
+        .tolist()
+    )
+
+    ACTRESS_OPTS = ['All', 'Many', 'Not Listed'] + sorted(
+        actress_df['Name (Alphabet)']
         .dropna()
         .unique()
         .tolist()
@@ -266,8 +281,11 @@ def display_film_card(df, tag_df):
     # Filter options
     if st.session_state.get('search_reset', False):
         st.session_state.search_reset = False
-        st.session_state.search_bar = ''
-        st.session_state.search_by = 'Code'
+        if st.session_state.search_by != 'Actress':
+            st.session_state.search_bar = ''
+        else:
+            st.session_state.search_bar = 'All'
+
     
     if st.session_state.get('tags_reset', False):
         st.session_state.tags_reset = False
@@ -291,12 +309,15 @@ def display_film_card(df, tag_df):
     )
     
     with st.sidebar:
-        search_by = st.radio('Search By:', options=['Code', 'Actress', 'Title'], horizontal=True, key='search_by', on_change=reset_page)
+        search_by = st.radio('Search By:', options=['Code', 'Actress', 'Title'], horizontal=True, key='search_by', on_change=reset_search_by)
         col1, col2, col3 = st.columns(3)
 
         with col1:
             with st.container(horizontal=True, vertical_alignment='bottom'):
-                search_name = st.text_input("🔍 Search Bar", placeholder="Name or Code...", key='search_bar', on_change=reset_page)
+                if search_by != 'Actress':
+                    search_name = st.text_input("🔍 Search Bar", placeholder="Name or Code...", key='search_bar', on_change=reset_page)
+                else:
+                    search_name = st.selectbox('🔍 Search Bar', options=ACTRESS_OPTS, key='search_bar', on_change=reset_page)
                 if st.button('Clear', on_click=reset_page):
                     st.session_state.search_reset = True
                     st.rerun()
@@ -379,7 +400,10 @@ def display_film_card(df, tag_df):
             search_name = '-'.join(search_name)
             mask = filtered_df['Code'].str.contains(search_name, case=False, na=False)
         elif search_by == 'Actress':
-            mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
+            if search_name != 'All':
+                mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
+            else:
+                mask = [True] * len(filtered_df)
         else:
             mask = filtered_df['Title'].str.contains(search_name, case=False, na=False)
 
@@ -401,14 +425,64 @@ def display_film_card(df, tag_df):
     
     st.markdown("---")
     st.markdown(
-        f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Film Information</div>",
+        f"<div style='text-align:center; font-weight:600; font-size:25px; padding-bottom:15px'>Film Information</div>",
         unsafe_allow_html=True
     )
     with st.container(horizontal=True):
-        st.metric("Total Film", len(filtered_df))
-        st.metric("Watched", watched_count)
-        st.metric("Goat", goat_count)
-    
+            st.markdown(
+            f"""
+            <div style="
+                border: 1px solid rgba(49, 51, 63, 1);
+                border-radius: 10px;
+                padding: 12px;
+                text-align: center;
+            ">
+                <div style="font-size: 14px; color: gray;">
+                    Total Film
+                </div>
+                <div style="font-size: 28px; font-weight: bold;">
+                    {len(filtered_df):,}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+            st.markdown(
+            f"""
+            <div style="
+                border: 1px solid rgba(49, 51, 63, 1);
+                border-radius: 10px;
+                padding: 12px;
+                text-align: center;
+            ">
+                <div style="font-size: 14px; color: gray;">
+                    Watched
+                </div>
+                <div style="font-size: 28px; font-weight: bold;">
+                    {watched_count:,}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+            st.markdown(
+            f"""
+            <div style="
+                border: 1px solid rgba(49, 51, 63, 1);
+                border-radius: 10px;
+                padding: 12px;
+                text-align: center;
+            ">
+                <div style="font-size: 14px; color: gray;">
+                    Goat
+                </div>
+                <div style="font-size: 28px; font-weight: bold;">
+                    {goat_count:,}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     st.markdown("---")
     
     if filtered_df.empty:
@@ -775,6 +849,7 @@ def display_film_calender(df):
     today_date = st.session_state.selected_date
     today_month = today_date.month
     today_year = today_date.year
+
     with st.container(horizontal=True):
         calender_month = st.number_input('Month', min_value=1, max_value=12, value=today_month, key='calender_month')
         calender_year = st.number_input('Year', min_value=2000, value=today_year, key='calender_year')
@@ -1154,6 +1229,14 @@ def display_film_grid(df, tag_df):
     """
     Menampilkan semua card sekaligus dalam grid
     """
+    actress_df = init_dataframe_actress()
+    ACTRESS_OPTS = ['All', 'Many', 'Not Listed'] + sorted(
+        actress_df['Name (Alphabet)']
+        .dropna()
+        .unique()
+        .tolist()
+    )
+
     TAGS_OPTS = sorted(
         tag_df['Tags']
         .dropna()
@@ -1179,8 +1262,10 @@ def display_film_grid(df, tag_df):
 
     if st.session_state.get('search_reset', False):
         st.session_state.search_reset = False
-        st.session_state.search_bar = ''
-        st.session_state.search_by = 'Code'
+        if st.session_state.search_by != 'Actress':
+            st.session_state.search_bar = ''
+        else:
+            st.session_state.search_bar = 'All'
 
     if st.session_state.get('tags_reset', False):
         st.session_state.tags_reset = False
@@ -1202,7 +1287,7 @@ def display_film_grid(df, tag_df):
         actress_width = 76
     with st.sidebar:
         with st.container(horizontal=True):
-            search_by = st.radio('Search By :', options=['Code', 'Actress', 'Title'], key='search_by', width='content', horizontal=False)    
+            search_by = st.radio('Search By :', options=['Code', 'Actress', 'Title'], key='search_by', width='content', horizontal=False, on_change=reset_search_by)    
             filters = st.radio(
                     "Type :",
                     ["Watched", "Not Watched"],
@@ -1238,9 +1323,12 @@ def display_film_grid(df, tag_df):
             }).fillna('grey')
 
         with st.container(horizontal=True, vertical_alignment='bottom'):
-            search_name = st.text_input("🔍 Search (Actress Name / Code):", 
+            if st.session_state.search_by != 'Actress':
+                search_name = st.text_input("🔍 Search (Actress Name / Code):", 
                                     placeholder="Name or Code...", 
                                     key='search_bar', on_change=reset_page)
+            else:
+                search_name = st.selectbox('🔍 Search Bar', options=ACTRESS_OPTS, key='search_bar', on_change=reset_page)
             if st.button('Clear', on_click=reset_page):
                 st.session_state.search_reset = True
                 st.rerun()
@@ -1251,17 +1339,17 @@ def display_film_grid(df, tag_df):
                 options=TAGS_OPTS, 
                 on_change=reset_page)
             if st.button('Clear', on_click=reset_page, key='tag_clear'):
-                    st.session_state.search_reset = True
-                    st.rerun()
-        sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
+                st.session_state.search_reset = True
+                st.rerun()
+        st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
-        if sort_type == '(A-Z)':
+        if st.session_state.sort_type == '(A-Z)':
             filtered_df = filtered_df.sort_values(by='Code', ascending=True)
 
-        elif sort_type == '(Z-A)':
+        elif st.session_state.sort_type == '(Z-A)':
             filtered_df = filtered_df.sort_values(by='Code', ascending=False)
 
-        elif sort_type == 'Date Acs':
+        elif st.session_state.sort_type == 'Date Acs':
             filtered_df['release_date'] = pd.to_datetime(
                 filtered_df['Release Date'],
                 format='%d/%m/%Y',
@@ -1269,7 +1357,7 @@ def display_film_grid(df, tag_df):
             )
             filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
 
-        elif sort_type == 'Date Desc':
+        elif st.session_state.sort_type == 'Date Desc':
             filtered_df['release_date'] = pd.to_datetime(
                 filtered_df['Release Date'],
                 format='%d/%m/%Y',
@@ -1311,7 +1399,10 @@ def display_film_grid(df, tag_df):
             search_name = '-'.join(search_name)
             mask = filtered_df['Code'].str.contains(search_name, case=False, na=False)
         elif search_by == 'Actress':
-            mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
+            if search_name != 'All':
+                mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
+            else:
+                mask = [True] * len(filtered_df)
         else:
             mask = filtered_df['Title'].str.contains(search_name, case=False, na=False)
         filtered_df = filtered_df[mask].copy()
@@ -1727,6 +1818,7 @@ def complex_film(device):
         .unique()
         .tolist()
     )
+
 
     def reset_pic():
         st.session_state.prev_pic = 0
