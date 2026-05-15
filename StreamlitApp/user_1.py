@@ -2735,7 +2735,7 @@ def complex_film(device):
             else:
                 if st.session_state.scrap_new[0][3] in actress_df['Name (Kanji)'].values:
                     index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[0][3]].index
-                    row = index + 2
+                    row = int(index[0]) + 2
                     actress_worksheet().update(f'A{row}:O{row}', st.session_state.scrap_new)
                 else:
                     actress_worksheet().append_rows(st.session_state.scrap_new)
