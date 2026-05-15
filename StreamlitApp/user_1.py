@@ -289,79 +289,80 @@ def display_film_card(df, tag_df):
         """,
         unsafe_allow_html=True
     )
-        
-    search_by = st.radio('Search By:', options=['Code', 'Actress', 'Title'], horizontal=True, key='search_by', on_change=reset_page)
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        with st.container(horizontal=True, vertical_alignment='bottom'):
-            search_name = st.text_input("🔍 Search Bar", placeholder="Name or Code...", key='search_bar', on_change=reset_page)
-            if st.button('Clear', on_click=reset_page):
-                st.session_state.search_reset = True
-                st.rerun()
-    with col2:
-        info_filter = st.multiselect(
-            "📊 Status Filter:",
-            options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
-            default=['Watched', 'Goat', 'Not Watched']
-        )
-    with col3:
-        with st.container(horizontal=True, vertical_alignment='bottom'):
-            tags_filter = st.multiselect("Tags:", options=TAGS_OPTS, on_change=reset_page, key='tag_bar')
-            if st.button('Clear', on_click=reset_page, key='tag_clear'):
-                st.session_state.tags_reset = True
-                st.rerun()
     
-    sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
-    # Filter data
-    filtered_df = df.copy()
-    if sort_type == '(A-Z)':
-        filtered_df = filtered_df.sort_values(by='Code', ascending=True)
+    with st.sidebar:
+        search_by = st.radio('Search By:', options=['Code', 'Actress', 'Title'], horizontal=True, key='search_by', on_change=reset_page)
+        col1, col2, col3 = st.columns(3)
 
-    elif sort_type == '(Z-A)':
-        filtered_df = filtered_df.sort_values(by='Code', ascending=False)
+        with col1:
+            with st.container(horizontal=True, vertical_alignment='bottom'):
+                search_name = st.text_input("🔍 Search Bar", placeholder="Name or Code...", key='search_bar', on_change=reset_page)
+                if st.button('Clear', on_click=reset_page):
+                    st.session_state.search_reset = True
+                    st.rerun()
+        with col2:
+            info_filter = st.multiselect(
+                "📊 Status Filter:",
+                options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
+                default=['Watched', 'Goat', 'Not Watched']
+            )
+        with col3:
+            with st.container(horizontal=True, vertical_alignment='bottom'):
+                tags_filter = st.multiselect("Tags:", options=TAGS_OPTS, on_change=reset_page, key='tag_bar')
+                if st.button('Clear', on_click=reset_page, key='tag_clear'):
+                    st.session_state.tags_reset = True
+                    st.rerun()
+        
+        sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
+        # Filter data
+        filtered_df = df.copy()
+        if sort_type == '(A-Z)':
+            filtered_df = filtered_df.sort_values(by='Code', ascending=True)
 
-    elif sort_type == 'Date Acs':
-        filtered_df['release_date'] = pd.to_datetime(
-            filtered_df['Release Date'],
-            format='%d/%m/%Y',
-            errors='coerce'
-        )
-        filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
+        elif sort_type == '(Z-A)':
+            filtered_df = filtered_df.sort_values(by='Code', ascending=False)
 
-    elif sort_type == 'Date Desc':
-        filtered_df['release_date'] = pd.to_datetime(
-            filtered_df['Release Date'],
-            format='%d/%m/%Y',
-            errors='coerce'
-        )
-        filtered_df = filtered_df.sort_values(by='release_date', ascending=False)
-    if st.toggle('Date filter', key='date_filter'):
-        with st.container(horizontal=True):
-            select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_page)
-            filtered_df['filtered_date'] = pd.to_datetime(
+        elif sort_type == 'Date Acs':
+            filtered_df['release_date'] = pd.to_datetime(
                 filtered_df['Release Date'],
                 format='%d/%m/%Y',
                 errors='coerce'
             )
-            selected_date = st.date_input('Filter by date:', key='calender_filter', min_value=filtered_df['filtered_date'].min(), on_change=reset_page)
-        if selected_date:
-            selected_date = pd.to_datetime(selected_date).date()
-            if select_date_type == 'Date':
-                st.write(f'Filter by {select_date_type} : {selected_date}')
-                filtered_df = filtered_df[
-                    filtered_df['filtered_date'].dt.date == selected_date
-                ]
-            elif select_date_type == 'Month/Year':
-                st.write(f'Filter by {select_date_type} : {selected_date.strftime("%B")} {selected_date.year}')
-                filtered_df = filtered_df[
-                    (filtered_df['filtered_date'].dt.month == selected_date.month) &
-                    (filtered_df['filtered_date'].dt.year == selected_date.year)
-                ]
-            elif select_date_type == 'Year':
-                st.write(f'Filter by {select_date_type} : {selected_date.year}')
-                filtered_df = filtered_df[
-                    filtered_df['filtered_date'].dt.year == selected_date.year
+            filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
+
+        elif sort_type == 'Date Desc':
+            filtered_df['release_date'] = pd.to_datetime(
+                filtered_df['Release Date'],
+                format='%d/%m/%Y',
+                errors='coerce'
+            )
+            filtered_df = filtered_df.sort_values(by='release_date', ascending=False)
+        if st.toggle('Date filter', key='date_filter', on_change=reset_page):
+            with st.container(horizontal=True):
+                select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_page)
+                filtered_df['filtered_date'] = pd.to_datetime(
+                    filtered_df['Release Date'],
+                    format='%d/%m/%Y',
+                    errors='coerce'
+                )
+                selected_date = st.date_input('Filter by date:', key='calender_filter', min_value=filtered_df['filtered_date'].min(), on_change=reset_page)
+            if selected_date:
+                selected_date = pd.to_datetime(selected_date).date()
+                if select_date_type == 'Date':
+                    st.write(f'Filter by {select_date_type} : {selected_date}')
+                    filtered_df = filtered_df[
+                        filtered_df['filtered_date'].dt.date == selected_date
+                    ]
+                elif select_date_type == 'Month/Year':
+                    st.write(f'Filter by {select_date_type} : {selected_date.strftime("%B")} {selected_date.year}')
+                    filtered_df = filtered_df[
+                        (filtered_df['filtered_date'].dt.month == selected_date.month) &
+                        (filtered_df['filtered_date'].dt.year == selected_date.year)
+                    ]
+                elif select_date_type == 'Year':
+                    st.write(f'Filter by {select_date_type} : {selected_date.year}')
+                    filtered_df = filtered_df[
+                        filtered_df['filtered_date'].dt.year == selected_date.year
                 ]
     if st.session_state.width_option == 'Device 1':
         img_card_height = 215
@@ -398,6 +399,7 @@ def display_film_card(df, tag_df):
     watched_count = len(filtered_df[filtered_df['Info'] == 'Watched']) if 'Info' in filtered_df.columns else 0
     goat_count = len(filtered_df[filtered_df['Info'] == 'Goat']) if 'Info' in filtered_df.columns else 0
     
+    st.markdown("---")
     with st.container(horizontal=True):
         st.metric("Total Film", len(filtered_df))
         st.metric("Watched", watched_count)
@@ -1194,109 +1196,109 @@ def display_film_grid(df, tag_df):
         image_width = 106
         image_heigth = 151
         actress_width = 76
-        
-    with st.container(horizontal=True):
-        search_by = st.radio('Search By :', options=['Code', 'Actress', 'Title'], key='search_by', width='content', horizontal=False)    
-        filters = st.radio(
-                "Type :",
-                ["Watched", "Not Watched"],
-                horizontal=False,
-                on_change=reset_page,
-                width='content'
-            )
+    with st.sidebar:
+        with st.container(horizontal=True):
+            search_by = st.radio('Search By :', options=['Code', 'Actress', 'Title'], key='search_by', width='content', horizontal=False)    
+            filters = st.radio(
+                    "Type :",
+                    ["Watched", "Not Watched"],
+                    horizontal=False,
+                    on_change=reset_page,
+                    width='content'
+                )
 
-    # Filter data dan simpan index asli
-    if filters == 'Watched':
-        filtered_df = df[df['Info'] != 'Not Watched'].copy()
-        filtered_df['badge_icon'] = filtered_df['Info'].map({
-            'Watched': '🟢',
-            'Goat': '🟣'
-        }).fillna('⚪')
-        filtered_df['badge_color'] = filtered_df['Info'].map({
-            'Watched': 'green',
-            'Goat': 'violet'
-        }).fillna('⚪')
-    elif filters == 'Not Watched':
-        filtered_df = df[df['Info'] == 'Not Watched'].copy()
-        filtered_df['is_release'] = filtered_df['Release Status'].map({
-            1: 'Released',
-            0: 'Not Released'
-        }).fillna('Unknown')
-        filtered_df['badge_icon'] = filtered_df['Release Status'].map({
-            1: '🟢',
-            0: '🔴'
-        }).fillna('⚪')
-        filtered_df['badge_color'] = filtered_df['Release Status'].map({
-            1: 'green',
-            0: 'red'
-        }).fillna('grey')
+        # Filter data dan simpan index asli
+        if filters == 'Watched':
+            filtered_df = df[df['Info'] != 'Not Watched'].copy()
+            filtered_df['badge_icon'] = filtered_df['Info'].map({
+                'Watched': '🟢',
+                'Goat': '🟣'
+            }).fillna('⚪')
+            filtered_df['badge_color'] = filtered_df['Info'].map({
+                'Watched': 'green',
+                'Goat': 'violet'
+            }).fillna('⚪')
+        elif filters == 'Not Watched':
+            filtered_df = df[df['Info'] == 'Not Watched'].copy()
+            filtered_df['is_release'] = filtered_df['Release Status'].map({
+                1: 'Released',
+                0: 'Not Released'
+            }).fillna('Unknown')
+            filtered_df['badge_icon'] = filtered_df['Release Status'].map({
+                1: '🟢',
+                0: '🔴'
+            }).fillna('⚪')
+            filtered_df['badge_color'] = filtered_df['Release Status'].map({
+                1: 'green',
+                0: 'red'
+            }).fillna('grey')
 
-    with st.container(horizontal=True, vertical_alignment='bottom'):
-        search_name = st.text_input("🔍 Search (Actress Name / Code):", 
-                                  placeholder="Name or Code...", 
-                                  key='search_bar', on_change=reset_page)
-        if st.button('Clear', on_click=reset_page):
-            st.session_state.search_reset = True
-            st.rerun()
-
-    with st.container(horizontal=True, vertical_alignment='bottom'):
-        tags_filter = st.multiselect(
-            "Tags:", 
-            options=TAGS_OPTS, 
-            on_change=reset_page)
-        if st.button('Clear', on_click=reset_page, key='tag_clear'):
+        with st.container(horizontal=True, vertical_alignment='bottom'):
+            search_name = st.text_input("🔍 Search (Actress Name / Code):", 
+                                    placeholder="Name or Code...", 
+                                    key='search_bar', on_change=reset_page)
+            if st.button('Clear', on_click=reset_page):
                 st.session_state.search_reset = True
                 st.rerun()
-    sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
-    # Filter data
-    if sort_type == '(A-Z)':
-        filtered_df = filtered_df.sort_values(by='Code', ascending=True)
 
-    elif sort_type == '(Z-A)':
-        filtered_df = filtered_df.sort_values(by='Code', ascending=False)
+        with st.container(horizontal=True, vertical_alignment='bottom'):
+            tags_filter = st.multiselect(
+                "Tags:", 
+                options=TAGS_OPTS, 
+                on_change=reset_page)
+            if st.button('Clear', on_click=reset_page, key='tag_clear'):
+                    st.session_state.search_reset = True
+                    st.rerun()
+        sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
+        # Filter data
+        if sort_type == '(A-Z)':
+            filtered_df = filtered_df.sort_values(by='Code', ascending=True)
 
-    elif sort_type == 'Date Acs':
-        filtered_df['release_date'] = pd.to_datetime(
-            filtered_df['Release Date'],
-            format='%d/%m/%Y',
-            errors='coerce'
-        )
-        filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
+        elif sort_type == '(Z-A)':
+            filtered_df = filtered_df.sort_values(by='Code', ascending=False)
 
-    elif sort_type == 'Date Desc':
-        filtered_df['release_date'] = pd.to_datetime(
-            filtered_df['Release Date'],
-            format='%d/%m/%Y',
-            errors='coerce'
-        )
-        filtered_df = filtered_df.sort_values(by='release_date', ascending=False)
-    if st.toggle('Date filter', key='date_filter'):
-        with st.container(horizontal=True):
-            select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_page)
-            filtered_df['filtered_date'] = pd.to_datetime(
+        elif sort_type == 'Date Acs':
+            filtered_df['release_date'] = pd.to_datetime(
                 filtered_df['Release Date'],
                 format='%d/%m/%Y',
                 errors='coerce'
             )
-            selected_date = st.date_input('Filter by date:', key='calender_filter', min_value=date(1980,1,1), on_change=reset_page)
-            if selected_date:
-                selected_date = pd.to_datetime(selected_date).date()
-                if select_date_type == 'Date':
-                    st.write(f'Filter by {select_date_type} : {selected_date}')
-                    filtered_df = filtered_df[
-                        filtered_df['filtered_date'].dt.date == selected_date
-                    ]
-                elif select_date_type == 'Month/Year':
-                    st.write(f'Filter by {select_date_type} : {selected_date.strftime("%B")} {selected_date.year}')
-                    filtered_df = filtered_df[
-                        (filtered_df['filtered_date'].dt.month == selected_date.month) &
-                        (filtered_df['filtered_date'].dt.year == selected_date.year)
-                    ]
-                elif select_date_type == 'Year':
-                    st.write(f'Filter by {select_date_type} : {selected_date.year}')
-                    filtered_df = filtered_df[
-                        filtered_df['filtered_date'].dt.year == selected_date.year
-                    ]
+            filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
+
+        elif sort_type == 'Date Desc':
+            filtered_df['release_date'] = pd.to_datetime(
+                filtered_df['Release Date'],
+                format='%d/%m/%Y',
+                errors='coerce'
+            )
+            filtered_df = filtered_df.sort_values(by='release_date', ascending=False)
+        if st.toggle('Date filter', key='date_filter',on_change=reset_page):
+            with st.container(horizontal=True):
+                select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_page)
+                filtered_df['filtered_date'] = pd.to_datetime(
+                    filtered_df['Release Date'],
+                    format='%d/%m/%Y',
+                    errors='coerce'
+                )
+                selected_date = st.date_input('Filter by date:', key='calender_filter', min_value=date(1980,1,1), on_change=reset_page)
+                if selected_date:
+                    selected_date = pd.to_datetime(selected_date).date()
+                    if select_date_type == 'Date':
+                        st.write(f'Filter by {select_date_type} : {selected_date}')
+                        filtered_df = filtered_df[
+                            filtered_df['filtered_date'].dt.date == selected_date
+                        ]
+                    elif select_date_type == 'Month/Year':
+                        st.write(f'Filter by {select_date_type} : {selected_date.strftime("%B")} {selected_date.year}')
+                        filtered_df = filtered_df[
+                            (filtered_df['filtered_date'].dt.month == selected_date.month) &
+                            (filtered_df['filtered_date'].dt.year == selected_date.year)
+                        ]
+                    elif select_date_type == 'Year':
+                        st.write(f'Filter by {select_date_type} : {selected_date.year}')
+                        filtered_df = filtered_df[
+                            filtered_df['filtered_date'].dt.year == selected_date.year
+                        ]
 
 
     if search_name:
@@ -1403,15 +1405,18 @@ def display_film_grid(df, tag_df):
                         with st.container(horizontal_alignment='center', horizontal=True):
                             if film['A-Detector'] == 1:
                                 film['badge_color'] = 'yellow'
+                            
+                            if film['Release Date'] == '?':
+                                release = '?'
+                            else:
+                                release = datetime.strptime(film['Release Date'], "%d/%m/%Y").strftime("%d %b %Y")
+                            
+                            if 'Downloaded' in film['Tags']:
+                                release += ' ✅'
 
                             if filters == 'Not Watched':
-                                if 'Downloaded' in film['Tags']:
-                                    button_text = film['Code'] + ' ✅'
-                                else:
-                                    button_text = film['Code']
                                 st.badge(film['is_release'], icon=film['badge_icon'], color=film['badge_color'])
                             else:
-                                button_text = film['Code']
                                 st.badge(film['Info'], icon=film['badge_icon'], color=film['badge_color'])
 
                         # Tambahkan wrapper dengan fixed height
@@ -1434,9 +1439,17 @@ def display_film_grid(df, tag_df):
                                         object-position: center;
                                     ">
                             </div>
+                            <div style="
+                                text-align: center;
+                                font-size: 12px;
+                                color: gray;
+                                margin-bottom: 10px;
+                            ">
+                                {release}
+                            </div>
                         """, unsafe_allow_html=True)
 
-                        if st.button(button_text, key=f'film_edit_{real_index}', width='stretch', type='primary'):
+                        if st.button(film['Code'], key=f'film_edit_{real_index}', width='stretch', type='primary'):
                             st.session_state.viewing_film_index = real_index
                             st.session_state.filtered_film_data = filtered_df_data
                             st.session_state.filtered_data_position = start_idx + i
@@ -2612,7 +2625,7 @@ def complex_film(device):
                 key='film_layout'
             )
 
-            if display_mode != 'Calender Scrap':
+            if display_mode not in ['Calender Scrap', 'Scrap Manual']:
                 tags_status = st.radio(
                     "Tags", 
                     ['All', 'Tags', 'No Tags'], 
@@ -2622,27 +2635,8 @@ def complex_film(device):
                 tags_status = 'Invalid'
 
         st.markdown('---')
+        st.subheader('⚙️ Page Option')
         show_a = st.toggle('✨')
-        
-        st.markdown('---')
-        if st.button('➕ Add New Film', width='stretch'):
-            add_new_film()
-        if st.session_state.log_out_btn == False:
-            if st.button('🔐 Logout', width='stretch'):
-                st.session_state.log_out_btn = True
-                st.rerun()
-        else:
-            st.warning('Are you sure want to logout?')
-            with st.container(horizontal=True):
-                if st.button('Yes', width='stretch'):
-                    st.session_state.clear()
-                    return 'login'
-                if st.button('No', width='stretch'):
-                    st.session_state.log_out_btn = False
-                    st.rerun()
-
-        if st.button('⬆️ Back to top', width='stretch'):
-            st.session_state.scroll_to_top = True
     
     # Main
     st.space('small')
@@ -2666,13 +2660,13 @@ def complex_film(device):
             filtered_df = filtered_df[filtered_df['Tags'] == 'No Tags']
 
     if display_mode == "Detailed":
-        st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Film Detailed</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center;'>Film Detailed</h1>", unsafe_allow_html=True)
         display_film_card(filtered_df, tag_df)
     elif display_mode == "Simple":
-        st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Film Simple</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center;'>Film Simple</h1>", unsafe_allow_html=True)
         display_film_grid(filtered_df, tag_df)
     elif display_mode == "Calender Scrap":
-        st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Calendar Scrap</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center;'>Calendar Scrap</h1>", unsafe_allow_html=True)
         display_film_calender(df)
     else:  # Table View
         def reset_scrap():
@@ -2791,6 +2785,8 @@ def complex_film(device):
                     section = soup.find("div", class_="col-md-9")
                     all_p = section.find_all("p")
 
+                    casts = []
+                    actress_list = []
                     for p in all_p:
                         span = p.find("span")
 
@@ -2807,8 +2803,6 @@ def complex_film(device):
                                 release_status = 0
 
                         if span and "Cast(s):" in span.text:
-                            casts = []
-                            actress_list = []
 
                             for a in p.find_all("a"):
                                 cast = a.get_text(strip=True)
@@ -2837,10 +2831,13 @@ def complex_film(device):
                                     ])
 
                                 actress_list.append(latin.strip())
-                            
+                    
+                    if actress_list:
+                        actress_name = ', '.join(actress_list)
+                    else:
+                        actress_name = 'Not Listed'
 
                     thumbnail = soup.find("div", id="thumbnailContainer").find("img").get("src")
-                    actress_name = ', '.join(actress_list)
                     film_link = soup.find("link", rel="canonical")
                     film_ref = film_link.get("href") if film_link else '--'
 
@@ -2928,7 +2925,7 @@ def complex_film(device):
                                 st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
                     except Exception as e:
                         st.error('Gallery Not Found! ❌')
-                        img_srcs = 'Not Found'
+                        img_srcs = 'No Picture'
 
                     st.space('small')
                     background_text('Thumbnail:', 'yellow')
@@ -2945,7 +2942,7 @@ def complex_film(device):
                     st.write(film_title)
                     st.space('small')
                     background_text('Preview Image:', 'yellow')
-                    if img_srcs != 'Not Found':
+                    if img_srcs != 'No Picture':
                         st.write(img_srcs)
                     else:
                         st.error('Gallery Not Found! ❌')
@@ -3032,7 +3029,27 @@ def complex_film(device):
         else:
             st.warning('⚠️ HTML Empty')
 
+    with st.sidebar:
+        st.markdown('---')
+        if st.button('➕ Add New Film', width='stretch'):
+            add_new_film()
+        if st.session_state.log_out_btn == False:
+            if st.button('🔐 Logout', width='stretch'):
+                st.session_state.log_out_btn = True
+                st.rerun()
+        else:
+            st.warning('Are you sure want to logout?')
+            with st.container(horizontal=True):
+                if st.button('Yes', width='stretch'):
+                    st.session_state.clear()
+                    return 'login'
+                if st.button('No', width='stretch'):
+                    st.session_state.log_out_btn = False
+                    st.rerun()
 
+        if st.button('⬆️ Back to top', width='stretch'):
+            st.session_state.scroll_to_top = True
+    
     st.markdown("""
     <style>
     ul[data-testid="stSelectboxVirtualDropdown"] li:nth-child(odd){
