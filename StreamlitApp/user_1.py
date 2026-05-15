@@ -400,6 +400,10 @@ def display_film_card(df, tag_df):
     goat_count = len(filtered_df[filtered_df['Info'] == 'Goat']) if 'Info' in filtered_df.columns else 0
     
     st.markdown("---")
+    st.markdown(
+        f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Film Information</div>",
+        unsafe_allow_html=True
+    )
     with st.container(horizontal=True):
         st.metric("Total Film", len(filtered_df))
         st.metric("Watched", watched_count)
