@@ -859,8 +859,8 @@ def display_film_calender(df):
     def set_save_edit():
         start_row = 2
         end_row = start_row + len(calender_df)
-        print(calender_df)
-        print(calender_df[calender_df.isna().any(axis=1)])
+        st.write(calender_df)
+        st.write(calender_df[calender_df.isna().any(axis=1)])
         st.stop()
         calendar_worksheet().update(f'A{start_row}:G{end_row}', calender_df.values.tolist())
         st.session_state.calender_data = calender_df
