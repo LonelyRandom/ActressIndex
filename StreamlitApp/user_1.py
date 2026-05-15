@@ -2845,7 +2845,7 @@ def complex_film(device):
                     
                     st.selectbox('Info', options=['🔴 Not Watched', '🟢 Watched', '🟣 Goat'], key='input_info', index=info_index)
                     st.space('small')
-                    st.toggle('✨ A-Detector', value=a_index)
+                    input_a = st.toggle('✨ A-Detector', value=a_index)
                     if img_srcs:
                         st.space('small')
                         st.write(':yellow-background[Gallery:]')
@@ -2931,7 +2931,7 @@ def complex_film(device):
                         release_status,
                         film_ref,
                         img_srcs,
-                        a_index
+                        input_a
                     ])
 
                     st.session_state.actress_new = casts
