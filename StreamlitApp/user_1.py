@@ -1851,11 +1851,9 @@ def complex_film(device):
         if st.session_state.editing_film_index == index:
             show_edit_film(film, idx)
         else:
-            show_view_film(film)
+            show_view_film(film, idx)
 
-    def show_view_film(film):
-
-
+    def show_view_film(film, idx):
         with st.container(key='poster_code', horizontal_alignment='center'):
             st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
             st.image(film['Picture'], width=200)
@@ -2002,8 +2000,16 @@ def complex_film(device):
             if film['A-Detector'] == 1:
                 st.badge(label='', icon='⭐', color='yellow')
 
-
-        st.markdown('### Tags')
+        with st.container(horizontal=True):
+            st.markdown('### Tags')
+            if film['Status'] == 'Not Watched':
+                if st.button('✅️', type='tertiary'):
+                    row = idx + 2
+                    if film['Tags'] == 'No Tags':
+                        tag_text = 'Downloaded'
+                    else:
+                        tag_text = film['Tags'] + ', Downloaded'
+                    film_worksheet().update(f'F{row}:F{row}', [tag_text])
         st.write(film['Tags'])
 
         st.markdown('### Gallery')
