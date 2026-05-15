@@ -2000,7 +2000,7 @@ def complex_film(device):
             if film['A-Detector'] == 1:
                 st.badge(label='', icon='⭐', color='yellow')
 
-        with st.container(horizontal=True, horizontal_aligment='distribute'):
+        with st.container(horizontal=True, horizontal_alignment='distribute'):
             st.markdown('### Tags')
             if film['Info'] == 'Not Watched':
                 if st.button('✅️', type='tertiary', width='content'):
