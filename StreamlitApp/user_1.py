@@ -2715,7 +2715,9 @@ def complex_film(device):
             if st.session_state.s_type == "film":
                 if st.session_state.scrap_new[0][1] in df['Code'].values:
                     index = df.loc[df['Code'] == st.session_state.scrap_new[0][1]].index
-                    df.loc[index] = st.session_state.scrap_new
+                    df.loc[index] = st.session_state.scrap_new[0]
+                    st.write(df.loc[index])
+                    st.stop()
                     
                     row = index + 2
                     film_worksheet().update(f'A{row}:K{row}', st.session_state.scrap_new)
