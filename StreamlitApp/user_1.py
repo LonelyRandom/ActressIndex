@@ -339,8 +339,10 @@ def display_film_card(df, tag_df):
                     st.session_state.tags_reset = True
                     st.rerun()
             with st.container(horizontal=True):
-                st.button(':green-background[:green[Downloaded]]', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content')
-                st.button(':yellow-background[:yellow[Want to Watch]]', on_click=set_tag, key='tag_wtw', args=('Want to watch',), type='tertiary', width='content')
+                if st.button(':green-background[:green[Downloaded]]', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content'):
+                    st.rerun()
+                if st.button(':yellow-background[:yellow[Want to Watch]]', on_click=set_tag, key='tag_wtw', args=('Want to watch',), type='tertiary', width='content'):
+                    st.rerun()
             
         sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
@@ -1350,8 +1352,10 @@ def display_film_grid(df, tag_df):
                 st.session_state.search_reset = True
                 st.rerun()
         with st.container(horizontal=True):
-            st.button(':green-background[:green[Downloaded]]', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content')
-            st.button(':yellow-background[:yellow[Want to Watch]]', on_click=set_tag, key='tag_wtw', args=('Want to watch',), type='tertiary', width='content')
+            if st.button(':green-background[:green[Downloaded]]', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content'):
+                st.rerun()
+            if st.button(':yellow-background[:yellow[Want to Watch]]', on_click=set_tag, key='tag_wtw', args=('Want to watch',), type='tertiary', width='content'):
+                st.rerun()
             
         st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
