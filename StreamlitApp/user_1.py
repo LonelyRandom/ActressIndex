@@ -247,6 +247,11 @@ def reset_search_by():
         st.session_state.search_bar = ''
     else:
         st.session_state.search_bar = 'All'
+
+def set_tag(tag):
+    st.session_state.page = 1
+    st.session_state.tag_bar = [tag]
+    
 def display_film_card(df, tag_df):
     """
     Menampilkan DataFrame aktris dalam bentuk card yang menarik
@@ -333,6 +338,9 @@ def display_film_card(df, tag_df):
                 if st.button('Clear', on_click=reset_page, key='tag_clear'):
                     st.session_state.tags_reset = True
                     st.rerun()
+            with st.container(horizontal=True):
+                st.button('Downloaded', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content')
+                st.button('Want to Watch', on_click=set_tag, key='tag_wtw', args=('Want to Watch',), type='tertiary', width='content')
         
         sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
@@ -1341,6 +1349,10 @@ def display_film_grid(df, tag_df):
             if st.button('Clear', on_click=reset_page, key='tag_clear'):
                 st.session_state.search_reset = True
                 st.rerun()
+        with st.container(horizontal=True):
+            st.button('Downloaded', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content')
+            st.button('Want to Watch', on_click=set_tag, key='tag_wtw', args=('Want to Watch',), type='tertiary', width='content')
+            
         st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
         if st.session_state.sort_type == '(A-Z)':
@@ -2000,21 +2012,16 @@ def complex_film(device):
             if film['A-Detector'] == 1:
                 st.badge(label='', icon='⭐', color='yellow')
 
-        with st.container(horizontal=True, horizontal_alignment='left'):
+        with st.container(horizontal=True, horizontal_alignment='left', vertical_alignment='bottom'):
             with st.container(width='content'):
                 st.markdown('### Tags')
             if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
                 if st.button('📥', width='content', type='tertiary'):
                     row = index + 2
-                    st.write(row)
                     if film['Tags'] == 'No Tags':
-                        st.write('ini no tags')
                         tag_text = 'Downloaded'
                     else:
-                        st.write('ini tags')
                         tag_text = film['Tags'] + ', Downloaded'
-                    st.write(tag_text)
-                    st.stop()
                     film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
                     df.at[idx, 'Tags'] = tag_text
                     st.session_state.film_df = df
