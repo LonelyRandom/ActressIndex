@@ -2003,14 +2003,20 @@ def complex_film(device):
         with st.container(horizontal=True, horizontal_alignment='left'):
             with st.container(width='content'):
                 st.markdown('### Tags')
-            if film['Info'] == 'Not Watched':
-                if st.button('📥', width='content'):
+            if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
+                if st.button('📥', width='content', type='tertiary'):
                     row = idx + 2
+                    st.write(row, film["Tags"])
+                    st.stop()
                     if film['Tags'] == 'No Tags':
                         tag_text = 'Downloaded'
                     else:
                         tag_text = film['Tags'] + ', Downloaded'
-                    film_worksheet().update(f'F{row}', [[tag_text]])
+                    film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                    df.at[idx, 'Tags'] = tag_text
+                    st.session_state.film_df = df
+                    st.toast(f'📥 {film["Code"]} is downloaded!')
+                    time.sleep(.5)
         st.write(film['Tags'])
 
         st.markdown('### Gallery')
