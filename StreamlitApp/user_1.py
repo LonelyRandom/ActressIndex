@@ -2004,7 +2004,7 @@ def complex_film(device):
             with st.container(width='content'):
                 st.markdown('### Tags')
             if film['Info'] == 'Not Watched':
-                if st.button('✅️', type='tertiary', width='content'):
+                if st.button('📥', width='content'):
                     row = idx + 2
                     if film['Tags'] == 'No Tags':
                         tag_text = 'Downloaded'
