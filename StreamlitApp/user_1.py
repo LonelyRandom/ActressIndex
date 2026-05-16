@@ -2006,10 +2006,15 @@ def complex_film(device):
             if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
                 if st.button('📥', width='content', type='tertiary'):
                     row = idx + 2
+                    st.write(row)
                     if film['Tags'] == 'No Tags':
+                        st.write('ini no tags')
                         tag_text = 'Downloaded'
                     else:
+                        st.write('ini tags')
                         tag_text = film['Tags'] + ', Downloaded'
+                    st.write(tag_text)
+                    st.stop()
                     film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
                     df.at[idx, 'Tags'] = tag_text
                     st.session_state.film_df = df
