@@ -2001,7 +2001,8 @@ def complex_film(device):
                 st.badge(label='', icon='⭐', color='yellow')
 
         with st.container(horizontal=True, horizontal_alignment='left'):
-            st.markdown('### Tags')
+            with st.container(width='content'):
+                st.markdown('### Tags')
             if film['Info'] == 'Not Watched':
                 if st.button('✅️', type='tertiary', width='content'):
                     row = idx + 2
@@ -2009,7 +2010,7 @@ def complex_film(device):
                         tag_text = 'Downloaded'
                     else:
                         tag_text = film['Tags'] + ', Downloaded'
-                    film_worksheet().update(f'F{row}', [tag_text])
+                    film_worksheet().update(f'F{row}', [[tag_text]])
         st.write(film['Tags'])
 
         st.markdown('### Gallery')
