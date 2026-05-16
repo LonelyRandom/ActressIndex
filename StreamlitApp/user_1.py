@@ -1853,7 +1853,7 @@ def complex_film(device):
         else:
             show_view_film(film, index)
 
-    def show_view_film(film, idx):
+    def show_view_film(film, index):
         with st.container(key='poster_code', horizontal_alignment='center'):
             st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
             st.image(film['Picture'], width=200)
@@ -2005,7 +2005,7 @@ def complex_film(device):
                 st.markdown('### Tags')
             if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
                 if st.button('📥', width='content', type='tertiary'):
-                    row = idx + 2
+                    row = index + 2
                     st.write(row)
                     if film['Tags'] == 'No Tags':
                         st.write('ini no tags')
