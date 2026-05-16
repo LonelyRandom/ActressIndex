@@ -1851,7 +1851,7 @@ def complex_film(device):
         if st.session_state.editing_film_index == index:
             show_edit_film(film, idx)
         else:
-            show_view_film(film, idx)
+            show_view_film(film, index)
 
     def show_view_film(film, idx):
         with st.container(key='poster_code', horizontal_alignment='center'):
@@ -2006,8 +2006,6 @@ def complex_film(device):
             if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
                 if st.button('📥', width='content', type='tertiary'):
                     row = idx + 2
-                    st.write(row, film["Tags"])
-                    st.stop()
                     if film['Tags'] == 'No Tags':
                         tag_text = 'Downloaded'
                     else:
