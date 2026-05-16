@@ -339,9 +339,9 @@ def display_film_card(df, tag_df):
                     st.session_state.tags_reset = True
                     st.rerun()
             with st.container(horizontal=True):
-                st.button('Downloaded', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content')
-                st.button('Want to Watch', on_click=set_tag, key='tag_wtw', args=('Want to Watch',), type='tertiary', width='content')
-        
+                st.button(':green-background[:green[Downloaded]]', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content')
+                st.button(':yellow-background[:yellow[Want to Watch]]', on_click=set_tag, key='tag_wtw', args=('Want to watch',), type='tertiary', width='content')
+            
         sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
         filtered_df = df.copy()
@@ -1350,8 +1350,8 @@ def display_film_grid(df, tag_df):
                 st.session_state.search_reset = True
                 st.rerun()
         with st.container(horizontal=True):
-            st.button('Downloaded', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content')
-            st.button('Want to Watch', on_click=set_tag, key='tag_wtw', args=('Want to Watch',), type='tertiary', width='content')
+            st.button(':green-background[:green[Downloaded]]', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content')
+            st.button(':yellow-background[:yellow[Want to Watch]]', on_click=set_tag, key='tag_wtw', args=('Want to watch',), type='tertiary', width='content')
             
         st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
@@ -1863,9 +1863,9 @@ def complex_film(device):
         if st.session_state.editing_film_index == index:
             show_edit_film(film, idx)
         else:
-            show_view_film(film, index)
+            show_view_film(film, index, idx)
 
-    def show_view_film(film, index):
+    def show_view_film(film, index, filtered_index):
         with st.container(key='poster_code', horizontal_alignment='center'):
             st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
             st.image(film['Picture'], width=200)
@@ -2025,6 +2025,7 @@ def complex_film(device):
                     film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
                     df.at[idx, 'Tags'] = tag_text
                     st.session_state.film_df = df
+                    st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
                     st.toast(f'📥 {film["Code"]} is downloaded!')
                     time.sleep(.5)
         st.write(film['Tags'])
