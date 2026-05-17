@@ -319,44 +319,39 @@ def display_film_card(df, tag_df):
     
     with st.sidebar:
         search_by = st.radio('Search By:', options=['Code', 'Actress', 'Title'], horizontal=True, key='search_by', on_change=reset_search_by)
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            with st.container(horizontal=True, vertical_alignment='bottom'):
-                if search_by != 'Actress':
-                    search_name = st.text_input("🔍 Search Bar", placeholder="Name or Code...", key='search_bar', on_change=reset_page)
-                else:
-                    search_name = st.selectbox('🔍 Search Bar', options=ACTRESS_OPTS, key='search_bar', on_change=reset_page)
-                if st.button('Clear', on_click=reset_page):
-                    st.session_state.search_reset = True
+        with st.container(horizontal=True, vertical_alignment='bottom'):
+            if search_by != 'Actress':
+                search_name = st.text_input("🔍 Search Bar", placeholder="Name or Code...", key='search_bar', on_change=reset_page)
+            else:
+                search_name = st.selectbox('🔍 Search Bar', options=ACTRESS_OPTS, key='search_bar', on_change=reset_page)
+            if st.button('Clear', on_click=reset_page):
+                st.session_state.search_reset = True
+                st.rerun()
+        info_filter = st.multiselect(
+            "📊 Status Filter:",
+            options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
+            default=['Watched', 'Goat', 'Not Watched']
+        )
+        with st.container(horizontal=True, vertical_alignment='bottom'):
+            tags_filter = st.multiselect("Tags:", options=TAGS_OPTS, on_change=reset_page, key='tag_bar')
+            if st.button('Clear', on_click=reset_page, key='tag_clear'):
+                st.session_state.tags_reset = True
+                st.rerun()
+        with st.container(horizontal=True):
+            if 'Downloaded' not in tags_filter:
+                if st.button(':green-background[:green[Downloaded]]', on_click=reset_page, key='tag_download', type='tertiary', width='content'):
+                    tag_text = []
+                    st.session_state.set_tag = True
+                    tag_text.append('Downloaded')
+                    st.session_state.tag_text = tag_text
                     st.rerun()
-        with col2:
-            info_filter = st.multiselect(
-                "📊 Status Filter:",
-                options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
-                default=['Watched', 'Goat', 'Not Watched']
-            )
-        with col3:
-            with st.container(horizontal=True, vertical_alignment='bottom'):
-                tags_filter = st.multiselect("Tags:", options=TAGS_OPTS, on_change=reset_page, key='tag_bar')
-                if st.button('Clear', on_click=reset_page, key='tag_clear'):
-                    st.session_state.tags_reset = True
+            if 'Want to watch' not in tags_filter:
+                if st.button(':yellow-background[:yellow[Want to Watch]]', on_click=reset_page, key='tag_wtw', type='tertiary', width='content'):
+                    tag_text = []
+                    st.session_state.set_tag = True
+                    tag_text.append('Want to watch')
+                    st.session_state.tag_text = tag_text
                     st.rerun()
-            with st.container(horizontal=True):
-                if 'Downloaded' not in tags_filter:
-                    if st.button(':green-background[:green[Downloaded]]', on_click=reset_page, key='tag_download', type='tertiary', width='content'):
-                        tag_text = []
-                        st.session_state.set_tag = True
-                        tag_text.append('Downloaded')
-                        st.session_state.tag_text = tag_text
-                        st.rerun()
-                if 'Want to watch' not in tags_filter:
-                    if st.button(':yellow-background[:yellow[Want to Watch]]', on_click=reset_page, key='tag_wtw', type='tertiary', width='content'):
-                        tag_text = []
-                        st.session_state.set_tag = True
-                        tag_text.append('Want to watch')
-                        st.session_state.tag_text = tag_text
-                        st.rerun()
             
         sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
@@ -818,7 +813,7 @@ def set_calender_a(index):
 def display_film_calender(df):
     if 'calender_data' not in st.session_state:
         calender_data = pd.DataFrame(calendar_worksheet().get_all_records())
-        calebder_data = values_handling(calender_data, "calender")
+        calender_data = values_handling(calender_data, "calender")
         st.session_state.calender_data = calender_data
 
     if 'calender_page' not in st.session_state:
