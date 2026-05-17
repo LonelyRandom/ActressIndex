@@ -247,10 +247,6 @@ def reset_search_by():
         st.session_state.search_bar = ''
     else:
         st.session_state.search_bar = 'All'
-
-def set_tag(tag):
-    st.session_state.page = 1
-    st.session_state.tag_bar = [tag]
     
 def display_film_card(df, tag_df):
     """
@@ -278,6 +274,9 @@ def display_film_card(df, tag_df):
 
     if 'film_page' not in st.session_state:
         st.session_state.film_page = 1
+    
+    if 'tag_text' not in st.session_state:
+        st.session_state.tag_text = []
 
     if df.empty:
         st.warning("📭 No film data available!")
@@ -295,6 +294,11 @@ def display_film_card(df, tag_df):
     if st.session_state.get('tags_reset', False):
         st.session_state.tags_reset = False
         st.session_state.tag_bar = []
+    
+    if st.session_state.get('set_tag', False):
+        st.session_state.set_tag = False
+        st.session_state.tag_bar = st.session_state.tag_text
+
 
     if st.session_state.get('set_search', False):
         st.session_state.set_search = False
@@ -339,10 +343,20 @@ def display_film_card(df, tag_df):
                     st.session_state.tags_reset = True
                     st.rerun()
             with st.container(horizontal=True):
-                if st.button(':green-background[:green[Downloaded]]', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content'):
-                    st.rerun()
-                if st.button(':yellow-background[:yellow[Want to Watch]]', on_click=set_tag, key='tag_wtw', args=('Want to watch',), type='tertiary', width='content'):
-                    st.rerun()
+                if 'Downloaded' not in tags_filter:
+                    if st.button(':green-background[:green[Downloaded]]', on_click=reset_page, key='tag_download', type='tertiary', width='content'):
+                        tag_text = []
+                        st.session_state.set_tag = True
+                        tag_text.append('Downloaded')
+                        st.session_state.tag_text = tag_text
+                        st.rerun()
+                if 'Want to watch' not in tags_filter:
+                    if st.button(':yellow-background[:yellow[Want to Watch]]', on_click=reset_page, key='tag_wtw', type='tertiary', width='content'):
+                        tag_text = []
+                        st.session_state.set_tag = True
+                        tag_text.append('Want to watch')
+                        st.session_state.tag_text = tag_text
+                        st.rerun()
             
         sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
@@ -493,6 +507,9 @@ def display_film_card(df, tag_df):
             """,
             unsafe_allow_html=True
         )
+    st.space('small')
+    st.write(f':blue-background[ℹ️ Search : {st.session_state.search_bar if st.session_state.search_bar else "-"}]')
+    st.write(f':blue-background[ℹ️ Tags : {", ".join(st.session_state.tag_bar) if st.session_state.tag_bar else "-"}]')
     st.markdown("---")
     
     if filtered_df.empty:
@@ -552,6 +569,7 @@ def display_film_card(df, tag_df):
             if st.button('Last Page', width='stretch', disabled=(st.session_state.film_page == total_pages), on_click=set_page, args=(total_pages,)):
                 st.session_state.scroll_to_here = True
                 st.rerun()
+    st.markdown("---")
     
     filtered_df_data = filtered_df.copy()
     filtered_df_data = filtered_df_data.drop(columns=['filtered_date'], errors='ignore')
@@ -683,10 +701,6 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
     else:
         release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y') if pd.notna(actress['Release Date']) else "Unknown"
     
-    if 'Downloaded' in actress['Tags']:
-        act_info = actress['Info'] + ' ✅'
-    else:
-        act_info = actress['Info']
     card_html += f"""<div class="actress-card" id="card_{card_id}" 
         style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
         margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
@@ -703,8 +717,22 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
             margin-bottom: 10px;
             border-radius: 10px;
             border : 2px solid {status_color};
-        ">
-            <img src="{actress['Picture']}" 
+        ">"""
+    if 'Downloaded' in actress['Tags'] or 'Want to watch' in actress['Tags']:
+        if 'Downloaded' in actress['Tags']:
+            tag_text = '📥'
+            tag_tier = 'download'
+        else:
+            tag_text = '👁️'
+            tag_tier = 'wtw'
+
+        card_html += f"""<div class="badge-stack">
+                <div class="tag-badge {tag_tier}-tier">
+                    {tag_text}
+                </div>
+            </div>"""
+        
+    card_html += f"""<img src="{actress['Picture']}" 
                 style="
                     width: 100%;
                     height: 100%;
@@ -728,7 +756,7 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
                         font-size: 9px;
                         font-weight: bold;
                     ">
-                        {act_info}
+                        {actress['Code']}
                     </span>"""
     else:
         card_html += f"""<span style="
@@ -739,7 +767,7 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
                         font-size: 9px;
                         font-weight: bold;
                     ">
-                        {act_info}
+                        {actress['Code']}
                     </span>"""
 
     card_html += f"""</div>
@@ -1280,6 +1308,10 @@ def display_film_grid(df, tag_df):
     if st.session_state.get('tags_reset', False):
         st.session_state.tags_reset = False
         st.session_state.tag_bar = ''
+    
+    if st.session_state.get('set_tag', False):
+        st.session_state.set_tag = False
+        st.session_state.tag_bar = st.session_state.tag_text
 
     if st.session_state.get('set_search', False):
         st.session_state.set_search = False
@@ -1347,15 +1379,26 @@ def display_film_grid(df, tag_df):
             tags_filter = st.multiselect(
                 "Tags:", 
                 options=TAGS_OPTS, 
-                on_change=reset_page)
+                on_change=reset_page,
+                key='tag_bar')
             if st.button('Clear', on_click=reset_page, key='tag_clear'):
                 st.session_state.search_reset = True
                 st.rerun()
         with st.container(horizontal=True):
-            if st.button(':green-background[:green[Downloaded]]', on_click=set_tag, key='tag_download', args=('Downloaded',), type='tertiary', width='content'):
-                st.rerun()
-            if st.button(':yellow-background[:yellow[Want to Watch]]', on_click=set_tag, key='tag_wtw', args=('Want to watch',), type='tertiary', width='content'):
-                st.rerun()
+            if 'Downloaded' not in tags_filter:
+                if st.button(':green-background[:green[Downloaded]]', on_click=reset_page, key='tag_download', type='tertiary', width='content'):
+                    tag_text = []
+                    st.session_state.set_tag = True
+                    tag_text.append('Downloaded')
+                    st.session_state.tag_text = tag_text
+                    st.rerun()
+            if 'Want to watch' not in tags_filter:
+                if st.button(':yellow-background[:yellow[Want to Watch]]', on_click=reset_page, key='tag_wtw', type='tertiary', width='content'):
+                    tag_text = []
+                    st.session_state.set_tag = True
+                    tag_text.append('Want to watch')
+                    st.session_state.tag_text = tag_text
+                    st.rerun()
             
         st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
@@ -1524,6 +1567,8 @@ def display_film_grid(df, tag_df):
                             
                             if 'Downloaded' in film['Tags']:
                                 release += ' ✅'
+                            elif 'Want to watch' in film['Tags']:
+                                release += ' 👁️'
 
                             if filters == 'Not Watched':
                                 st.badge(film['is_release'], icon=film['badge_icon'], color=film['badge_color'])
@@ -1876,13 +1921,15 @@ def complex_film(device):
         
         st.markdown('### Title')
         st.write(film['Title'])
+ 
         st.markdown(
             """
             <style>
-            button[data-testid="stBaseButton-tertiary"] p {
-                font-size: 14px !important;
+            [class*="st-key-actress_matched_"] p {
                 color: #d6cfc7 !important;
+                font-size: 14px !important;
             }
+            </style>
             """,
             unsafe_allow_html=True
         )
@@ -1924,7 +1971,7 @@ def complex_film(device):
                         """, unsafe_allow_html=True)
                         
                         # Button
-                        if st.button(actress_name, width='stretch', type='tertiary', key=f"{actress_name}_{idx}", on_click=reset_page):
+                        if st.button(actress_name, width='stretch', type='tertiary', key=f"actress_matched_{actress_name}_{idx}", on_click=reset_page):
                             st.session_state.viewing_film_index = None
                             st.session_state.editing_film_index = None
                             st.session_state.search_text = actress_name
@@ -2015,24 +2062,55 @@ def complex_film(device):
             st.badge(label=film['Info'], icon=icons, color=colors)
             if film['A-Detector'] == 1:
                 st.badge(label='', icon='⭐', color='yellow')
-
-        with st.container(horizontal=True, horizontal_alignment='left', vertical_alignment='bottom'):
+        st.markdown('---')
+        with st.container(horizontal=True):
             with st.container(width='content'):
                 st.markdown('### Tags')
             if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
-                if st.button('📥', width='content', type='tertiary'):
+                if st.button(':blue-background[📥]', width='content', type='tertiary'): # :download-quick
                     row = index + 2
                     if film['Tags'] == 'No Tags':
                         tag_text = 'Downloaded'
+                    elif 'Want to watch' in film['Tags']:
+                        tag_text = film['Tags'].replace('Want to watch', 'Downloaded')
                     else:
                         tag_text = film['Tags'] + ', Downloaded'
+
                     film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                    df.at[idx, 'Tags'] = tag_text
-                    st.session_state.film_df = df
+                    df.at[index, 'Tags'] = tag_text
+                    st.session_state.film_df = values_handling(df,'film')
+                    st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
                     st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
                     st.toast(f'📥 {film["Code"]} is downloaded!')
                     time.sleep(.5)
-        st.write(film['Tags'])
+                    st.rerun()
+            if film['Info'] == 'Not Watched' and "Want to watch" not in film['Tags'] and "Downloaded" not in film['Tags']:
+                if st.button(':yellow-background[👁️]', width='content', type='tertiary'): # :download-quick
+                    row = index + 2
+                    if film['Tags'] == 'No Tags':
+                        tag_text = 'Want to watch'
+                    else:
+                        tag_text = film['Tags'] + ', Want to watch'
+                    film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                    df.at[index, 'Tags'] = tag_text
+                    st.session_state.film_df = values_handling(df,'film')
+                    st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                    st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                    st.toast(f'📥 {film["Code"]} is listed to watch!')
+                    time.sleep(.5)
+                    st.rerun()
+        tags = film['Tags'].split(', ')
+
+        with st.container(horizontal=True):
+            for tag in tags:
+                if st.button(f':gray-background[{tag}]', width='content', type='tertiary'):
+                    tag_bar = st.session_state.tag_bar
+                    if tag not in tag_bar:
+                        tag_bar.append(tag)
+                        st.session_state.tag_bar = tag_bar
+                    st.session_state.viewing_film_index = None
+                    st.rerun()
+        st.markdown('---')
 
         st.markdown('### Gallery')
         if st.checkbox('Show', on_change=reset_pic):
@@ -2092,7 +2170,7 @@ def complex_film(device):
             else:
                 st.warning('Picture Unavailable')
 
-
+        st.markdown('---')
                         
         if pd.isna(film['Link']) :
             st.button('🔗 No Link Found!', type='primary', width='stretch')
@@ -3183,12 +3261,6 @@ def complex_film(device):
     ul[data-testid="stSelectboxVirtualDropdown"] li:nth-child(even){
         background-color:#2d2f31 !important;
     }
-    /* Hover effect untuk card */
-    .actress-card:hover {
-        transform: translateY(-5px) !important;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
-        border-color: #004cff !important;
-    }
     
     /* Smooth transition */
     .actress-card {
@@ -3214,6 +3286,38 @@ def complex_film(device):
 
     st.markdown("""
     <style>
+    .badge-stack {
+        position: absolute;
+        top: 15px;
+        right: 5px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 6px;
+        z-index: 10;
+    }
+                
+    .tag-badge {
+        padding: 5px 6px;
+        border-radius: 100%;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        text-align: center;
+        color: white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+                
+    .download-tier {
+        background-color: #DCFCE7;
+        border: 1px solid #16A34A;
+    }
+                
+    .wtw-tier {
+        background-color: #FEF9C3;
+        border: 1px solid #EAB308;
+    }
+                
     /* ================= DESKTOP ================= */
     @media (min-width: 768px) {
         section[data-testid="stSidebar"] {
@@ -5135,10 +5239,6 @@ def complex_actress(device):
         .review-d-tier { border-color: #e67e22 !important; }
         .review-e-tier { border-color: #ff8c42 !important; }
         .review-f-tier { border-color: #e74c3c !important; }
-        .cat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        }
         .cat-image-container {
             display: flex;
             justify-content: center;
