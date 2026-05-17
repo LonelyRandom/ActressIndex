@@ -639,7 +639,7 @@ def display_film_card(df, tag_df):
         f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Actress Recommendation</div>",
         unsafe_allow_html=True
     )
-    with st.container(horizontal=True):
+    with st.container(horizontal=True, horizontal_alignment='center'):
         for idx in random_df.index:
             with st.container(width=actress_width, key=f'bottom_actress_recommendation_{idx}'):
                 # Display image as circle using HTML
@@ -679,7 +679,7 @@ def display_film_card(df, tag_df):
         filtered_film = df.copy()
         st.session_state.random_film = filtered_film.sample(n=6)
     random_film = st.session_state.random_film
-    with st.container(horizontal=True):
+    with st.container(horizontal=True, horizontal_alignment='center'):
         for i in range(len(random_film)):
             actress = random_film.iloc[i]
             real_index = random_film.index[i] 
@@ -962,8 +962,29 @@ def display_film_calender(df):
 
     if st.session_state.date_clicked:
         if select_date_type == 'Date':
-            st.write(f'Filter by {select_date_type} : {st.session_state.show_date.strftime("%d %B %Y")}')
             filtered_df = filtered_df[filtered_df['filtered_date'].dt.date == st.session_state.show_date]
+            with st.container(horizontal=True, vertical_alignment='bottom'):
+                with st.container(width='content'):
+                    st.write(f'Filter by {select_date_type} : {st.session_state.show_date.strftime("%d %B %Y")}')
+                if st.button(':yellow-background[📌]', type='tertiary'):
+                    # calender_df_copy = calender_df.copy()
+                    # pin_index = filtered_df.index
+                    # calender_df_copy.loc[pin_index, 'is_Anchor'] = True
+                    # st.session_state.calender_data = calender_df_copy
+                    # batch_data = [
+                    #     {
+                    #         "range": f"G{row+2}",
+                    #         "values": [[True]]
+                    #     }
+                    #     for row in pin_index
+                    # ]
+
+                    # calendar_worksheet().batch_update(batch_data)
+                    # st.toast('✅ Date Marked!')
+                    st.toast('⚠️ Under Construction!')
+                    time.sleep(.5)
+                    st.rerun()
+
         elif select_date_type == 'Month/Year':
             st.write(f'Filter by {select_date_type} : {st.session_state.show_date.strftime("%B %Y")}')
             filtered_df = filtered_df[
@@ -998,14 +1019,23 @@ def display_film_calender(df):
         st.toast('✅ Succesfully drop all not checked data!')
         time.sleep(.5)
     
-    def set_this_drop():
+    def set_this_drop(filtered_df):
+        filtered_df = calender_df.copy()
+        filtered_df['filtered_date'] = pd.to_datetime(
+                    filtered_df['Month'],
+                    format='%d/%m/%Y',
+                    errors='coerce'
+                )
         filtered_df = filtered_df[
-                (filtered_df['filtered_date'].dt.month == st.session_state.show_date.month) &
-                (filtered_df['filtered_date'].dt.year == st.session_state.show_date.year)
+                (filtered_df['filtered_date'].dt.month == calender_month) &
+                (filtered_df['filtered_date'].dt.year == calender_year) &
+                (~filtered_df['Flag'].isin(['Pass', 'Unsure']))
                 ]
+        
         index = filtered_df.index.to_list()
-        calender_df.loc[index, 'Flag'] = 'Drop'
-        st.session_state.calender_data = calender_df
+        calender_df_copy = calender_df.copy()
+        calender_df_copy.loc[index, 'Flag'] = 'Drop'
+        st.session_state.calender_data = calender_df_copy
         batch_data = [
             {
                 "range": f"E{row+2}",
@@ -1017,6 +1047,7 @@ def display_film_calender(df):
         calendar_worksheet().batch_update(batch_data)
         st.toast('✅ Succesfully drop this months not checked data!')
         time.sleep(.5)
+        st.rerun()
     
     def set_match():
         calender_df.loc[calender_df['Code'].isin(df['Code'].values), 'Flag'] = 'Pass'
@@ -1063,7 +1094,8 @@ def display_film_calender(df):
         time.sleep(.5)        
             
     st.button('Save edit',width='stretch', type='primary', on_click=set_save_edit)
-    st.button('Drop this month', width='stretch', on_click=set_this_drop)
+    if st.button(f'Drop this month - {dates.strftime("%B")}', width='stretch'):
+        set_this_drop(filtered_df)
     with st.container(horizontal=True):
         st.button('Drop All', on_click=set_all_drop, width='stretch')
         st.button('Match', on_click=set_match, width='stretch')
