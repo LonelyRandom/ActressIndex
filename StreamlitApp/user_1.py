@@ -994,8 +994,8 @@ def display_film_calender(df):
     def set_save_edit():
         start_row = 2
         end_row = start_row + len(calender_df)
-        calender_df['is_Anchor'] = calender_df['is_Anchor'].fillna(False)
-        calendar_worksheet().update(f'A{start_row}:G{end_row}', calender_df.values.tolist())
+        # calender_df['is_Anchor'] = calender_df['is_Anchor'].fillna(False)
+        calendar_worksheet().update(f'A{start_row}:F{end_row}', calender_df.values.tolist())
         st.session_state.calender_data = calender_df
         st.toast('✅ Succesfully update data!')
         time.sleep(.5)
