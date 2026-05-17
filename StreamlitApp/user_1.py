@@ -2130,7 +2130,12 @@ def complex_film(device):
 
         with st.container(horizontal=True):
             for tag in tags:
-                if st.button(f':gray-background[{tag}]', width='content', type='tertiary'):
+                if tag == 'No Tags':
+                    dis_values = True
+                else:
+                    dis_values = False
+
+                if st.button(f':gray-background[{tag}]', width='content', type='tertiary', disabled=dis_values):
                     tag_bar = st.session_state.tag_bar
                     if tag not in tag_bar:
                         tag_bar.append(tag)
