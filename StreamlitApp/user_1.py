@@ -2125,7 +2125,7 @@ def complex_film(device):
                     "Value": "Watched",
                     "Color": "green"
                 })
-            buttons.extend(
+            buttons.extend([
                 {
                     "Label": "🆗️",
                     "Value": "Great",
@@ -2136,7 +2136,7 @@ def complex_film(device):
                     "Value": "Goat",
                     "Color": "violet"
                 }
-            )
+            ])
             
             for data in buttons:
                 label, value, color = data["Label"], data["Value"], data["Color"]
