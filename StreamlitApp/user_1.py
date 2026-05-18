@@ -2125,7 +2125,7 @@ def complex_film(device):
                     "Value": "Watched",
                     "Color": "green"
                 })
-            buttons.append(
+            buttons.extend(
                 {
                     "Label": "🆗️",
                     "Value": "Great",
