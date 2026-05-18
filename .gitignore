@@ -8,6 +8,7 @@ coba_scrapping.py
 # Virtual environment
 .venv/
 venv/
+complex_user.py
 
 # Streamlit secrets
 secrets.toml

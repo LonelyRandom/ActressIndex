@@ -123,6 +123,7 @@ SIZE_OPTS = [
 INFO_OPTS = [
     "Not Watched",
     "Watched",
+    "Great",
     "Goat"
 ]
 
@@ -329,8 +330,8 @@ def display_film_card(df, tag_df):
                 st.rerun()
         info_filter = st.multiselect(
             "📊 Status Filter:",
-            options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
-            default=['Watched', 'Goat', 'Not Watched']
+            options=INFO_OPTS,
+            default=['Not Watched', 'Watched', 'Great', 'Goat']
         )
         with st.container(horizontal=True, vertical_alignment='bottom'):
             tags_filter = st.multiselect("Tags:", options=TAGS_OPTS, on_change=reset_page, key='tag_bar')
@@ -441,14 +442,52 @@ def display_film_card(df, tag_df):
     # Tampilkan statistik filter
     watched_count = len(filtered_df[filtered_df['Info'] == 'Watched']) if 'Info' in filtered_df.columns else 0
     goat_count = len(filtered_df[filtered_df['Info'] == 'Goat']) if 'Info' in filtered_df.columns else 0
+    great_count = len(filtered_df[filtered_df['Info'] == 'Great']) if 'Info' in filtered_df.columns else 0
     
     st.markdown("---")
     st.markdown(
         f"<div style='text-align:center; font-weight:600; font-size:25px; padding-bottom:15px'>Film Information</div>",
         unsafe_allow_html=True
     )
+    st.markdown(
+        f"""
+        <div style="
+            border: 1px solid rgba(49, 51, 63, 1);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        ">
+            <div style="font-size: 14px; color: gray;">
+                Total Film
+            </div>
+            <div style="font-size: 28px; font-weight: bold;">
+                {len(filtered_df):,}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.space('small')
     with st.container(horizontal=True):
-            st.markdown(
+        st.markdown(
+        f"""
+        <div style="
+            border: 1px solid rgba(49, 51, 63, 1);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        ">
+            <div style="font-size: 14px; color: gray;">
+                Watched
+            </div>
+            <div style="font-size: 28px; font-weight: bold;">
+                {watched_count:,}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+        )
+        st.markdown(
             f"""
             <div style="
                 border: 1px solid rgba(49, 51, 63, 1);
@@ -457,51 +496,33 @@ def display_film_card(df, tag_df):
                 text-align: center;
             ">
                 <div style="font-size: 14px; color: gray;">
-                    Total Film
+                    Great
                 </div>
                 <div style="font-size: 28px; font-weight: bold;">
-                    {len(filtered_df):,}
+                    {great_count:,}
                 </div>
             </div>
             """,
             unsafe_allow_html=True
         )
-            st.markdown(
-            f"""
-            <div style="
-                border: 1px solid rgba(49, 51, 63, 1);
-                border-radius: 10px;
-                padding: 12px;
-                text-align: center;
-            ">
-                <div style="font-size: 14px; color: gray;">
-                    Watched
-                </div>
-                <div style="font-size: 28px; font-weight: bold;">
-                    {watched_count:,}
-                </div>
+        st.markdown(
+        f"""
+        <div style="
+            border: 1px solid rgba(49, 51, 63, 1);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        ">
+            <div style="font-size: 14px; color: gray;">
+                Goat
             </div>
-            """,
-            unsafe_allow_html=True
-        )
-            st.markdown(
-            f"""
-            <div style="
-                border: 1px solid rgba(49, 51, 63, 1);
-                border-radius: 10px;
-                padding: 12px;
-                text-align: center;
-            ">
-                <div style="font-size: 14px; color: gray;">
-                    Goat
-                </div>
-                <div style="font-size: 28px; font-weight: bold;">
-                    {goat_count:,}
-                </div>
+            <div style="font-size: 28px; font-weight: bold;">
+                {goat_count:,}
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.space('small')
     st.write(f':blue-background[ℹ️ Search : {st.session_state.search_bar if st.session_state.search_bar else "-"}]')
     st.write(f':blue-background[ℹ️ Tags : {", ".join(st.session_state.tag_bar) if st.session_state.tag_bar else "-"}]')
@@ -689,7 +710,7 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
     """
 
     # st.write(actress['Code'])
-    status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E" if actress['Info'] == 'Drop' else "#9b59b6"
+    status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E" if actress['Info'] == 'Drop' else "#9b59b6" if actress['Info'] == 'Goat' else '#3498db'
     card_html = ''
     if actress['Release Date'] == '?':
         release_date = '?'
@@ -1370,10 +1391,12 @@ def display_film_grid(df, tag_df):
             filtered_df = df[df['Info'] != 'Not Watched'].copy()
             filtered_df['badge_icon'] = filtered_df['Info'].map({
                 'Watched': '🟢',
+                'Great': '🔵',
                 'Goat': '🟣'
             }).fillna('⚪')
             filtered_df['badge_color'] = filtered_df['Info'].map({
                 'Watched': 'green',
+                'Great': 'blue',
                 'Goat': 'violet'
             }).fillna('⚪')
         elif filters == 'Not Watched':
@@ -1939,9 +1962,9 @@ def complex_film(device):
         if st.session_state.editing_film_index == index:
             show_edit_film(film, idx)
         else:
-            show_view_film(film, index, idx)
+            show_view_film(film, idx)
 
-    def show_view_film(film, index, filtered_index):
+    def show_view_film(film, filtered_index):
         with st.container(key='poster_code', horizontal_alignment='center'):
             st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
             st.image(film['Picture'], width=200)
@@ -1973,6 +1996,7 @@ def complex_film(device):
                 for idx in matching_actresses.index:
                     actress_name = matching_actresses['Name (Alphabet)'][idx]
                     container_key = f"{actress_name}_{st.session_state.filtered_data_position}_{idx}"
+                    status_color = "#FFD700" if matching_actresses['Review'][idx] == 'S-Tier' else "#9b59b6" if matching_actresses['Review'][idx] == 'A-Tier' else "#3498db" if matching_actresses['Review'][idx] == 'B-Tier' else "#2ecc71" if matching_actresses['Review'][idx] == 'C-Tier' else '#e67e22' if matching_actresses['Review'][idx] == 'D-Tier' else "#ff8c42" if matching_actresses['Review'][idx] == 'E-Tier' else "#e74c3c" if matching_actresses['Review'][idx] == 'F-Tier' else '#7f8c8d'
 
                     with st.container(width=80, key=container_key):
                         # Display image as circle using HTML
@@ -1987,6 +2011,7 @@ def complex_film(device):
                                 align-items: center;
                                 margin: 0 auto 8px auto;
                                 background: white;
+                                border: 1.5px solid {status_color};
                             ">
                                 <img src="{matching_actresses['Picture'][idx]}" 
                                     style="
@@ -2081,6 +2106,9 @@ def complex_film(device):
         elif film['Info'] == 'Watched':
             icons = '🟢'
             colors = 'green'
+        elif film['Info'] == 'Great':
+            icons = '🔵'
+            colors = 'blue'
         else:
             icons = '🔴'
             colors = 'red'
@@ -2095,7 +2123,7 @@ def complex_film(device):
                 st.markdown('### Tags')
             if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
                 if st.button(':blue-background[📥]', width='content', type='tertiary'): # :download-quick
-                    row = index + 2
+                    row = filtered_index + 2
                     if film['Tags'] == 'No Tags':
                         tag_text = 'Downloaded'
                     elif 'Want to watch' in film['Tags']:
@@ -2104,7 +2132,7 @@ def complex_film(device):
                         tag_text = film['Tags'] + ', Downloaded'
 
                     film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                    df.at[index, 'Tags'] = tag_text
+                    df.at[filtered_index, 'Tags'] = tag_text
                     st.session_state.film_df = values_handling(df,'film')
                     st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
                     st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
@@ -2113,13 +2141,13 @@ def complex_film(device):
                     st.rerun()
             if film['Info'] == 'Not Watched' and "Want to watch" not in film['Tags'] and "Downloaded" not in film['Tags']:
                 if st.button(':yellow-background[👁️]', width='content', type='tertiary'): # :download-quick
-                    row = index + 2
+                    row = filtered_index + 2
                     if film['Tags'] == 'No Tags':
                         tag_text = 'Want to watch'
                     else:
                         tag_text = film['Tags'] + ', Want to watch'
                     film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                    df.at[index, 'Tags'] = tag_text
+                    df.at[filtered_index, 'Tags'] = tag_text
                     st.session_state.film_df = values_handling(df,'film')
                     st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
                     st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
@@ -2298,7 +2326,7 @@ def complex_film(device):
 
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
 
-        if edited_info == 'Watched' or edited_info == 'Goat':
+        if edited_info == 'Watched' or edited_info == 'Goat' or edited_info == 'Great':
             if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
                 new_review = []
                 actress_list = selected_actress
@@ -3090,7 +3118,7 @@ def complex_film(device):
                         a_index = False
                     
                     st.space('small')
-                    input_info = st.selectbox(':yellow-background[Info:]', options=['🔴 Not Watched', '🟢 Watched', '🟣 Goat'], key='input_info', index=info_index)
+                    input_info = st.selectbox(':yellow-background[Info:]', options=['🔴 Not Watched', '🟢 Watched', '🔵 Great', '🟣 Goat'], key='input_info', index=info_index)
                     input_info = input_info.split(' ',1)[1]
                     st.space('small')
                     input_a = st.toggle('✨ A-Detector', value=a_index)
@@ -3741,6 +3769,9 @@ def complex_actress(device):
             if film['Info'] == 'Goat':
                 icons = '🟣'
                 colors = 'violet'
+            elif film['Info'] == 'Great':
+                icons = '🔵'
+                colors = 'blue'
             elif film['Info'] == 'Watched':
                 icons = '🟢'
                 colors = 'green'
@@ -4961,7 +4992,7 @@ def complex_actress(device):
                     for idx in rows_to_display.index:
                         actress = df.iloc[idx]    
                         actress_film = film_df[film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])]
-                        watched_film = film_df[(film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])) & ((film_df['Info'] == 'Watched') | (film_df['Info'] == 'Goat'))]
+                        watched_film = film_df[(film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])) & ((film_df['Info'] == 'Watched') | (film_df['Info'] == 'Great') | (film_df['Info'] == 'Goat'))]
                         try:
                             with st.container(width='content', key=f'card_container_{idx}'):
                                 cat_url = actress['Picture'] if pd.notna(actress['Picture']) else ""
