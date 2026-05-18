@@ -2117,6 +2117,41 @@ def complex_film(device):
             st.badge(label=film['Info'], icon=icons, color=colors)
             if film['A-Detector'] == 1:
                 st.badge(label='', icon='⭐', color='yellow')
+            st.write(' | ')
+            buttons = []
+            if film['Info'] == 'Not Watched':
+                buttons.append({
+                    "Label": "✅️",
+                    "Value": "Watched",
+                    "Color": "green"
+                })
+            buttons.append(
+                {
+                    "Label": "🆗️",
+                    "Value": "Great",
+                    "Color": "blue"
+                },
+                {
+                    "Label": "🐐",
+                    "Value": "Goat",
+                    "Color": "violet"
+                }
+            )
+            
+            for data in buttons:
+                label, value, color = data["Label"], data["Value"], data["Color"]
+                if st.button(f':{color}-background[{label}]', width='content', type='tertiary'):
+                    info_text = value
+                    row = filtered_index + 2
+                    film_worksheet().update(f'G{row}:G{row}', [[info_text]])
+                    df.at[filtered_index, 'Info'] = info_text
+                    st.session_state.film_df = values_handling(df,'film')
+                    st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                    st.session_state.filtered_film_data.at[filtered_index, 'Info'] = info_text
+                    st.toast(f'{label} {film["Code"]} is :{color}[{value}]!')
+                    time.sleep(.5)
+                    st.rerun()
+
         st.markdown('---')
         with st.container(horizontal=True):
             with st.container(width='content'):
