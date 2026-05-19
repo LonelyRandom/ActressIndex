@@ -3251,7 +3251,7 @@ def complex_film(device):
                     row = index[0] + 2
                     actress_worksheet().update(f'A{row}:O{row}', st.session_state.scrap_new)
                 else:
-                    actress_worksheet().append_rows(st.session_state.scrap_new)
+                    actress_worksheet().append_row(st.session_state.scrap_new)
 
             st.session_state.html_reset = True
             st.toast("✅ Scrap Saved Successfully!")
