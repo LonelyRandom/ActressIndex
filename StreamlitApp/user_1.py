@@ -374,6 +374,12 @@ def display_film_card(df, tag_df):
                 mask = filtered_df['Title'].str.contains(search_name, case=False, na=False)
 
             filtered_df = filtered_df[mask]
+        if tags_filter:
+            filtered_df = filtered_df[
+                filtered_df["Tags"].apply(
+                    lambda x: any(tag.strip() in tags_filter for tag in x.split(","))
+                )
+            ]
 
         if info_filter and 'Info' in filtered_df.columns:
             filtered_df = filtered_df[filtered_df['Info'].isin(info_filter)]
