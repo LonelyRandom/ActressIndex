@@ -8,10 +8,10 @@ from value_handling import values_handling, initial_load
 from dateutil.relativedelta import relativedelta
 from streamlit_scroll_to_top import scroll_to_here
 import gspread
-import math
 from google.oauth2.service_account import Credentials
 from st_copy import copy_button
 from bs4 import BeautifulSoup
+from streamlit_float import *
 
 @st.cache_resource
 def get_gsheet_client():
@@ -258,7 +258,7 @@ def display_film_card(df, tag_df):
     """
 
     actress_df = init_dataframe_actress()
-
+    
     TAGS_OPTS = sorted(
         tag_df['Tags']
         .dropna()
@@ -282,6 +282,8 @@ def display_film_card(df, tag_df):
     if df.empty:
         st.warning("📭 No film data available!")
         return
+    else:
+        filtered_df = df
     
     # Filter options
     if st.session_state.get('search_reset', False):
@@ -319,7 +321,7 @@ def display_film_card(df, tag_df):
     )
     
     with st.sidebar:
-        search_by = st.radio('Search By:', options=['Code', 'Actress', 'Title'], horizontal=True, key='search_by', on_change=reset_search_by)
+        search_by = st.radio('Search By:', options=['Code', 'Actress', 'Title'], horizontal=False, key='search_by', on_change=reset_search_by)
         with st.container(horizontal=True, vertical_alignment='bottom'):
             if search_by != 'Actress':
                 search_name = st.text_input("🔍 Search Bar", placeholder="Name or Code...", key='search_bar', on_change=reset_page)
@@ -330,7 +332,7 @@ def display_film_card(df, tag_df):
                 st.rerun()
         info_filter = st.multiselect(
             "📊 Status Filter:",
-            options=INFO_OPTS,
+            options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
             default=['Not Watched', 'Watched', 'Great', 'Goat']
         )
         with st.container(horizontal=True, vertical_alignment='bottom'):
@@ -357,6 +359,25 @@ def display_film_card(df, tag_df):
         sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
         # Filter data
         filtered_df = df.copy()
+
+        if search_name:
+            if search_by == 'Code':
+                search_name = search_name.split(' ')
+                search_name = '-'.join(search_name)
+                mask = filtered_df['Code'].str.contains(search_name, case=False, na=False)
+            elif search_by == 'Actress':
+                if search_name != 'All':
+                    mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
+                else:
+                    mask = [True] * len(filtered_df)
+            else:
+                mask = filtered_df['Title'].str.contains(search_name, case=False, na=False)
+
+            filtered_df = filtered_df[mask]
+
+        if info_filter and 'Info' in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df['Info'].isin(info_filter)]
+
         if sort_type == '(A-Z)':
             filtered_df = filtered_df.sort_values(by='Code', ascending=True)
 
@@ -405,7 +426,7 @@ def display_film_card(df, tag_df):
                     filtered_df = filtered_df[
                         filtered_df['filtered_date'].dt.year == selected_date.year
                 ]
-    if st.session_state.width_option == 'Device 1':
+    if st.session_state.width_option == 'Device 1': 
         img_card_height = 215
         img_card_width = 115
         actress_width = 81
@@ -413,31 +434,6 @@ def display_film_card(df, tag_df):
         img_card_height = 202
         img_card_width = 106
         actress_width = 76
-    
-    if search_name:
-        if search_by == 'Code':
-            search_name = search_name.split(' ')
-            search_name = '-'.join(search_name)
-            mask = filtered_df['Code'].str.contains(search_name, case=False, na=False)
-        elif search_by == 'Actress':
-            if search_name != 'All':
-                mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
-            else:
-                mask = [True] * len(filtered_df)
-        else:
-            mask = filtered_df['Title'].str.contains(search_name, case=False, na=False)
-
-        filtered_df = filtered_df[mask]
-    
-    if info_filter and 'Info' in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df['Info'].isin(info_filter)]
-    
-    if tags_filter:
-        filtered_df = filtered_df[
-            filtered_df["Tags"].apply(
-                lambda x: any(tag.strip() in tags_filter for tag in x.split(","))
-            )
-        ]
         
     # Tampilkan statistik filter
     watched_count = len(filtered_df[filtered_df['Info'] == 'Watched']) if 'Info' in filtered_df.columns else 0
@@ -506,23 +502,23 @@ def display_film_card(df, tag_df):
             unsafe_allow_html=True
         )
         st.markdown(
-        f"""
-        <div style="
-            border: 1px solid rgba(49, 51, 63, 1);
-            border-radius: 10px;
-            padding: 12px;
-            text-align: center;
-        ">
-            <div style="font-size: 14px; color: gray;">
-                Goat
+            f"""
+            <div style="
+                border: 1px solid rgba(49, 51, 63, 1);
+                border-radius: 10px;
+                padding: 12px;
+                text-align: center;
+            ">
+                <div style="font-size: 14px; color: gray;">
+                    Goat
+                </div>
+                <div style="font-size: 28px; font-weight: bold;">
+                    {goat_count:,}
+                </div>
             </div>
-            <div style="font-size: 28px; font-weight: bold;">
-                {goat_count:,}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+            """,
+            unsafe_allow_html=True
+        )
     st.space('small')
     st.write(f':blue-background[ℹ️ Search : {st.session_state.search_bar if st.session_state.search_bar else "-"}]')
     st.write(f':blue-background[ℹ️ Tags : {", ".join(st.session_state.tag_bar) if st.session_state.tag_bar else "-"}]')
@@ -710,7 +706,7 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
     """
 
     # st.write(actress['Code'])
-    status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E" if actress['Info'] == 'Drop' else "#9b59b6" if actress['Info'] == 'Goat' else '#3498db'
+    status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E" if actress['Info'] == 'Drop' else "#9b59b6" if actress['Info'] == 'Goat' else "#3498db"
     card_html = ''
     if actress['Release Date'] == '?':
         release_date = '?'
@@ -1533,6 +1529,7 @@ def display_film_grid(df, tag_df):
     if st.session_state.scroll_to_here:
         scroll_to_here(0,key='here')  # Scroll to the top of the page
         st.session_state.scroll_to_here = False
+    st.space('small')
     st.markdown('---')
     if not filtered_df.empty:
         st.markdown(
@@ -1815,13 +1812,14 @@ def complex_home():
         st.session_state.first_load_film = True
     if 'first_load_actress' not in st.session_state:
         st.session_state.first_load_actress = True
-        
+    
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
     df_actress = init_dataframe_actress()
     df_film = init_dataframe_film()
-
-    left, right = st.columns(2)
-    with left:
+    dummy_container = st.container()
+    with dummy_container:
+        st.write('')
+    with st.container(horizontal=True):
         with st.container(key='ActressList'):
             st.header('🌟 Actress List')
             with st.container(horizontal=True):
@@ -1833,7 +1831,7 @@ def complex_home():
                     st.metric('Drop', len(df_actress[df_actress['Review'] == 'Drop']))
             if st.button('Go To Actress →'):
                 return 'actress'
-    with right:
+            
         with st.container(key='FilmList'):
             st.header('🎬 Film List')
             with st.container(horizontal=True):
@@ -1870,13 +1868,13 @@ def complex_home():
         padding: 30px 20px 50px 20px;
         border-radius: 10px;
     }
-
-    .st-key-MainContainer {
-        background-color: #e6e7f2; /* Pink soft */
+                
+    .st-key-Title {
+        background-color: #ffc629; /* Pink soft */
         padding: 30px 20px 50px 20px;
         border-radius: 10px;
     }
-                
+
     /* Container dengan key FilmList */
     .st-key-FilmList {
         background-color: #40b3ff; /* Pink soft */
@@ -1983,7 +1981,7 @@ def complex_film(device):
             """,
             unsafe_allow_html=True
         )
-        
+
         st.markdown('### Actress')
         if 'Not Listed' not in film['Actress Name'] and 'Many' not in film['Actress Name']:
             actress_list = film['Actress Name'].split(', ')
@@ -2093,51 +2091,54 @@ def complex_film(device):
             release_date_text = datetime.strptime(film['Release Date'], '%d/%m/%Y').strftime("%b, %d %Y")
         else:
             release_date_text = '?'
-
+        
         st.markdown('### Release Date')
         st.write(release_date_text)
 
         with st.container(horizontal=True):      
             with st.container(width='content', horizontal=True):
                 st.markdown('### Status')
-                st.write(' | ')
-                buttons = [
-                    {
-                        "Label": "❌️",
-                        "Value": "Not Watched",
-                        "Color": "red"
-                    },
-                    {
-                        "Label": "✅️",
-                        "Value": "Watched",
-                        "Color": "green"
-                    },
-                    {
-                        "Label": "🆗️",
-                        "Value": "Great",
-                        "Color": "blue"
-                    },
-                    {
-                        "Label": "🐐",
-                        "Value": "Goat",
-                        "Color": "violet"
-                    }
-                ]
+                # st.markdown(
+                #     "<div style='text-align:center; font-size:24px;'>|</div>",
+                #     unsafe_allow_html=True
+                # )
+                # buttons = [
+                #     {
+                #         "Label": "❌️",
+                #         "Value": "Not Watched",
+                #         "Color": "red"
+                #     },
+                #     {
+                #         "Label": "✅️",
+                #         "Value": "Watched",
+                #         "Color": "green"
+                #     },
+                #     {
+                #         "Label": "🆗️",
+                #         "Value": "Great",
+                #         "Color": "blue"
+                #     },
+                #     {
+                #         "Label": "🐐",
+                #         "Value": "Goat",
+                #         "Color": "violet"
+                #     }
+                # ]
             
-                for data in buttons:
-                    label, value, color = data["Label"], data["Value"], data["Color"]
-                    if film['Info'] != value:
-                        if st.button(f':{color}-background[{label}]', width='content', type='tertiary'):
-                            info_text = value
-                            row = filtered_index + 2
-                            film_worksheet().update(f'G{row}:G{row}', [[info_text]])
-                            df.at[filtered_index, 'Info'] = info_text
-                            st.session_state.film_df = values_handling(df,'film')
-                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                            st.session_state.filtered_film_data.at[filtered_index, 'Info'] = info_text
-                            st.toast(f'{label} {film["Code"]} is :{color}[{value}]!')
-                            time.sleep(.5)
-                            st.rerun()
+                # for data in buttons:
+                #     label, value, color = data["Label"], data["Value"], data["Color"]
+                #     if film['Info'] != value:
+                #         if st.button(f':{color}-background[{label}]', width='content', type='tertiary'):
+                #             info_text = value
+                #             row = filtered_index + 2
+                #             film_worksheet().update(f'G{row}:G{row}', [[info_text]])
+                #             df.at[filtered_index, 'Info'] = info_text
+                #             st.session_state.film_df = values_handling(df,'film')
+                #             st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                #             st.session_state.filtered_film_data.at[filtered_index, 'Info'] = info_text
+                #             st.toast(f'{label} {film["Code"]} is :{color}[{value}]!')
+                #             time.sleep(.5)
+                #             st.rerun()
         icons = ''
         colors = ''
         if film['Info'] == 'Goat':
@@ -2159,43 +2160,46 @@ def complex_film(device):
                 st.badge(label='', icon='⭐', color='yellow')
             
  
-        st.markdown('---')
-        with st.container(horizontal=True):
+        with st.container(horizontal=True, width='content'):
             with st.container(width='content'):
                 st.markdown('### Tags')
-            if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
-                if st.button(':blue-background[📥]', width='content', type='tertiary'): # :download-quick
-                    row = filtered_index + 2
-                    if film['Tags'] == 'No Tags':
-                        tag_text = 'Downloaded'
-                    elif 'Want to watch' in film['Tags']:
-                        tag_text = film['Tags'].replace('Want to watch', 'Downloaded')
-                    else:
-                        tag_text = film['Tags'] + ', Downloaded'
+            # st.markdown(
+            #     "<div style='text-align:center; font-size:24px;'>|</div>",
+            #     unsafe_allow_html=True
+            # )
+            # if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
+            #     if st.button(':blue-background[📥]', width='content', type='tertiary'): # :download-quick
+            #         row = filtered_index + 2
+            #         if film['Tags'] == 'No Tags':
+            #             tag_text = 'Downloaded'
+            #         elif 'Want to watch' in film['Tags']:
+            #             tag_text = film['Tags'].replace('Want to watch', 'Downloaded')
+            #         else:
+            #             tag_text = film['Tags'] + ', Downloaded'
 
-                    film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                    df.at[filtered_index, 'Tags'] = tag_text
-                    st.session_state.film_df = values_handling(df,'film')
-                    st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                    st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-                    st.toast(f'📥 {film["Code"]} is downloaded!')
-                    time.sleep(.5)
-                    st.rerun()
-            if film['Info'] == 'Not Watched' and "Want to watch" not in film['Tags'] and "Downloaded" not in film['Tags']:
-                if st.button(':yellow-background[👁️]', width='content', type='tertiary'): # :download-quick
-                    row = filtered_index + 2
-                    if film['Tags'] == 'No Tags':
-                        tag_text = 'Want to watch'
-                    else:
-                        tag_text = film['Tags'] + ', Want to watch'
-                    film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                    df.at[filtered_index, 'Tags'] = tag_text
-                    st.session_state.film_df = values_handling(df,'film')
-                    st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                    st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-                    st.toast(f'📥 {film["Code"]} is listed to watch!')
-                    time.sleep(.5)
-                    st.rerun()
+            #         film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+            #         df.at[filtered_index, 'Tags'] = tag_text
+            #         st.session_state.film_df = values_handling(df,'film')
+            #         st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+            #         st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+            #         st.toast(f'📥 {film["Code"]} is downloaded!')
+            #         time.sleep(.5)
+            #         st.rerun()
+            # if film['Info'] == 'Not Watched' and "Want to watch" not in film['Tags'] and "Downloaded" not in film['Tags']:
+            #     if st.button(':yellow-background[👁️]', width='content', type='tertiary'): # :download-quick
+            #         row = filtered_index + 2
+            #         if film['Tags'] == 'No Tags':
+            #             tag_text = 'Want to watch'
+            #         else:
+            #             tag_text = film['Tags'] + ', Want to watch'
+            #         film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+            #         df.at[filtered_index, 'Tags'] = tag_text
+            #         st.session_state.film_df = values_handling(df,'film')
+            #         st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+            #         st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+            #         st.toast(f'📥 {film["Code"]} is listed to watch!')
+            #         time.sleep(.5)
+            #         st.rerun()
         tags = film['Tags'].split(', ')
 
         with st.container(horizontal=True):
@@ -2271,7 +2275,169 @@ def complex_film(device):
                     st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1, count), on_click=set_prev_pic, width='stretch')
             else:
                 st.warning('Picture Unavailable')
+            
+            info_btn = [
+                {
+                    "Label": "❌️",
+                    "Value": "Not Watched",
+                    "Color": "red"
+                },
+                {
+                    "Label": "✅️",
+                    "Value": "Watched",
+                    "Color": "green"
+                },
+                {
+                    "Label": "🆗️",
+                    "Value": "Great",
+                    "Color": "blue"
+                },
+                {
+                    "Label": "🐐",
+                    "Value": "Goat",
+                    "Color": "violet"
+                }
+            ]
 
+            info_film = next(
+                (btn for btn in info_btn if btn["Value"] == film["Info"]),
+                None
+            )
+
+            with st.container(horizontal=True, horizontal_alignment='left', width='content'):
+                with st.container(width='content'):
+                    st.markdown('### Status : ')
+                if st.button(f':{info_film["Color"]}-background[{info_film["Label"]}]', width='content', type='tertiary'):
+                    info_text = info_film['Value']
+                    row = filtered_index + 2
+                    film_worksheet().update(f'G{row}:G{row}', [[info_text]])
+                    df.at[filtered_index, 'Info'] = info_text   
+                    st.session_state.film_df = values_handling(df,'film')
+                    st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                    st.session_state.filtered_film_data.at[filtered_index, 'Info'] = info_text
+                    st.toast(f'{info_film["Label"]} {film["Code"]} is :{info_film["Color"]}[{info_film["Value"]}]!')
+                    time.sleep(.5)
+                    st.rerun()
+                st.markdown(
+                    "<div style='text-align:center; font-size:24px;'>|</div>",
+                    unsafe_allow_html=True
+                )
+                for data in info_btn:
+                    label, value, color = data["Label"], data["Value"], data["Color"]
+                    if film['Info'] != value:
+                        if st.button(f':{color}-background[{label}]', width='content', type='tertiary'):
+                            info_text = value
+                            row = filtered_index + 2
+                            film_worksheet().update(f'G{row}:G{row}', [[info_text]])
+                            df.at[filtered_index, 'Info'] = info_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Info'] = info_text
+                            st.toast(f'{label} {film["Code"]} is :{color}[{value}]!')
+                            time.sleep(.5)
+                            st.rerun()
+            a_btn = [
+                {
+                    "Label": "🚫",
+                    "Value": False,
+                    "Color": "red"
+                },
+                {
+                    "Label": "⭐",
+                    "Value": True,
+                    "Color": "yellow"
+                }
+            ]
+
+            a_film = next(
+                (btn for btn in a_btn if btn["Value"] == film["A-Detector"]),
+                None
+            )
+            with st.container(horizontal=True, horizontal_alignment='left', width='content'):
+                with st.container(width='content'):
+                    st.markdown('### A-Detector : ')
+                if st.button(f':{a_film["Color"]}-background[{a_film["Label"]}]', width='content', type='tertiary'):
+                    a_text = a_film['Value']
+                    row = filtered_index + 2
+                    film_worksheet().update(f'K{row}:K{row}', [[a_text]])
+                    df.at[filtered_index, 'A-Detector'] = a_text   
+                    st.session_state.film_df = values_handling(df,'film')
+                    st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                    st.session_state.filtered_film_data.at[filtered_index, 'A-Detector'] = a_text
+                    st.toast(f'{a_film["Label"]} {film["Code"]} is :{a_film["Color"]}[{a_film["Value"]}]!')
+                    time.sleep(.5)
+                    st.rerun()
+                st.markdown(
+                    "<div style='text-align:center; font-size:24px;'>|</div>",
+                    unsafe_allow_html=True
+                )
+                for data in a_btn:
+                    label, value, color = data["Label"], data["Value"], data["Color"]
+                    if film['A-Detector'] != value:
+                        if st.button(f':{color}-background[{label}]', width='content', type='tertiary'):
+                            a_text = value
+                            row = filtered_index + 2
+                            film_worksheet().update(f'K{row}:K{row}', [[a_text]])
+                            df.at[filtered_index, 'A-Detector'] = a_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'A-Detector'] = a_text
+                            st.toast(f'{label} {film["Code"]} is :{color}[{value}]!')
+                            time.sleep(.5)
+                            st.rerun()
+
+            with st.container(horizontal=True, width='stretch', horizontal_alignment='left'):
+                with st.container(width='content'):
+                    st.markdown('### Tags:')
+                if film['Info'] == 'Not Watched':
+                    if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
+                        if st.button(':blue-background[📥]', width='content', type='tertiary'): # :download-quick
+                            row = filtered_index + 2
+                            if film['Tags'] == 'No Tags':
+                                tag_text = 'Downloaded'
+                            elif 'Want to watch' in film['Tags']:
+                                tag_text = film['Tags'].replace('Want to watch', 'Downloaded')
+                            else:
+                                tag_text = film['Tags'] + ', Downloaded'
+
+                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                            df.at[filtered_index, 'Tags'] = tag_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                            st.toast(f'📥 {film["Code"]} is downloaded!')
+                            time.sleep(.5)
+                            st.rerun()
+                    if film['Info'] == 'Not Watched' and "Want to watch" not in film['Tags'] and "Downloaded" not in film['Tags']:
+                        if st.button(':yellow-background[👁️]', width='content', type='tertiary'): # :download-quick
+                            row = filtered_index + 2
+                            if film['Tags'] == 'No Tags':
+                                tag_text = 'Want to watch'
+                            else:
+                                tag_text = film['Tags'] + ', Want to watch'
+                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                            df.at[filtered_index, 'Tags'] = tag_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                            st.toast(f'📥 {film["Code"]} is listed to watch!')
+                            time.sleep(.5)
+                            st.rerun()
+                    if film['Info'] == 'Not Watched' and ("Want to watch" in film['Tags'] or "Downloaded" in film['Tags']):
+                        if st.button(':red-background[🧹]', width='content', type='tertiary'): # :download-quick
+                            row = filtered_index + 2
+                            tags = film['Tags'].split(', ')
+                            tag_text = ', '.join(tag for tag in tags if tag not in {'Downloaded', 'Want to watch'}) or 'No Tags'
+
+                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                            df.at[filtered_index, 'Tags'] = tag_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                            st.toast(f'📥 {film["Code"]} tags removed!')
+                            time.sleep(.5)
+                            st.rerun()
+                    
         st.markdown('---')
                         
         if pd.isna(film['Link']) :
@@ -2797,156 +2963,183 @@ def complex_film(device):
 
             if st.button('Close', type='primary', width='stretch'):
                 st.rerun()
+    
+    if 'film_layout' not in st.session_state:
+        st.session_state.film_layout = 'Detailed'
 
     with st.sidebar:
-        if st.button('⬅️ Back', width='stretch'):
+        if st.session_state.film_layout not in ['Scrap Manual', 'Calender Scrap']:
+            st.subheader('⚙️ Page Option')
+            show_a = st.toggle('✨')
+    
+    st.markdown(
+        """
+        <style>
+        .st-key-film-navbar {
+            background-color: #1D546D;
+            padding: 5px;
+            border-radius: 10px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    film_navbar = st.container(key='film-navbar', width='stretch', horizontal=True, horizontal_alignment='distribute')
+
+    with film_navbar:
+        if st.button('🏠 Home', width='content'):
             st.session_state.first_load_film = True
             return 'home'
-        st.markdown('---')
-        with st.expander('Gacha'):
-            if device == 'Device 1':
-                img_width_percentage = 45
-                img_height = 216
-            else:
-                img_width_percentage = 40
-                img_height = 176
-
-            actress_gacha = st.multiselect('Actress Filter', key='new_actresses_gacha', options=ACTRESS_OPTS)
-            gacha_df = df.copy()
-            if actress_gacha:
-                pattern = '|'.join([f'(?:^|, ){a}(?:,|$)' for a in actress_gacha])
-                gacha_df = gacha_df[(gacha_df['Actress Name'].str.contains(pattern, na=False, regex=True)) & (gacha_df['Info'] == 'Not Watched')]
-            else:
-                gacha_df = gacha_df[gacha_df['Info'] == 'Not Watched']
-            if st.button('Gacha', width='stretch'):
-                random_row = gacha_df.sample(n=1)
-                st.subheader('Result')
-                st.markdown("""
-                    <style>
-                    .centered-container {
-                        display: flex;
-                        justify-content: center;
-                        width: 100%;
-                    }
-                    </style>
-                """, unsafe_allow_html=True)
-                
-                st.markdown(f"""
-                    <div class="centered-container">
-                        <div style="
-                            height: {img_height}px;
-                            width: {img_width_percentage}%;
-                            overflow: hidden;
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                            margin-bottom: 10px;
-                            border-radius: 5px;
-                        ">
-                            <img src="{random_row['Picture'].values[0]}" 
-                                style="
-                                    width: 100%;
-                                    height: 100%;
-                                    object-fit: cover;
-                                    object-position: center;
-                                ">
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
-                if random_row['A-Detector'].values[0] == True:
-                    st.markdown(f"<h3 style='text-align: center;'>⭐ {random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<h3 style='text-align: center;'>{random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
-                st.write('**Title :**', random_row['Title'].values[0])
-                st.write('**Actress :**', random_row['Actress Name'].values[0])
-                st.write('**Review :**', random_row['Info'].values[0])
-                st.link_button('View Film', random_row['Link'].values[0], width='stretch', type='primary')
-
-        with st.expander('Add Tags'):
-            if st.session_state.get('reset_tag', False):
-                st.session_state.reset_tag = False
-                st.session_state.add_new_tag = ''
-                st.session_state.film_playlist = []
-            new_tag = st.text_input('Tag', placeholder='Enter tag... (tag1, tag2, tag3, ..)', key='add_new_tag')
-            if st.button('Save Tag', width='stretch'):
-                if not new_tag.isspace() and new_tag:
-                    new_tags = []
-                    tag_error = False
-                    new_tag = new_tag.split(', ')
-
-                    for tag in new_tag:
-                        if tag in st.session_state.tag_df['Tags'].values:
-                            tag_error = True        
+        
+        with st.container(horizontal_alignment='right', horizontal=True):
+            if st.button('📌 Feature', width='content'):
+                @st.dialog('Features', width='small')
+                def features(tag_df):
+                    with st.expander('Gacha'):
+                        if device == 'Device 1':
+                            img_width_percentage = 45
+                            img_height = 216
                         else:
-                            new_tags.append([tag])
+                            img_width_percentage = 40
+                            img_height = 176
 
-                    if not tag_error:
-                        new_tag_df = pd.DataFrame({'Tags': new_tag})
-                        st.session_state.tag_df = pd.concat([tag_df, new_tag_df], ignore_index=True)
-                        tags_worksheet().append_rows(new_tags)
-                        st.session_state.reset_tag = True
-                        st.rerun()
-                    else:
-                        st.warning(f'{tag} already in Tags')
-                else:
-                    st.warning('Tag cannot be empty')
-            
-            opts = st.session_state.tag_df['Tags'].values
+                        actress_gacha = st.multiselect('Actress Filter', key='new_actresses_gacha', options=ACTRESS_OPTS)
+                        gacha_df = df.copy()
+                        if actress_gacha:
+                            pattern = '|'.join([f'(?:^|, ){a}(?:,|$)' for a in actress_gacha])
+                            gacha_df = gacha_df[(gacha_df['Actress Name'].str.contains(pattern, na=False, regex=True)) & (gacha_df['Info'] == 'Not Watched')]
+                        else:
+                            gacha_df = gacha_df[gacha_df['Info'] == 'Not Watched']
+                        if st.button('Gacha', width='stretch'):
+                            random_row = gacha_df.sample(n=1)
+                            st.subheader('Result')
+                            st.markdown("""
+                                <style>
+                                .centered-container {
+                                    display: flex;
+                                    justify-content: center;
+                                    width: 100%;
+                                }
+                                </style>
+                            """, unsafe_allow_html=True)
+                            
+                            st.markdown(f"""
+                                <div class="centered-container">
+                                    <div style="
+                                        height: {img_height}px;
+                                        width: {img_width_percentage}%;
+                                        overflow: hidden;
+                                        display: flex;
+                                        justify-content: center;
+                                        align-items: center;
+                                        margin-bottom: 10px;
+                                        border-radius: 5px;
+                                    ">
+                                        <img src="{random_row['Picture'].values[0]}" 
+                                            style="
+                                                width: 100%;
+                                                height: 100%;
+                                                object-fit: cover;
+                                                object-position: center;
+                                            ">
+                                    </div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                            if random_row['A-Detector'].values[0] == True:
+                                st.markdown(f"<h3 style='text-align: center;'>⭐ {random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
+                            else:
+                                st.markdown(f"<h3 style='text-align: center;'>{random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
+                            st.write('**Title :**', random_row['Title'].values[0])
+                            st.write('**Actress :**', random_row['Actress Name'].values[0])
+                            st.write('**Review :**', random_row['Info'].values[0])
+                            st.link_button('View Film', random_row['Link'].values[0], width='stretch', type='primary')
 
-            test_new_tags = st.multiselect(
-                'Test Tags', 
-                options=opts, 
-                key=f'film_playlist'
-            )
+                    with st.expander('Add Tags'):
+                        if st.session_state.get('reset_tag', False):
+                            st.session_state.reset_tag = False
+                            st.session_state.add_new_tag = ''
+                            st.session_state.film_playlist = []
+                        new_tag = st.text_input('Tag', placeholder='Enter tag... (tag1, tag2, tag3, ..)', key='add_new_tag')
+                        if st.button('Save Tag', width='stretch'):
+                            if not new_tag.isspace() and new_tag:
+                                new_tags = []
+                                tag_error = False
+                                new_tag = new_tag.split(', ')
 
-            if st.button('Delete Tags', width='stretch'):
-                if test_new_tags:
-                    tag_df = st.session_state.tag_df
-                    rows_to_delete = tag_df[
-                        tag_df['Tags'].isin(test_new_tags)
-                    ].index.tolist()
+                                for tag in new_tag:
+                                    if tag in st.session_state.tag_df['Tags'].values:
+                                        tag_error = True        
+                                    else:
+                                        new_tags.append([tag])
 
-                    for index in sorted(rows_to_delete, reverse=True):
-                        tags_worksheet().delete_row(int(index)+2)
-
-                    tag_df = tag_df[
-                        ~tag_df['Tags'].isin(test_new_tags)
-                    ].reset_index(drop=True)
-                    st.session_state.tag_df = tag_df
-                    st.session_state.reset_tag = True  
-                    st.rerun()
-                else:
-                    st.warning('No Tags selectec above')
-            st.button('Reset', width='stretch', key='tags_reset_btn')
+                                if not tag_error:
+                                    new_tag_df = pd.DataFrame({'Tags': new_tag})
+                                    st.session_state.tag_df = pd.concat([tag_df, new_tag_df], ignore_index=True)
+                                    tags_worksheet().append_rows(new_tags)
+                                    st.session_state.reset_tag = True
+                                    st.rerun()
+                                else:
+                                    st.warning(f'{tag} already in Tags')
+                            else:
+                                st.warning('Tag cannot be empty')
                         
-        st.markdown('---')
-        st.header("⚙️ Display Settings")
-        with st.container(horizontal=True):
-            display_mode = st.radio(
-                "View Mode",
-                ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"],
-                on_change=reset_page,
-                key='film_layout'
-            )
+                        opts = st.session_state.tag_df['Tags'].values
 
-            if display_mode not in ['Calender Scrap', 'Scrap Manual']:
-                tags_status = st.radio(
-                    "Tags", 
-                    ['All', 'Tags', 'No Tags'], 
-                    on_change=reset_page, 
-                    key='tag_film')
-            else:
-                tags_status = 'Invalid'
+                        test_new_tags = st.multiselect(
+                            'Test Tags', 
+                            options=opts, 
+                            key=f'film_playlist'
+                        )
 
-        st.markdown('---')
-        st.subheader('⚙️ Page Option')
-        show_a = st.toggle('✨')
-    
+                        if st.button('Delete Tags', width='stretch'):
+                            if test_new_tags:
+                                tag_df = st.session_state.tag_df
+                                rows_to_delete = tag_df[
+                                    tag_df['Tags'].isin(test_new_tags)
+                                ].index.tolist()
+
+                                for index in sorted(rows_to_delete, reverse=True):
+                                    tags_worksheet().delete_row(int(index)+2)
+
+                                tag_df = tag_df[
+                                    ~tag_df['Tags'].isin(test_new_tags)
+                                ].reset_index(drop=True)
+                                st.session_state.tag_df = tag_df
+                                st.session_state.reset_tag = True  
+                                st.rerun()
+                            else:
+                                st.warning('No Tags selectec above')
+                        st.button('Reset', width='stretch', key='tags_reset_btn')
+                    if st.button('Set', width='stretch'):
+                        st.rerun()
+                
+                features(tag_df)
+            
+            if st.button('👁️ Display', width='content'):
+                @st.dialog('Display Settings', width='small') #viewmode
+                def display_setting():
+                    layout_index = ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"].index(st.session_state.film_layout) if st.session_state.film_layout in ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"] else 0
+                    # tag_index = ['All', 'Tags', 'No Tags'].index(st.session_state.tags_status) if st.session_state.tags_status in ['All', 'Tags', 'No Tags'] else 0
+                    with st.container(horizontal=True):
+                        st.session_state.film_layout = st.radio(
+                            "View Mode",
+                            ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"],
+                            index= layout_index,
+                            on_change=reset_page,
+                        )
+                    if st.button('Set', width='stretch'):
+                        st.rerun()
+                
+                display_setting()
+        
+    film_navbar.float("top: 50px;z-index: 999990;")
+
     # Main
-    st.space('small')
     if st.session_state.viewing_film_index is not None:
         show_film_details()
-    
+
+    st.space('small')
     if st.session_state.first_load_film:
         st.session_state.scroll_to_top = True
         st.session_state.first_load_film = False
@@ -2954,22 +3147,17 @@ def complex_film(device):
     filtered_df = df.copy()
     filtered_df = filtered_df.sort_values(by='Code', ascending=True)
 
-    if show_a:
-        filtered_df = filtered_df[filtered_df['A-Detector'] == 1]
-    
-    if tags_status != 'Invalid' and tags_status != 'All':
-        if tags_status == 'Tags':
-            filtered_df = filtered_df[filtered_df['Tags'] != 'No Tags']
-        else:
-            filtered_df = filtered_df[filtered_df['Tags'] == 'No Tags']
+    if st.session_state.film_layout not in ['Scrap Manual', 'Calender Scrap']:
+        if show_a:
+            filtered_df = filtered_df[filtered_df['A-Detector'] == 1]
 
-    if display_mode == "Detailed":
+    if st.session_state.film_layout == "Detailed":
         st.markdown("<h1 style='text-align: center;'>Film Detailed</h1>", unsafe_allow_html=True)
         display_film_card(filtered_df, tag_df)
-    elif display_mode == "Simple":
+    elif st.session_state.film_layout == "Simple":
         st.markdown("<h1 style='text-align: center;'>Film Simple</h1>", unsafe_allow_html=True)
         display_film_grid(filtered_df, tag_df)
-    elif display_mode == "Calender Scrap":
+    elif st.session_state.film_layout == "Calender Scrap":
         st.markdown("<h1 style='text-align: center;'>Calendar Scrap</h1>", unsafe_allow_html=True)
         display_film_calender(df)
     else:  # Table View
@@ -2994,7 +3182,6 @@ def complex_film(device):
         if 's_type' not in st.session_state:
             st.session_state.s_type = None
 
-
         scrap_new = []
         if st.session_state.get('html_reset', False):
             st.session_state.html_reset = False
@@ -3003,7 +3190,6 @@ def complex_film(device):
             st.session_state.input_a = False
             st.session_state.prev_pic = 0
             st.session_state.start_scrap = False
-        
 
         st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Scrap Manual</h1>", unsafe_allow_html=True)
         st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar', on_change=reset_scrap)
@@ -3030,11 +3216,11 @@ def complex_film(device):
                     
                     row = index[0] + 2
                     film_worksheet().update(f'A{row}:K{row}', st.session_state.scrap_new)
-                    st.toast('ℹ Existing Film')
+                    st.toast('ℹ️ Existing Film')
                 else:
                     film_worksheet().append_rows(st.session_state.scrap_new)
                     df.loc[len(df)] = st.session_state.scrap_new[0]
-                    st.toast('ℹ New Film')
+                    st.toast('ℹ️ New Film')
 
                 st.session_state.film_df = df
                 
@@ -3222,7 +3408,6 @@ def complex_film(device):
 
                             st.markdown(img_html, unsafe_allow_html=True)
 
-
                             with st.container(horizontal=True):
                                 # Tombol navigasi
                                 st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
@@ -3334,7 +3519,6 @@ def complex_film(device):
             st.warning('⚠️ HTML Empty')
 
     with st.sidebar:
-        st.markdown('---')
         if st.button('➕ Add New Film', width='stretch'):
             add_new_film()
         if st.session_state.log_out_btn == False:
@@ -4851,11 +5035,6 @@ def complex_actress(device):
         if st.button("➕ Add New Actress", width='stretch'):
             st.session_state.adding_new = True
         
-        # # Tombol refresh data
-        # if st.button("🔄 Refresh Data", width='stretch'):
-        #     refresh_data()
-        #     st.rerun()
-        
         if st.session_state.log_out_btn == False:
             if st.button('🔐 Logout', width='stretch'):
                 st.session_state.log_out_btn = True
@@ -4885,7 +5064,11 @@ def complex_actress(device):
         if st.session_state.get('search_reset', False):
             st.session_state.search_reset = False
             st.session_state.search_bar = ''
+        dummy_container = st.container()
+        with dummy_container:
+            st.write('')
         
+        dummy_container.float()
         search_container = st.container(horizontal=True, vertical_alignment='bottom')
 
         if st.session_state.scroll_to_here:
