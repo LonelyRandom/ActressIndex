@@ -1819,7 +1819,9 @@ def complex_home():
     dummy_container = st.container()
     with dummy_container:
         st.write('')
-    with st.container(horizontal=True):
+    
+    col1, col2 = st.columns(2)
+    with col1:
         with st.container(key='ActressList'):
             st.header('🌟 Actress List')
             with st.container(horizontal=True):
@@ -1831,7 +1833,8 @@ def complex_home():
                     st.metric('Drop', len(df_actress[df_actress['Review'] == 'Drop']))
             if st.button('Go To Actress →'):
                 return 'actress'
-            
+    
+    with col2:
         with st.container(key='FilmList'):
             st.header('🎬 Film List')
             with st.container(horizontal=True):
@@ -1936,13 +1939,14 @@ def complex_film(device):
         if pic < total and pic >=0:
             st.session_state.prev_pic = pic
 
+    def set_film_data(p, total):
+        if p < total and p >= 0:
+            st.session_state.filtered_data_position = p
+            st.session_state.prev_pic = 0
+
     @st.dialog("🎬 Film Details", width='small')
     def show_film_details():
         index = st.session_state.viewing_film_index
-        def set_film_data(p, total):
-            if p < total and p >= 0:
-                st.session_state.filtered_data_position = p
-                st.session_state.prev_pic = 0
         
         filtered_data = st.session_state.filtered_film_data
         pos = st.session_state.filtered_data_position
@@ -2275,7 +2279,7 @@ def complex_film(device):
                     st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1, count), on_click=set_prev_pic, width='stretch')
             else:
                 st.warning('Picture Unavailable')
-            
+            st.markdown('---')
             info_btn = [
                 {
                     "Label": "❌️",
@@ -2437,6 +2441,11 @@ def complex_film(device):
                             st.toast(f'📥 {film["Code"]} tags removed!')
                             time.sleep(.5)
                             st.rerun()
+            
+            st.space('small')
+            with st.container(horizontal=True):
+                st.button('⬅️', width='stretch', key='prev_film_bottom', disabled=(st.session_state.filtered_data_position==0), on_click=set_film_data, args=(st.session_state.filtered_data_position-1,len(st.session_state.filtered_film_data)))
+                st.button('➡️', width='stretch', key='next_film_bottom', disabled=(st.session_state.filtered_data_position==len(st.session_state.filtered_film_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(st.session_state.filtered_film_data)))
                     
         st.markdown('---')
                         
