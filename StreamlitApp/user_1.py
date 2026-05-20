@@ -3515,6 +3515,15 @@ def complex_film(device):
                         st.write(':blue-background[ℹ️ Actress found in database!]')
                         match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
                         idx = match_data.index
+
+                        if match_data['Retire Date'] != '?' and debut != '?':
+                            retire = datetime.strptime(match_data['Retire Date'], "%d/%m/%Y")
+                            period = relativedelta(retire.date(), debut.date())
+
+                            if period.months == 0:
+                                debut_period = f'{period.years} Year'
+                            else:
+                                debut_period = f'{period.years} Year {period.months} Month'
                     
                         row = idx + 2
                         new_value = [
@@ -3529,7 +3538,7 @@ def complex_film(device):
                             data['Height'],
                             match_data['Notes'].iloc[0],
                             age,
-                            match_data['Debut Period'].iloc[0],
+                            debut_period,
                             match_data['Retire Date'].iloc[0],
                             match_data['Status'].iloc[0],
                             match_data['Page'].iloc[0],
@@ -3542,6 +3551,7 @@ def complex_film(device):
                         st.write(f"Kanji : {match_data['Name (Kanji)'].iloc[0]}" )
                         st.write(f"Birthdate : {data['DOB']}" )
                         st.write(f"Debut Date : {data['Debut']}" )
+                        st.write(f"Debut Period : {debut_period}")
                         st.write(f"Cup : {data['Cup']}" )
                         st.write(f"Measurement : {measurement}" )
                         st.write(f"Height : {data['Height']}" )
