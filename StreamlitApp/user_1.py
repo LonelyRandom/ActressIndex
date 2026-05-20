@@ -3516,8 +3516,8 @@ def complex_film(device):
                         match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
                         idx = match_data.index
 
-                        if match_data['Retire Date'] != '?' and debut != '?':
-                            retire = datetime.strptime(match_data['Retire Date'], "%d/%m/%Y")
+                        if match_data['Retire Date'].iloc[0] != '?' and debut != '?':
+                            retire = datetime.strptime(match_data['Retire Date'].iloc[0], "%d/%m/%Y")
                             period = relativedelta(retire.date(), debut.date())
 
                             if period.months == 0:
