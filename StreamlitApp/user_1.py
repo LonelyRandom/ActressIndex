@@ -3486,9 +3486,21 @@ def complex_film(device):
                     
                     dob = extract_field("DOB", st.session_state.html_bar)
                     debut = extract_field("Debut", st.session_state.html_bar)
+                    if debut != '?':
+                        debut = datetime.strptime(debut, "%Y-%m-%d")
+                        debut_date = debut.strftime("%d/%m/%Y")
+                        debut_period = relativedelta(date.today(), edited_debut_date)
+
+                        if period.months == 0:
+                            debut = f'{period.years} Year'
+                        else:
+                            debut = f'{period.years} Year {period.months} Month'
+                    else:
+                        debut_date = '?'
+                        debut_period = '?'
                     data = {
                         "DOB": datetime.strptime(dob, "%Y-%m-%d").strftime("%d/%m/%Y") if dob != '?' else '?',
-                        "Debut": datetime.strptime(debut, "%Y-%m-%d").strftime("%d/%m/%Y") if debut != '?' else '?',
+                        "Debut": debut_date,
                         "Measurements": extract_field("Measurements", st.session_state.html_bar),
                         "Cup": extract_field("Cup", st.session_state.html_bar),
                         "Height": extract_field("Height", st.session_state.html_bar),
@@ -3523,7 +3535,16 @@ def complex_film(device):
                             match_data['Page'].iloc[0],
                         ]
 
-                        st.write()
+                        with st.container(horizontal_alignment='center'):
+                            st.image(match_data['Picture'].iloc[0], width=120)
+                        st.write(f"Review : {match_data['Review'].iloc[0]}" )
+                        st.write(f"Latin : {match_data['Name (Alphabet)'].iloc[0]}" )
+                        st.write(f"Kanji : {match_data['Name (Kanji)'].iloc[0]}" )
+                        st.write(f"Birthdate : {data['DOB']}" )
+                        st.write(f"Debut Date : {data['Debut']}" )
+                        st.write(f"Cup : {data['Cup']}" )
+                        st.write(f"Measurement : {measurement}" )
+                        st.write(f"Height : {data['Height']}" )
                         st.session_state.scrap_new = new_value
                     else:
                         st.error('Actress not found in database! ❌')                        
@@ -4698,7 +4719,7 @@ def complex_actress(device):
                 key=f"height_{index}"
             )
 
-            if st.checkbox('No Info', value=(actress['Height (cm)'] == '? cm'), key='Height Check'):
+            if st.checkbox('No Info', value=(height == '130'), key='Height Check'):
                 edited_height = '?'
             else:
                 edited_height = str(edited_height) + ' cm'
