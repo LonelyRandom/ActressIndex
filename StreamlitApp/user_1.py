@@ -3225,16 +3225,16 @@ def complex_film(device):
         # ==============================
         if st.session_state.save_scrap:
             if st.session_state.s_type == "film": # Film
-                if st.session_state.scrap_new[0][1] in df['Code'].values:
-                    index = df.loc[df['Code'] == st.session_state.scrap_new[0][1]].index
-                    df.loc[index] = st.session_state.scrap_new[0]
+                if st.session_state.scrap_new[1] in df['Code'].values:
+                    index = df.loc[df['Code'] == st.session_state.scrap_new[1]].index
+                    df.loc[index] = st.session_state.scrap_new
                     
                     row = index[0] + 2
-                    film_worksheet().update(f'A{row}:K{row}', st.session_state.scrap_new)
+                    film_worksheet().update(f'A{row}:K{row}', [st.session_state.scrap_new])
                     st.toast('ℹ️ Existing Film')
                 else:
-                    film_worksheet().append_rows(st.session_state.scrap_new)
-                    df.loc[len(df)] = st.session_state.scrap_new[0]
+                    film_worksheet().append_row(st.session_state.scrap_new)
+                    df.loc[len(df)] = st.session_state.scrap_new
                     st.toast('ℹ️ New Film')
 
                 st.session_state.film_df = df
@@ -3246,12 +3246,16 @@ def complex_film(device):
                     st.session_state.actress_df = final_df
                     
             else: # Cast
-                if st.session_state.scrap_new[0][3] in actress_df['Name (Kanji)'].values:
-                    index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[0][3]].index
+                if st.session_state.scrap_new[3] in actress_df['Name (Kanji)'].values:
+                    index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[3]].index
+                    actress_df.loc[index[0]] = st.session_state.scrap_new
                     row = index[0] + 2
-                    actress_worksheet().update(f'A{row}:O{row}', st.session_state.scrap_new)
+                    actress_worksheet().update(f'A{row}:O{row}', [st.session_state.scrap_new])
                 else:
+                    actress_df.loc[len(actress_df)] = st.session_state.scrap_new
                     actress_worksheet().append_row(st.session_state.scrap_new)
+
+                st.session_state.actress_df = actress_df
 
             st.session_state.html_reset = True
             st.toast("✅ Scrap Saved Successfully!")
@@ -3457,7 +3461,7 @@ def complex_film(device):
                     st.markdown('### :orange-background[New Actress:]')
                     st.write(casts)
                         
-                    scrap_new.append([
+                    scrap_new = [
                         actress_name,
                         dvd_id,
                         film_title,
@@ -3469,7 +3473,7 @@ def complex_film(device):
                         film_ref,
                         img_srcs,
                         input_a
-                    ])
+                    ]
 
                     st.session_state.actress_new = casts
                     st.session_state.scrap_new = scrap_new
