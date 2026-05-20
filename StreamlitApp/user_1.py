@@ -3489,12 +3489,12 @@ def complex_film(device):
                     if debut != '?':
                         debut = datetime.strptime(debut, "%Y-%m-%d")
                         debut_date = debut.strftime("%d/%m/%Y")
-                        debut_period = relativedelta(date.today(), debut_date)
+                        period = relativedelta(date.today(), debut.date())
 
                         if period.months == 0:
-                            debut = f'{period.years} Year'
+                            debut_period = f'{period.years} Year'
                         else:
-                            debut = f'{period.years} Year {period.months} Month'
+                            debut_period = f'{period.years} Year {period.months} Month'
                     else:
                         debut_date = '?'
                         debut_period = '?'
