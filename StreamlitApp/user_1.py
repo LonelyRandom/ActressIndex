@@ -1070,6 +1070,9 @@ def display_film_calender(df):
         new_rows = []
         for i in range(len(pass_data)):
             data = pass_data.iloc[i]
+            if '-HZGD' in data['Code']:
+                data['Code'] = data['Code'][1:]
+                
             if data['Code'] not in df['Code'].values:
                 new_rows.append([
                     'Not Listed',
@@ -1082,13 +1085,13 @@ def display_film_calender(df):
                     '?',
                     '--',
                     '--',
-                    data['A-Detector']
+                    bool(data['A-Detector'])
                 ])
         
         new_row_df = pd.DataFrame(new_rows, columns=df.columns)
         final_df = pd.concat([df,new_row_df], ignore_index=True)
-        st.session_state.film_df = final_df
         film_worksheet().append_rows(new_rows)
+        st.session_state.film_df = final_df
         st.toast('✅ Succesfully sent data to database!')
         time.sleep(.5)        
             
