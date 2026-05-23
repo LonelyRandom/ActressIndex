@@ -63,8 +63,6 @@ def log_in_auth():
 
         login_button = st.button("Login", width="stretch", type="primary")
         
-        # Inisialisasi status error di session state
-        
         if login_button:
             pass_hash = hash_password(username+password)
             st.session_state.login_error = None

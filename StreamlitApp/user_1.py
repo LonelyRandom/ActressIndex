@@ -1072,7 +1072,7 @@ def display_film_calender(df):
             data = pass_data.iloc[i]
             if '-HZGD' in data['Code']:
                 data['Code'] = data['Code'][1:]
-                
+
             if data['Code'] not in df['Code'].values:
                 new_rows.append([
                     'Not Listed',
@@ -1831,7 +1831,7 @@ def complex_home():
             with st.container(horizontal=True):
                 with st.container(key='Film Info 1', horizontal=False):
                     st.metric('Film Count', len(df_film))
-                    st.metric('Watched', len(df_film[df_film['Info'] == 'Watched']))
+                    st.metric('Watched', len(df_film[(df_film['Info'] == 'Watched') | (df_film['Info'] == 'Great')]))
                 with st.container(key='Film Info 2', horizontal=False):
                     st.metric('Not Watched', len(df_film[df_film['Info'] == 'Not Watched']))
                     st.metric('Goat', len(df_film[df_film['Info'] == 'Goat']))
@@ -1972,6 +1972,10 @@ def complex_film(device):
                 color: #d6cfc7 !important;
                 font-size: 14px !important;
             }
+            [class*="st-key-actress_unmatched_"] p {
+                color: #d6cfc7 !important;
+                font-size: 14px !important;
+            }
             </style>
             """,
             unsafe_allow_html=True
@@ -1979,9 +1983,14 @@ def complex_film(device):
 
         st.markdown('### Actress')
         if 'Not Listed' not in film['Actress Name'] and 'Many' not in film['Actress Name']:
+            unmatched_actress_list = []
             actress_list = film['Actress Name'].split(', ')
             matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
-            if len(matching_actresses)>2:
+            for actress in actress_list:
+                if actress not in matching_actresses['Name (Alphabet)'].values:
+                    unmatched_actress_list.append(actress)
+
+            if len(actress_list)>2:
                 is_center = 'center'
             else:
                 is_center = 'left'
@@ -2023,6 +2032,42 @@ def complex_film(device):
                             st.session_state.set_search = True
                             st.session_state.scroll_to_top = True
                             st.rerun()
+                
+                if unmatched_actress_list:
+                    for actress in unmatched_actress_list:
+                        with st.container(width=80, key=actress):
+                            # Display image as circle using HTML
+                            st.markdown(f"""
+                                <div style="
+                                    width: 70px;
+                                    height: 70px;
+                                    border-radius: 50%;
+                                    overflow: hidden;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    margin: 0 auto 8px auto;
+                                    background: white;
+                                    border: 1.5px solid #7f8c8d;
+                                ">
+                                    <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
+                                        style="
+                                            width: 100%;
+                                            height: 100%;
+                                            object-fit: cover;
+                                        ">
+                                </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Button
+                            if st.button(f':violet[{actress}]', width='stretch', type='tertiary', key=f"actress_unmatched_{actress}", on_click=reset_page):
+                                st.session_state.viewing_film_index = None
+                                st.session_state.editing_film_index = None
+                                st.session_state.search_text = actress
+                                st.session_state.set_search = True
+                                st.session_state.scroll_to_top = True
+                                st.rerun()
+
         elif 'Many' in film['Actress Name']:
             with st.container(width=80):
                 st.markdown(f"""
@@ -2093,47 +2138,6 @@ def complex_film(device):
         with st.container(horizontal=True):      
             with st.container(width='content', horizontal=True):
                 st.markdown('### Status')
-                # st.markdown(
-                #     "<div style='text-align:center; font-size:24px;'>|</div>",
-                #     unsafe_allow_html=True
-                # )
-                # buttons = [
-                #     {
-                #         "Label": "❌️",
-                #         "Value": "Not Watched",
-                #         "Color": "red"
-                #     },
-                #     {
-                #         "Label": "✅️",
-                #         "Value": "Watched",
-                #         "Color": "green"
-                #     },
-                #     {
-                #         "Label": "🆗️",
-                #         "Value": "Great",
-                #         "Color": "blue"
-                #     },
-                #     {
-                #         "Label": "🐐",
-                #         "Value": "Goat",
-                #         "Color": "violet"
-                #     }
-                # ]
-            
-                # for data in buttons:
-                #     label, value, color = data["Label"], data["Value"], data["Color"]
-                #     if film['Info'] != value:
-                #         if st.button(f':{color}-background[{label}]', width='content', type='tertiary'):
-                #             info_text = value
-                #             row = filtered_index + 2
-                #             film_worksheet().update(f'G{row}:G{row}', [[info_text]])
-                #             df.at[filtered_index, 'Info'] = info_text
-                #             st.session_state.film_df = values_handling(df,'film')
-                #             st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                #             st.session_state.filtered_film_data.at[filtered_index, 'Info'] = info_text
-                #             st.toast(f'{label} {film["Code"]} is :{color}[{value}]!')
-                #             time.sleep(.5)
-                #             st.rerun()
         icons = ''
         colors = ''
         if film['Info'] == 'Goat':
