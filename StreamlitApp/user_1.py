@@ -3458,9 +3458,22 @@ def complex_film(device):
                     
                     dob = extract_field("DOB", st.session_state.html_bar)
                     debut = extract_field("Debut", st.session_state.html_bar)
+                    if debut != '?':
+                        debut = datetime.strptime(debut, "%Y-%m-%d")
+                        debut_date = debut.strftime("%d/%m/%Y")
+                        period = relativedelta(date.today(), debut.date())
+
+                        if period.months == 0:
+                            debut_period = f'{period.years} Year'
+                        else:
+                            debut_period = f'{period.years} Year {period.months} Month'
+                    else:
+                        debut_date = '?'
+                        debut_period = '?'
+
                     data = {
                         "DOB": datetime.strptime(dob, "%Y-%m-%d").strftime("%d/%m/%Y") if dob != '?' else '?',
-                        "Debut": datetime.strptime(debut, "%Y-%m-%d").strftime("%d/%m/%Y") if debut != '?' else '?',
+                        "Debut": debut_date,
                         "Measurements": extract_field("Measurements", st.session_state.html_bar),
                         "Cup": extract_field("Cup", st.session_state.html_bar),
                         "Height": extract_field("Height", st.session_state.html_bar),
@@ -3475,7 +3488,16 @@ def complex_film(device):
                         st.write(':blue-background[ℹ️ Actress found in database!]')
                         match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
                         idx = match_data.index
-                    
+
+                        if match_data['Retire Date'].iloc[0] != '?' and debut != '?':
+                            retire = datetime.strptime(match_data['Retire Date'].iloc[0], "%d/%m/%Y")
+                            period = relativedelta(retire.date(), debut.date())
+
+                            if period.months == 0:
+                                debut_period = f'{period.years} Year'
+                            else:
+                                debut_period = f'{period.years} Year {period.months} Month'
+
                         row = idx + 2
                         new_value = [
                             match_data['Review'].iloc[0],
@@ -3489,7 +3511,7 @@ def complex_film(device):
                             data['Height'],
                             match_data['Notes'].iloc[0],
                             age,
-                            match_data['Debut Period'].iloc[0],
+                            debut_period,
                             match_data['Retire Date'].iloc[0],
                             match_data['Status'].iloc[0],
                             match_data['Page'].iloc[0],
