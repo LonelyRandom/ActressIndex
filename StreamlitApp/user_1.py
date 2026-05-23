@@ -965,7 +965,6 @@ def display_film_calender(df):
                 }}
                 </style>""", unsafe_allow_html=True)
                 
-    
     if calender_search:
         calender_search = calender_search.split(' ')
         calender_search = '-'.join(calender_search)
@@ -978,24 +977,6 @@ def display_film_calender(df):
             with st.container(horizontal=True, vertical_alignment='bottom'):
                 with st.container(width='content'):
                     st.write(f'Filter by {select_date_type} : {st.session_state.show_date.strftime("%d %B %Y")}')
-                if st.button(':yellow-background[📌]', type='tertiary'):
-                    # calender_df_copy = calender_df.copy()
-                    # pin_index = filtered_df.index
-                    # calender_df_copy.loc[pin_index, 'is_Anchor'] = True
-                    # st.session_state.calender_data = calender_df_copy
-                    # batch_data = [
-                    #     {
-                    #         "range": f"G{row+2}",
-                    #         "values": [[True]]
-                    #     }
-                    #     for row in pin_index
-                    # ]
-
-                    # calendar_worksheet().batch_update(batch_data)
-                    # st.toast('✅ Date Marked!')
-                    st.toast('⚠️ Under Construction!')
-                    time.sleep(.5)
-                    st.rerun()
 
         elif select_date_type == 'Month/Year':
             st.write(f'Filter by {select_date_type} : {st.session_state.show_date.strftime("%B %Y")}')
@@ -1714,7 +1695,7 @@ def display_film_grid(df, tag_df):
             f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Actress Recommendation</div>",
             unsafe_allow_html=True
         )
-        with st.container(horizontal=True):
+        with st.container(horizontal=True,horizontal_alignment='center'):
             for idx in random_df.index:
                 with st.container(width=actress_width, key=f'bottom_actress_recommendation_{idx}'):
                     # Display image as circle using HTML
@@ -1754,7 +1735,7 @@ def display_film_grid(df, tag_df):
             filtered_film = df.copy()
             st.session_state.random_film = filtered_film.sample(n=6)
         random_film = st.session_state.random_film
-        with st.container(horizontal=True):
+        with st.container(horizontal=True, horizontal_alignment='center'):
             for i in range(len(random_film)):
                 with st.container(width=image_width):
                     if i < len(random_film):
@@ -1832,6 +1813,7 @@ def complex_home():
                     st.metric('Not Checked', len(df_actress[df_actress['Review'] == 'Not Checked']))
                     st.metric('Drop', len(df_actress[df_actress['Review'] == 'Drop']))
             if st.button('Go To Actress →'):
+                st.session_state.actress_page = 1
                 return 'actress'
     
     with col2:
@@ -5234,6 +5216,14 @@ def complex_actress(device):
                                 kanji_text = actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ""
                                 
                                 review_class = actress["Review"].lower().strip().replace(" ", "-")
+                                if actress['Status'] == 'Retired':
+                                    review_class = 'retired'
+                                
+                                if len(actress_film) != 0:
+                                    film_progress = (len(watched_film) / len(actress_film)) * 100
+                                else:
+                                    film_progress = 0
+
                                 # Buat card dengan HTML lengkap
                                 card_html = f"""
                                 <div class="card-wrapper">
@@ -5247,7 +5237,11 @@ def complex_actress(device):
                                             <img src="{cat_url}" class="cat-image review-{review_class}" width="150" height="150">
                                         </div>
                                         <div class="card-divider"></div>
-                                        <div class="total-badge">
+                                        <div class="total-badge" style="background: linear-gradient(
+                                            to right,
+                                            #ff8b8b {film_progress}%,
+                                            #6b6b72 {film_progress}%
+                                        );">
                                             {len(watched_film)}/{len(actress_film)} Watched
                                         </div>
                                         """
@@ -5276,12 +5270,12 @@ def complex_actress(device):
                                         
                         except Exception as e:
                             # with col:
-                            error_html = """
+                            error_html = f"""
                             <div class="card-wrapper">
                                 <div class="cat-card">
                                     <div style="text-align: center; color: #e74c3c;">
                                         <div style="font-size: 24px; margin-bottom: 10px;">😿</div>
-                                        <div style="font-size: 14px;">Failed to load image</div>
+                                        <div style="font-size: 14px;">Failed to load image : {e}</div>
                                     </div>
                                 </div>
                             </div>
@@ -5427,7 +5421,7 @@ def complex_actress(device):
             text-align: center;
             color: white;
             box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-            background-color: #ff8b8b !important;
+            # background-color: #ff8b8b !important;
         }
 
         /* Warna review */
@@ -5436,6 +5430,8 @@ def complex_actress(device):
             background-color: #bdc3c7 !important;
             color: #2c3e50 !important;
         }
+        .review-retired { background-color: #8b0000 !important; }
+                
         .review-s-tier { 
             background-color: #FFD700 !important; 
             color: #2c3e50 !important;
@@ -5529,6 +5525,7 @@ def complex_actress(device):
             color: #2c3e50 !important;
         }
 
+        .review-retired { border-color: #8b0000 !important; }
         .review-s-tier { border-color: #FFD700 !important; }
         .review-a-tier { border-color: #9b59b6 !important; }
         .review-b-tier { border-color: #3498db !important; }
