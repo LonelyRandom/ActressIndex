@@ -226,6 +226,27 @@ def init_dataframe_tags():
     else:
         return st.session_state.tag_df
 
+def check_domain(url):
+    if "pics.dmm.co.jp" not in url and "image.mgstage.com" not in url and "sextb" not in url and 'No Picture' not in url:
+        return '--'  # bukan domain DMM
+    # ambil bagian sebelum '-' terakhir
+    if "sextb" in url or 'No Picture' in url:
+        return url
+    elif "pics.dmm.co.jp" in url:
+        parts = url.rsplit('-', 1)
+        if len(parts) < 2:
+            return url
+        before_dash = parts[0]
+        if before_dash.endswith('jp'):
+            return url
+        else:
+            parts = url.rsplit('-', 1)  # ['.../aldn00293/aldn00293', '1.jpg']
+            new_url = parts[0] + 'jp-' + parts[1]
+            return new_url
+    elif "image.mgstage.com" in url:
+        url_fix = url.replace("_t1_", "_e_")
+        return url_fix
+
 def calculate_age(birthdate_str):
         try:
             if not birthdate_str or pd.isna(birthdate_str):
@@ -2090,7 +2111,7 @@ def complex_film(device):
                             ">
                     </div>
                 """, unsafe_allow_html=True)
-                if st.button('Many', width='stretch', type='tertiary', key="many_profile", on_click=reset_page):
+                if st.button('Many', width='stretch', type='tertiary', key="actress_matched_many_profile", on_click=reset_page):
                     st.session_state.viewing_film_index = None
                     st.session_state.editing_film_index = None
                     st.session_state.search_text = 'Many'
@@ -2119,7 +2140,7 @@ def complex_film(device):
                             ">
                     </div>
                 """, unsafe_allow_html=True)
-                if st.button('Not Listed', width='stretch', type='tertiary', key="not_listed_profile", on_click=reset_page):
+                if st.button('Not Listed', width='stretch', type='tertiary', key="actress_matched_not_listed_profile", on_click=reset_page):
                     st.session_state.viewing_film_index = None
                     st.session_state.editing_film_index = None
                     st.session_state.search_text = 'Not Listed'
@@ -3115,8 +3136,29 @@ def complex_film(device):
                             else:
                                 st.warning('No Tags selectec above')
                         st.button('Reset', width='stretch', key='tags_reset_btn')
+                    
                     if st.button('Set', width='stretch'):
                         st.rerun()
+
+                    if st.button('Fix Gallery', width='stretch', type='primary'):
+                        for i in range(len(df)):
+                            results = []
+
+                            links = df['Preview Picture'][i].split(', ')
+                            for link in links:
+                                results.append(check_domain(link))
+                            
+                            if len(links) > 1:
+                                result = ', '.join(results)
+                            else:
+                                result = results[0]
+                            
+                            df.at[i, 'Preview Picture'] = result
+                        
+                        start_row = 2
+                        end_row = start_row + len(df)-1
+                        film_worksheet().update(f'J{start_row}:J{end_row}', df[['Preview Picture']].values.tolist())
+                        st.session_state.film_df = values_handling(df, 'Film')
                 
                 features(tag_df)
             
@@ -3124,7 +3166,6 @@ def complex_film(device):
                 @st.dialog('Display Settings', width='small') #viewmode
                 def display_setting():
                     layout_index = ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"].index(st.session_state.film_layout) if st.session_state.film_layout in ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"] else 0
-                    # tag_index = ['All', 'Tags', 'No Tags'].index(st.session_state.tags_status) if st.session_state.tags_status in ['All', 'Tags', 'No Tags'] else 0
                     with st.container(horizontal=True):
                         st.session_state.film_layout = st.radio(
                             "View Mode",
