@@ -374,6 +374,12 @@ def display_film_card(df, tag_df):
                 mask = filtered_df['Title'].str.contains(search_name, case=False, na=False)
 
             filtered_df = filtered_df[mask]
+        if tags_filter:
+            filtered_df = filtered_df[
+                filtered_df["Tags"].apply(
+                    lambda x: any(tag.strip() in tags_filter for tag in x.split(","))
+                )
+            ]
 
         if info_filter and 'Info' in filtered_df.columns:
             filtered_df = filtered_df[filtered_df['Info'].isin(info_filter)]
@@ -3201,16 +3207,16 @@ def complex_film(device):
         # ==============================
         if st.session_state.save_scrap:
             if st.session_state.s_type == "film": # Film
-                if st.session_state.scrap_new[0][1] in df['Code'].values:
-                    index = df.loc[df['Code'] == st.session_state.scrap_new[0][1]].index
-                    df.loc[index] = st.session_state.scrap_new[0]
+                if st.session_state.scrap_new[1] in df['Code'].values:
+                    index = df.loc[df['Code'] == st.session_state.scrap_new[1]].index
+                    df.loc[index] = st.session_state.scrap_new
                     
                     row = index[0] + 2
-                    film_worksheet().update(f'A{row}:K{row}', st.session_state.scrap_new)
+                    film_worksheet().update(f'A{row}:K{row}', [st.session_state.scrap_new])
                     st.toast('ℹ️ Existing Film')
                 else:
-                    film_worksheet().append_rows(st.session_state.scrap_new)
-                    df.loc[len(df)] = st.session_state.scrap_new[0]
+                    film_worksheet().append_row(st.session_state.scrap_new)
+                    df.loc[len(df)] = st.session_state.scrap_new
                     st.toast('ℹ️ New Film')
 
                 st.session_state.film_df = df
@@ -3222,12 +3228,16 @@ def complex_film(device):
                     st.session_state.actress_df = final_df
                     
             else: # Cast
-                if st.session_state.scrap_new[0][3] in actress_df['Name (Kanji)'].values:
-                    index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[0][3]].index
+                if st.session_state.scrap_new[3] in actress_df['Name (Kanji)'].values:
+                    index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[3]].index
+                    actress_df.loc[index[0]] = st.session_state.scrap_new
                     row = index[0] + 2
-                    actress_worksheet().update(f'A{row}:O{row}', st.session_state.scrap_new)
+                    actress_worksheet().update(f'A{row}:O{row}', [st.session_state.scrap_new])
                 else:
-                    actress_worksheet().append_rows(st.session_state.scrap_new)
+                    actress_df.loc[len(actress_df)] = st.session_state.scrap_new
+                    actress_worksheet().append_row(st.session_state.scrap_new)
+
+                st.session_state.actress_df = actress_df
 
             st.session_state.html_reset = True
             st.toast("✅ Scrap Saved Successfully!")
@@ -3433,7 +3443,7 @@ def complex_film(device):
                     st.markdown('### :orange-background[New Actress:]')
                     st.write(casts)
                         
-                    scrap_new.append([
+                    scrap_new = [
                         actress_name,
                         dvd_id,
                         film_title,
@@ -3445,7 +3455,7 @@ def complex_film(device):
                         film_ref,
                         img_srcs,
                         input_a
-                    ])
+                    ]
 
                     st.session_state.actress_new = casts
                     st.session_state.scrap_new = scrap_new
@@ -3517,7 +3527,17 @@ def complex_film(device):
                             match_data['Page'].iloc[0],
                         ]
 
-                        st.write()
+                        with st.container(horizontal_alignment='center'):
+                            st.image(match_data['Picture'].iloc[0], width=120)
+                        st.write(f"Review : {match_data['Review'].iloc[0]}" )
+                        st.write(f"Latin : {match_data['Name (Alphabet)'].iloc[0]}" )
+                        st.write(f"Kanji : {match_data['Name (Kanji)'].iloc[0]}" )
+                        st.write(f"Birthdate : {data['DOB']}" )
+                        st.write(f"Debut Date : {data['Debut']}" )
+                        st.write(f"Debut Period : {debut_period}")
+                        st.write(f"Cup : {data['Cup']}" )
+                        st.write(f"Measurement : {measurement}" )
+                        st.write(f"Height : {data['Height']}" )
                         st.session_state.scrap_new = new_value
                     else:
                         st.error('Actress not found in database! ❌')                        
@@ -4692,7 +4712,7 @@ def complex_actress(device):
                 key=f"height_{index}"
             )
 
-            if st.checkbox('No Info', value=(actress['Height (cm)'] == '? cm'), key='Height Check'):
+            if st.checkbox('No Info', value=(height == '130'), key='Height Check'):
                 edited_height = '?'
             else:
                 edited_height = str(edited_height) + ' cm'
