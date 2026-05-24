@@ -3385,7 +3385,7 @@ def complex_film(device):
                         match_film_data = df[df["Code"] == dvd_id]
 
                         tags = match_film_data["Tags"].iloc[0]
-                        info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in INFO_OPTS else 0
+                        info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in ['Not Watched', 'Watched', 'Great', 'Goat'] else 0
                 
                         a_index = match_film_data["A-Detector"].iloc[0]
                     else:
