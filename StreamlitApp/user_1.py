@@ -2257,6 +2257,10 @@ def complex_home():
         st.session_state.first_load_film = True
     if 'first_load_actress' not in st.session_state:
         st.session_state.first_load_actress = True
+    if 'film_layout' not in st.session_state:
+        st.session_state.film_layout = 'Detailed'
+    if 'display_actress' not in st.session_state:
+        st.session_state.display_actress = 'Gallery' 
     
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
     df_actress = init_dataframe_actress()
@@ -2278,6 +2282,7 @@ def complex_home():
                     st.metric('Drop', len(df_actress[df_actress['Review'] == 'Drop']))
             if st.button('Go To Actress →'):
                 st.session_state.actress_page = 1
+                st.session_state.display_actress = 'Gallery'
                 return 'actress'
     
     with col2:
@@ -2292,6 +2297,7 @@ def complex_home():
                     st.metric('Goat', len(df_film[df_film['Info'] == 'Goat']))
             if st.button('Go To Film →'):
                 st.session_state.first_load_film = True
+                st.session_state.film_layout = 'Detailed'
                 return 'film'
     
     if st.session_state.log_out_btn == False:
@@ -3380,9 +3386,6 @@ def complex_film(device):
 
             if st.button('Close', type='primary', width='stretch'):
                 st.rerun()
-    
-    if 'film_layout' not in st.session_state:
-        st.session_state.film_layout = 'Detailed'
 
     with st.sidebar:
         if st.session_state.film_layout not in ['Scrap Manual', 'Calender Scrap']:
@@ -4217,8 +4220,6 @@ def complex_actress(device):
         st.session_state.width_option = device
     if 'scroll_to_here' not in st.session_state:
         st.session_state.scroll_to_here = False
-    if 'display_actress' not in st.session_state:
-        st.session_state.display_actress = 'Gallery' 
     
     if 'show_review_not_checked' not in st.session_state:
         st.session_state.show_review_not_checked = False
