@@ -5553,11 +5553,11 @@ def complex_actress(device):
         if st.button('👁️ Display', width='content'):
             @st.dialog('Display Settings', width='small') #viewmode
             def display_setting():
-                layout_index = ["Gallery", "Detailed", "Actress Scrap"].index(st.session_state.display_actress) if st.session_state.display_actress in ["Gallery", "Detailed", "Actress Scrap"] else 0
+                layout_index = ["Gallery", "Detailed", "Scrap"].index(st.session_state.display_actress) if st.session_state.display_actress in ["Gallery", "Detailed", "Scrap"] else 0
                 with st.container(horizontal=True):
                     st.session_state.display_actress = st.radio(
                         "View Mode",
-                        ["Gallery", "Detailed", "Actress Scrap"],
+                        ["Gallery", "Detailed", "Scrap"],
                         key='display_mode_radio',
                         index=layout_index,
                         horizontal=True
