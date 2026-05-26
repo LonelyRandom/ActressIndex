@@ -5569,7 +5569,7 @@ def complex_actress(device):
     
     actress_navbar.float("top: 50px;z-index: 999990;")
 
-    if st.session_state.display_actress != 'Actress Scrap':
+    if st.session_state.display_actress != 'Scrap':
         st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Actress List</h1>", unsafe_allow_html=True)
         if not df.empty and 'Picture' in df.columns:
             if st.session_state.get('search_reset', False):
