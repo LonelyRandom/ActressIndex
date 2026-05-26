@@ -342,7 +342,14 @@ def display_film_card(df, tag_df):
     )
     
     with st.sidebar:
-        search_by = st.radio('Search By:', options=['Code', 'Actress', 'Title'], horizontal=False, key='search_by', on_change=reset_search_by)
+        search_by = st.radio(
+            'Search By :', 
+            options=['Code', 'Actress', 'Title'], 
+            key='search_by', 
+            width='content', 
+            horizontal=True, 
+            on_change=reset_search_by
+        )
         with st.container(horizontal=True, vertical_alignment='bottom'):
             if search_by != 'Actress':
                 search_name = st.text_input("🔍 Search Bar", placeholder="Name or Code...", key='search_bar', on_change=reset_page)
@@ -377,7 +384,12 @@ def display_film_card(df, tag_df):
                     st.session_state.tag_text = tag_text
                     st.rerun()
             
-        sort_type = st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
+        sort_type = st.selectbox(
+            'Sort Type', 
+            options=['🔤 (A-Z)', '🔤 (Z-A)', '🗓️ Oldest', '🗓️ Newest'], 
+            key='sort_type', 
+            on_change=reset_page
+        ).split(' ',1)[1]
         # Filter data
         filtered_df = df.copy()
 
@@ -411,7 +423,7 @@ def display_film_card(df, tag_df):
         elif sort_type == '(Z-A)':
             filtered_df = filtered_df.sort_values(by='Code', ascending=False)
 
-        elif sort_type == 'Date Acs':
+        elif sort_type == 'Oldest':
             filtered_df['release_date'] = pd.to_datetime(
                 filtered_df['Release Date'],
                 format='%d/%m/%Y',
@@ -419,7 +431,7 @@ def display_film_card(df, tag_df):
             )
             filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
 
-        elif sort_type == 'Date Desc':
+        elif sort_type == 'Newest':
             filtered_df['release_date'] = pd.to_datetime(
                 filtered_df['Release Date'],
                 format='%d/%m/%Y',
@@ -1388,14 +1400,22 @@ def display_film_grid(df, tag_df):
         actress_width = 76
     with st.sidebar:
         with st.container(horizontal=True):
-            search_by = st.radio('Search By :', options=['Code', 'Actress', 'Title'], key='search_by', width='content', horizontal=False, on_change=reset_search_by)    
+            search_by = st.radio(
+                'Search By :', 
+                options=['Code', 'Actress', 'Title'], 
+                key='search_by', 
+                width='content', 
+                horizontal=True, 
+                on_change=reset_search_by
+            )
+                
             filters = st.radio(
                     "Type :",
-                    ["Watched", "Not Watched"],
-                    horizontal=False,
+                    ["🟢 Watched", "🔴 Not Watched"],
+                    horizontal=True,
                     on_change=reset_page,
                     width='content'
-                )
+                ).split(' ',1)[1]
 
         # Filter data dan simpan index asli
         if filters == 'Watched':
@@ -1461,15 +1481,21 @@ def display_film_grid(df, tag_df):
                     st.session_state.tag_text = tag_text
                     st.rerun()
             
-        st.selectbox('Sort Type', options=['(A-Z)', '(Z-A)', 'Date Acs', 'Date Desc'], key='sort_type', on_change=reset_page)
+        sort_type = st.selectbox(
+            'Sort Type', 
+            options=['🔤 (A-Z)', '🔤 (Z-A)', '🗓️ Oldest', '🗓️ Newest'], 
+            key='sort_type', 
+            on_change=reset_page
+        ).split(' ',1)[1]
+
         # Filter data
-        if st.session_state.sort_type == '(A-Z)':
+        if sort_type == '(A-Z)':
             filtered_df = filtered_df.sort_values(by='Code', ascending=True)
 
-        elif st.session_state.sort_type == '(Z-A)':
+        elif sort_type == '(Z-A)':
             filtered_df = filtered_df.sort_values(by='Code', ascending=False)
 
-        elif st.session_state.sort_type == 'Date Acs':
+        elif sort_type == 'Oldest':
             filtered_df['release_date'] = pd.to_datetime(
                 filtered_df['Release Date'],
                 format='%d/%m/%Y',
@@ -1477,13 +1503,14 @@ def display_film_grid(df, tag_df):
             )
             filtered_df = filtered_df.sort_values(by='release_date', ascending=True)
 
-        elif st.session_state.sort_type == 'Date Desc':
+        elif sort_type == 'Newest':
             filtered_df['release_date'] = pd.to_datetime(
                 filtered_df['Release Date'],
                 format='%d/%m/%Y',
                 errors='coerce'
             )
             filtered_df = filtered_df.sort_values(by='release_date', ascending=False)
+
         if st.toggle('Date filter', key='date_filter',on_change=reset_page):
             with st.container(horizontal=True):
                 select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width=150, on_change=reset_page)
@@ -2456,7 +2483,7 @@ def complex_film(device):
                 for idx in matching_actresses.index:
                     actress_name = matching_actresses['Name (Alphabet)'][idx]
                     container_key = f"{actress_name}_{st.session_state.filtered_data_position}_{idx}"
-                    status_color = "#FFD700" if matching_actresses['Review'][idx] == 'S-Tier' else "#9b59b6" if matching_actresses['Review'][idx] == 'A-Tier' else "#3498db" if matching_actresses['Review'][idx] == 'B-Tier' else "#2ecc71" if matching_actresses['Review'][idx] == 'C-Tier' else '#e67e22' if matching_actresses['Review'][idx] == 'D-Tier' else "#ff8c42" if matching_actresses['Review'][idx] == 'E-Tier' else "#e74c3c" if matching_actresses['Review'][idx] == 'F-Tier' else '#7f8c8d'
+                    status_color = "#FFD700" if matching_actresses['Review'][idx] == 'S-Tier' else "#9b59b6" if matching_actresses['Review'][idx] == 'A-Tier' else "#3498db" if matching_actresses['Review'][idx] == 'B-Tier' else "#2ecc71" if matching_actresses['Review'][idx] == 'C-Tier' else '#e67e22' if matching_actresses['Review'][idx] == 'D-Tier' else "#ff8c42" if matching_actresses['Review'][idx] == 'E-Tier' else "#e74c3c" if matching_actresses['Review'][idx] == 'F-Tier' else "#8b0000" if matching_actresses['Review'][idx] == 'Drop' else '#7f8c8d'
 
                     with st.container(width=80, key=container_key):
                         # Display image as circle using HTML
