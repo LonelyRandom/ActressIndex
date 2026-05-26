@@ -1274,6 +1274,10 @@ def display_film_calender(df):
     if st.button('⬆️ Back to top', width='stretch'):
         st.session_state.scroll_to_here = True                   
 
+def set_prev_pic(pic, total):
+    if pic < total and pic >=0:
+        st.session_state.prev_pic = pic
+
 def reset_page():
     """Reset halaman ke 1"""
     st.session_state.film_page = 1
@@ -1816,6 +1820,436 @@ def display_film_grid(df, tag_df):
     if st.button('⬆️ Back to top', width='stretch'):
         st.session_state.scroll_to_here = True                   
 
+def display_scrap_manual():
+    df = init_dataframe_film()
+    actress_df = init_dataframe_actress()
+    def reset_scrap():
+        st.session_state.start_scrap = False
+        st.session_state.input_info = 'Not Watched'
+        st.session_state.input_a = False
+        st.session_state.prev_pic = 0
+
+    def background_text(text, color):
+        st.write(f':{color}-background[{text}]')
+
+    if 'scrap_new' not in st.session_state:
+        st.session_state.scrap_new = []
+    
+    if 'actress_new' not in st.session_state:
+        st.session_state.actress_new = []
+    
+    if 'start_scrap' not in st.session_state:
+        st.session_state.start_scrap = False
+
+    if 's_type' not in st.session_state:
+        st.session_state.s_type = None
+
+    scrap_new = []
+    if st.session_state.get('html_reset', False):
+        st.session_state.html_reset = False
+        st.session_state.html_bar = ''
+        st.session_state.input_info = 'Not Watched'
+        st.session_state.input_a = False
+        st.session_state.prev_pic = 0
+        st.session_state.start_scrap = False
+
+    st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Scrap Manual</h1>", unsafe_allow_html=True)
+    st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar', on_change=reset_scrap)
+    if st.button('Clear HTML', width='stretch', type='primary'):
+        st.session_state.html_reset = True
+        st.rerun()
+    if st.button('Scrap', width='stretch'):
+        st.session_state.start_scrap = True
+
+    st.markdown('---')
+    with st.container(horizontal=True):
+        st.button('Show Scrap', width='stretch', key='show_scrap')
+        st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
+    st.markdown('---')
+
+    # ==============================
+    #         SAVE SCRAP
+    # ==============================
+    if st.session_state.save_scrap:
+        if st.session_state.s_type == "film": # Film
+            if st.session_state.scrap_new[1] in df['Code'].values:
+                index = df.loc[df['Code'] == st.session_state.scrap_new[1]].index
+                df.loc[index] = st.session_state.scrap_new
+                
+                row = index[0] + 2
+                film_worksheet().update(f'A{row}:K{row}', [st.session_state.scrap_new])
+                st.toast('ℹ️ Existing Film')
+            else:
+                film_worksheet().append_row(st.session_state.scrap_new)
+                df.loc[len(df)] = st.session_state.scrap_new
+                st.toast('ℹ️ New Film')
+
+            st.session_state.film_df = df
+            
+            if st.session_state.actress_new:
+                actress_worksheet().append_rows(st.session_state.actress_new)
+                new_df = pd.DataFrame(st.session_state.actress_new, columns=actress_df.columns)
+                final_df = pd.concat([actress_df, new_df], ignore_index=True)
+                st.session_state.actress_df = final_df
+                
+        else: # Cast
+            if st.session_state.scrap_new[3] in actress_df['Name (Kanji)'].values:
+                index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[3]].index
+                actress_df.loc[index[0]] = st.session_state.scrap_new
+                row = index[0] + 2
+                actress_worksheet().update(f'A{row}:O{row}', [st.session_state.scrap_new])
+            else:
+                actress_df.loc[len(actress_df)] = st.session_state.scrap_new
+                actress_worksheet().append_row(st.session_state.scrap_new)
+
+            st.session_state.actress_df = actress_df
+
+        st.session_state.html_reset = True
+        st.toast("✅ Scrap Saved Successfully!")
+        time.sleep(.5)
+        st.rerun()
+    
+    # ========================
+    #      SHOW SCRAPPING
+    # ========================
+    elif st.session_state.show_scrap:
+        st.session_state.start_scrap = False
+        if st.session_state.s_type == "film":
+            st.write("Isi Scrap Film")
+            st.write(st.session_state.scrap_new)
+            st.space("small")
+            st.write("Actress New")
+            st.write(st.session_state.actress_new)
+        else:
+            st.write("Isi scrap Cast")
+            st.write(st.session_state.scrap_new)
+
+    # =======================
+    #    START SCRAPPING
+    # =======================
+    if st.session_state.html_bar:
+        soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
+        if soup.find():
+            st.session_state.s_type = 'film'
+        else:
+            st.session_state.s_type = 'cast'
+        
+        if st.session_state.start_scrap:
+            if st.session_state.s_type == 'film':
+                film_title = soup.find('h1').get_text(strip=True)
+
+                section = soup.find("div", class_="col-md-9")
+                all_p = section.find_all("p")
+
+                casts = []
+                actress_list = []
+                for p in all_p:
+                    span = p.find("span")
+
+                    if span and "DVD ID:" in span.text:
+                        dvd_id = p.get_text(strip=True).replace(span.get_text(strip=True), "").strip()
+                        st.markdown(f"# :orange-background[{dvd_id}]")
+                    
+                    if span and "Release Date" in span.text:
+                        release_date = datetime.strptime(p.get_text(strip=True).replace(span.get_text(strip=True), "").strip(), "%d %b %Y")
+                        formatted_date = release_date.strftime("%d/%m/%Y")
+                        if release_date.date() <= datetime.today().date():
+                            release_status = 1
+                        else:
+                            release_status = 0
+
+                    if span and "Cast(s):" in span.text:
+
+                        for a in p.find_all("a"):
+                            cast = a.get_text(strip=True)
+                            kanji = re.findall(r'[\u3005\u3040-\u30FF\u4E00-\u9FFF]+', cast)
+                            latins = re.findall(r'[A-Za-z ]+', cast)
+                            latins = latins[0].split(' ')
+                            latin = latins[1] + ' ' + latins[0]
+
+                            if kanji not in actress_df['Name (Kanji)'].values:
+                                casts.append([
+                                    'Not Checked',
+                                    st.secrets.indicators.PLACEHOLDER_IMG,
+                                    latin.strip(),
+                                    kanji[0].strip(),
+                                    '?',
+                                    '?',
+                                    '?',
+                                    '?',
+                                    '? cm',
+                                    '--',
+                                    '?',
+                                    '?',
+                                    '?',
+                                    'Active',
+                                    "https://javtrailers.com" + a.get("href")
+                                ])
+
+                            actress_list.append(latin.strip())
+                
+                if actress_list:
+                    actress_name = ', '.join(actress_list)
+                else:
+                    actress_name = 'Not Listed'
+
+                thumbnail = soup.find("div", id="thumbnailContainer").find("img").get("src")
+                film_link = soup.find("link", rel="canonical")
+                film_ref = film_link.get("href") if film_link else '--'
+
+                if dvd_id in df["Code"].values:
+                    st.write(':blue-background[ℹ️ Film exist in database!]')
+                    match_film_data = df[df["Code"] == dvd_id]
+
+                    tags = match_film_data["Tags"].iloc[0]
+                    info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in ['Not Watched', 'Watched', 'Great', 'Goat'] else 0
+            
+                    a_index = match_film_data["A-Detector"].iloc[0]
+                else:
+                    st.write(':blue-background[ℹ️ New Film!]')
+                    info_index = 0
+                    tags = 'No Tags'
+                    a_index = False
+                
+                st.space('small')
+                input_info = st.selectbox(':yellow-background[Info:]', options=['🔴 Not Watched', '🟢 Watched', '🔵 Great', '🟣 Goat'], key='input_info', index=info_index)
+                input_info = input_info.split(' ',1)[1]
+                st.space('small')
+                input_a = st.toggle('✨ A-Detector', value=a_index)
+                
+                st.space('small')
+                background_text('Gallery:', 'yellow')
+                try:
+                    gallery = soup.find("div", id="gallery-wrapper")
+                    # ambil semua img di dalamnya
+                    img_tags = gallery.find_all("img")
+
+                    # ambil src
+                    img_srcs = ', '.join([img.get("src") for img in img_tags])
+                    if img_srcs:
+                        if 'prev_pic' not in st.session_state:  
+                            st.session_state.prev_pic = 0
+                        
+                        pics = [img.get("src") for img in img_tags]
+                        count = len(pics)
+
+                        st.markdown(
+                            """
+                            <style>
+                            div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
+
+                            .img-fit {
+                                margin-top: -13px; 
+                                padding-top: 0; 
+                                display: flex;             /* gunakan flexbox */
+                                justify-content: center;   /* horizontal center */
+                                align-items: center;       /* vertical center jika container tinggi ditentukan */
+                                background-color: #ffffff;
+                                border-radius: 5px;
+                                margin-bottom: 15px;
+                            }
+
+                            .img-fit img {
+                                max-width: 100%;
+                                height: 400px;
+                                width: auto;
+                                object-fit: contain;
+                                display: none;  /* default hidden semua gambar */
+                            }
+
+                            .img-fit img.active {
+                                display: block; /* hanya gambar active yang terlihat */
+                            }
+                            </style>
+                            """,
+                            unsafe_allow_html=True
+                        )
+
+                        # HTML untuk semua gambar, preload semuanya
+                        img_html = '<div class="img-fit">'
+                        for i, pic in enumerate(pics):
+                            active_class = 'active' if i == st.session_state.prev_pic else ''
+                            img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
+                        img_html += '</div>'
+
+                        st.markdown(img_html, unsafe_allow_html=True)
+
+                        with st.container(horizontal=True):
+                            # Tombol navigasi
+                            st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
+                            st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
+                except Exception as e:
+                    st.error('Gallery Not Found! ❌')
+                    img_srcs = 'No Picture'
+
+                st.space('small')
+                background_text('Thumbnail:', 'yellow')
+                with st.container(horizontal_alignment='center'):
+                    st.image(thumbnail, width=180)
+                st.space('small')
+                background_text('Release Date:', 'yellow')
+                st.write(f"{formatted_date} ({release_date.date()})")
+                st.space('small')
+                background_text('Link:', 'yellow')
+                st.write(film_ref)
+                st.space('small')
+                background_text('Title:', 'yellow')
+                st.write(film_title)
+                st.space('small')
+                background_text('Preview Image:', 'yellow')
+                if img_srcs != 'No Picture':
+                    st.write(img_srcs)
+                else:
+                    st.error('Gallery Not Found! ❌')
+                st.space('small')
+                background_text('Actress Name:', 'yellow')
+                st.write(actress_name)
+                st.space('small')
+                st.markdown('### :orange-background[New Actress:]')
+                st.write(casts)
+                    
+                scrap_new = [
+                    actress_name,
+                    dvd_id,
+                    film_title,
+                    formatted_date,
+                    thumbnail,
+                    tags,
+                    input_info,
+                    release_status,
+                    film_ref,
+                    img_srcs,
+                    input_a
+                ]
+
+                st.session_state.actress_new = casts
+                st.session_state.scrap_new = scrap_new
+
+            else: # Cast
+                def extract_field(field, text):
+                    pattern = rf"{field}:\s*(.*?)\s*(?=\s*-\s*[A-Za-z ]+:|\n|$)"
+                    match = re.search(pattern, text)
+                    return match.group(1).strip() if match else None
+                
+                dob = extract_field("DOB", st.session_state.html_bar)
+                debut = extract_field("Debut", st.session_state.html_bar)
+                if debut != '?':
+                    debut = datetime.strptime(debut, "%Y-%m-%d")
+                    debut_date = debut.strftime("%d/%m/%Y")
+                    period = relativedelta(date.today(), debut.date())
+
+                    if period.months == 0:
+                        debut_period = f'{period.years} Year'
+                    else:
+                        debut_period = f'{period.years} Year {period.months} Month'
+                else:
+                    debut_date = '?'
+                    debut_period = '?'
+
+                data = {
+                    "DOB": datetime.strptime(dob, "%Y-%m-%d").strftime("%d/%m/%Y") if '?' not in dob else '?',
+                    "Debut": debut_date,
+                    "Measurements": extract_field("Measurements", st.session_state.html_bar),
+                    "Cup": extract_field("Cup", st.session_state.html_bar),
+                    "Height": extract_field("Height", st.session_state.html_bar),
+                    "JP": extract_field("JP", st.session_state.html_bar)
+                }
+
+                age = calculate_age(data['DOB'])
+                size_char = ['B','W','H']
+                measurement = ' / '.join([f"{size_char[i]}{num}" for i, num in enumerate(data["Measurements"].split("-"))]) if '?' not in data['Measurements'] else '?'
+
+                if data['JP'] in actress_df['Name (Kanji)'].values:
+                    st.write(':blue-background[ℹ️ Actress found in database!]')
+                    match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
+                    idx = match_data.index
+
+                    if match_data['Retire Date'].iloc[0] != '?' and debut != '?':
+                        retire = datetime.strptime(match_data['Retire Date'].iloc[0], "%d/%m/%Y")
+                        period = relativedelta(retire.date(), debut.date())
+
+                        if period.months == 0:
+                            debut_period = f'{period.years} Year'
+                        else:
+                            debut_period = f'{period.years} Year {period.months} Month'
+
+                    row = idx + 2
+                    new_value = [
+                        match_data['Review'].iloc[0],
+                        match_data['Picture'].iloc[0],
+                        match_data['Name (Alphabet)'].iloc[0],
+                        match_data['Name (Kanji)'].iloc[0],
+                        data['DOB'],
+                        data['Debut'],
+                        data['Cup'],
+                        measurement,
+                        data['Height'],
+                        match_data['Notes'].iloc[0],
+                        age,
+                        debut_period,
+                        match_data['Retire Date'].iloc[0],
+                        match_data['Status'].iloc[0],
+                        match_data['Page'].iloc[0],
+                    ]
+
+                    st.markdown("## Comparison Table")
+
+                    with st.container(horizontal_alignment='center'):
+                        st.image(match_data['Picture'].iloc[0], width=120)
+
+                    after_data = {
+                        "Field": [
+                            "Review",
+                            "Latin",
+                            "Kanji",
+                            "Birthdate",
+                            "Debut Date",
+                            "Debut Period",
+                            "Cup",
+                            "Measurement",
+                            "Height (cm)"
+                        ],
+                        "Before": [
+                            match_data['Review'].iloc[0],
+                            match_data['Name (Alphabet)'].iloc[0],
+                            match_data['Name (Kanji)'].iloc[0],
+                            match_data['Birthdate'].iloc[0],
+                            match_data['Debut Date'].iloc[0],
+                            match_data['Debut Period'].iloc[0],
+                            match_data['Size'].iloc[0],
+                            match_data['Measurement'].iloc[0],
+                            match_data['Height (cm)'].iloc[0]
+                        ],
+                        "After": [
+                            match_data['Review'].iloc[0],
+                            match_data['Name (Alphabet)'].iloc[0],
+                            match_data['Name (Kanji)'].iloc[0],
+                            data['DOB'],
+                            data['Debut'],
+                            debut_period,
+                            data['Cup'],
+                            measurement,
+                            data['Height']
+                        ]
+                    }
+
+                    df_compare = pd.DataFrame(after_data)
+                    st.dataframe(df_compare, hide_index=True)
+
+                    st.session_state.scrap_new = new_value
+                else:
+                    st.error('Actress not found in database! ❌')                        
+        else:
+            if soup.find():
+                st.info('ℹ️ Scrapping Film')
+            else:
+                st.info('ℹ️ Scrapping Cast')
+
+            st.success('✅ HTML Detected! (Ready to scrap)')
+    else:
+        st.warning('⚠️ HTML Empty')
+
+
 def complex_home():
     if 'log_out_btn' not in st.session_state:
         st.session_state.log_out_btn = False
@@ -1947,9 +2381,6 @@ def complex_film(device):
     def reset_pic():
         st.session_state.prev_pic = 0
     
-    def set_prev_pic(pic, total):
-        if pic < total and pic >=0:
-            st.session_state.prev_pic = pic
 
     def set_film_data(p, total):
         if p < total and p >= 0:
@@ -2982,7 +3413,7 @@ def complex_film(device):
             if st.button('📌 Feature', width='content'):
                 @st.dialog('Features', width='small')
                 def features(tag_df):
-                    with st.expander('Gacha'):
+                    with st.expander('Gacha', key='expander_gacha'):
                         if device == 'Device 1':
                             img_width_percentage = 45
                             img_height = 216
@@ -3132,6 +3563,7 @@ def complex_film(device):
                             "View Mode",
                             ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"],
                             index= layout_index,
+                            key='film_display_mode',
                             on_change=reset_page,
                         )
                     if st.button('Set', width='stretch'):
@@ -3166,399 +3598,401 @@ def complex_film(device):
     elif st.session_state.film_layout == "Calender Scrap":
         st.markdown("<h1 style='text-align: center;'>Calendar Scrap</h1>", unsafe_allow_html=True)
         display_film_calender(df)
-    else:  # Table View
-        def reset_scrap():
-            st.session_state.start_scrap = False
-            st.session_state.input_info = 'Not Watched'
-            st.session_state.input_a = False
-            st.session_state.prev_pic = 0
+    else:  # Scrap Manual
+        display_scrap_manual()
 
-        def background_text(text, color):
-            st.write(f':{color}-background[{text}]')
+        # def reset_scrap():
+        #     st.session_state.start_scrap = False
+        #     st.session_state.input_info = 'Not Watched'
+        #     st.session_state.input_a = False
+        #     st.session_state.prev_pic = 0
 
-        if 'scrap_new' not in st.session_state:
-            st.session_state.scrap_new = []
+        # def background_text(text, color):
+        #     st.write(f':{color}-background[{text}]')
+
+        # if 'scrap_new' not in st.session_state:
+        #     st.session_state.scrap_new = []
         
-        if 'actress_new' not in st.session_state:
-            st.session_state.actress_new = []
+        # if 'actress_new' not in st.session_state:
+        #     st.session_state.actress_new = []
         
-        if 'start_scrap' not in st.session_state:
-            st.session_state.start_scrap = False
+        # if 'start_scrap' not in st.session_state:
+        #     st.session_state.start_scrap = False
 
-        if 's_type' not in st.session_state:
-            st.session_state.s_type = None
+        # if 's_type' not in st.session_state:
+        #     st.session_state.s_type = None
 
-        scrap_new = []
-        if st.session_state.get('html_reset', False):
-            st.session_state.html_reset = False
-            st.session_state.html_bar = ''
-            st.session_state.input_info = 'Not Watched'
-            st.session_state.input_a = False
-            st.session_state.prev_pic = 0
-            st.session_state.start_scrap = False
+        # scrap_new = []
+        # if st.session_state.get('html_reset', False):
+        #     st.session_state.html_reset = False
+        #     st.session_state.html_bar = ''
+        #     st.session_state.input_info = 'Not Watched'
+        #     st.session_state.input_a = False
+        #     st.session_state.prev_pic = 0
+        #     st.session_state.start_scrap = False
 
-        st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Scrap Manual</h1>", unsafe_allow_html=True)
-        st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar', on_change=reset_scrap)
-        if st.button('Clear HTML', width='stretch', type='primary'):
-            st.session_state.html_reset = True
-            st.rerun()
-        if st.button('Scrap', width='stretch'):
-            st.session_state.start_scrap = True
+        # st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Scrap Manual</h1>", unsafe_allow_html=True)
+        # st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar', on_change=reset_scrap)
+        # if st.button('Clear HTML', width='stretch', type='primary'):
+        #     st.session_state.html_reset = True
+        #     st.rerun()
+        # if st.button('Scrap', width='stretch'):
+        #     st.session_state.start_scrap = True
     
-        st.markdown('---')
-        with st.container(horizontal=True):
-            st.button('Show Scrap', width='stretch', key='show_scrap')
-            st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
-        st.markdown('---')
+        # st.markdown('---')
+        # with st.container(horizontal=True):
+        #     st.button('Show Scrap', width='stretch', key='show_scrap')
+        #     st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
+        # st.markdown('---')
 
-        # ==============================
-        #         SAVE SCRAP
-        # ==============================
-        if st.session_state.save_scrap:
-            if st.session_state.s_type == "film": # Film
-                if st.session_state.scrap_new[1] in df['Code'].values:
-                    index = df.loc[df['Code'] == st.session_state.scrap_new[1]].index
-                    df.loc[index] = st.session_state.scrap_new
+        # # ==============================
+        # #         SAVE SCRAP
+        # # ==============================
+        # if st.session_state.save_scrap:
+        #     if st.session_state.s_type == "film": # Film
+        #         if st.session_state.scrap_new[1] in df['Code'].values:
+        #             index = df.loc[df['Code'] == st.session_state.scrap_new[1]].index
+        #             df.loc[index] = st.session_state.scrap_new
                     
-                    row = index[0] + 2
-                    film_worksheet().update(f'A{row}:K{row}', [st.session_state.scrap_new])
-                    st.toast('ℹ️ Existing Film')
-                else:
-                    film_worksheet().append_row(st.session_state.scrap_new)
-                    df.loc[len(df)] = st.session_state.scrap_new
-                    st.toast('ℹ️ New Film')
+        #             row = index[0] + 2
+        #             film_worksheet().update(f'A{row}:K{row}', [st.session_state.scrap_new])
+        #             st.toast('ℹ️ Existing Film')
+        #         else:
+        #             film_worksheet().append_row(st.session_state.scrap_new)
+        #             df.loc[len(df)] = st.session_state.scrap_new
+        #             st.toast('ℹ️ New Film')
 
-                st.session_state.film_df = df
+        #         st.session_state.film_df = df
                 
-                if st.session_state.actress_new:
-                    actress_worksheet().append_rows(st.session_state.actress_new)
-                    new_df = pd.DataFrame(st.session_state.actress_new, columns=actress_df.columns)
-                    final_df = pd.concat([actress_df, new_df], ignore_index=True)
-                    st.session_state.actress_df = final_df
+        #         if st.session_state.actress_new:
+        #             actress_worksheet().append_rows(st.session_state.actress_new)
+        #             new_df = pd.DataFrame(st.session_state.actress_new, columns=actress_df.columns)
+        #             final_df = pd.concat([actress_df, new_df], ignore_index=True)
+        #             st.session_state.actress_df = final_df
                     
-            else: # Cast
-                if st.session_state.scrap_new[3] in actress_df['Name (Kanji)'].values:
-                    index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[3]].index
-                    actress_df.loc[index[0]] = st.session_state.scrap_new
-                    row = index[0] + 2
-                    actress_worksheet().update(f'A{row}:O{row}', [st.session_state.scrap_new])
-                else:
-                    actress_df.loc[len(actress_df)] = st.session_state.scrap_new
-                    actress_worksheet().append_row(st.session_state.scrap_new)
+        #     else: # Cast
+        #         if st.session_state.scrap_new[3] in actress_df['Name (Kanji)'].values:
+        #             index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[3]].index
+        #             actress_df.loc[index[0]] = st.session_state.scrap_new
+        #             row = index[0] + 2
+        #             actress_worksheet().update(f'A{row}:O{row}', [st.session_state.scrap_new])
+        #         else:
+        #             actress_df.loc[len(actress_df)] = st.session_state.scrap_new
+        #             actress_worksheet().append_row(st.session_state.scrap_new)
 
-                st.session_state.actress_df = actress_df
+        #         st.session_state.actress_df = actress_df
 
-            st.session_state.html_reset = True
-            st.toast("✅ Scrap Saved Successfully!")
-            time.sleep(.5)
-            st.rerun()
+        #     st.session_state.html_reset = True
+        #     st.toast("✅ Scrap Saved Successfully!")
+        #     time.sleep(.5)
+        #     st.rerun()
         
-        # ========================
-        #      SHOW SCRAPPING
-        # ========================
-        elif st.session_state.show_scrap:
-            st.session_state.start_scrap = False
-            if st.session_state.s_type == "film":
-                st.write("Isi Scrap Film")
-                st.write(st.session_state.scrap_new)
-                st.space("small")
-                st.write("Actress New")
-                st.write(st.session_state.actress_new)
-            else:
-                st.write("Isi scrap Cast")
-                st.write(st.session_state.scrap_new)
+        # # ========================
+        # #      SHOW SCRAPPING
+        # # ========================
+        # elif st.session_state.show_scrap:
+        #     st.session_state.start_scrap = False
+        #     if st.session_state.s_type == "film":
+        #         st.write("Isi Scrap Film")
+        #         st.write(st.session_state.scrap_new)
+        #         st.space("small")
+        #         st.write("Actress New")
+        #         st.write(st.session_state.actress_new)
+        #     else:
+        #         st.write("Isi scrap Cast")
+        #         st.write(st.session_state.scrap_new)
 
-        # =======================
-        #    START SCRAPPING
-        # =======================
-        if st.session_state.html_bar:
-            soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
-            if soup.find():
-                st.session_state.s_type = 'film'
-            else:
-                st.session_state.s_type = 'cast'
+        # # =======================
+        # #    START SCRAPPING
+        # # =======================
+        # if st.session_state.html_bar:
+        #     soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
+        #     if soup.find():
+        #         st.session_state.s_type = 'film'
+        #     else:
+        #         st.session_state.s_type = 'cast'
             
-            if st.session_state.start_scrap:
-                if st.session_state.s_type == 'film':
-                    film_title = soup.find('h1').get_text(strip=True)
+        #     if st.session_state.start_scrap:
+        #         if st.session_state.s_type == 'film':
+        #             film_title = soup.find('h1').get_text(strip=True)
 
-                    section = soup.find("div", class_="col-md-9")
-                    all_p = section.find_all("p")
+        #             section = soup.find("div", class_="col-md-9")
+        #             all_p = section.find_all("p")
 
-                    casts = []
-                    actress_list = []
-                    for p in all_p:
-                        span = p.find("span")
+        #             casts = []
+        #             actress_list = []
+        #             for p in all_p:
+        #                 span = p.find("span")
 
-                        if span and "DVD ID:" in span.text:
-                            dvd_id = p.get_text(strip=True).replace(span.get_text(strip=True), "").strip()
-                            st.markdown(f"# :orange-background[{dvd_id}]")
+        #                 if span and "DVD ID:" in span.text:
+        #                     dvd_id = p.get_text(strip=True).replace(span.get_text(strip=True), "").strip()
+        #                     st.markdown(f"# :orange-background[{dvd_id}]")
                         
-                        if span and "Release Date" in span.text:
-                            release_date = datetime.strptime(p.get_text(strip=True).replace(span.get_text(strip=True), "").strip(), "%d %b %Y")
-                            formatted_date = release_date.strftime("%d/%m/%Y")
-                            if release_date.date() <= datetime.today().date():
-                                release_status = 1
-                            else:
-                                release_status = 0
+        #                 if span and "Release Date" in span.text:
+        #                     release_date = datetime.strptime(p.get_text(strip=True).replace(span.get_text(strip=True), "").strip(), "%d %b %Y")
+        #                     formatted_date = release_date.strftime("%d/%m/%Y")
+        #                     if release_date.date() <= datetime.today().date():
+        #                         release_status = 1
+        #                     else:
+        #                         release_status = 0
 
-                        if span and "Cast(s):" in span.text:
+        #                 if span and "Cast(s):" in span.text:
 
-                            for a in p.find_all("a"):
-                                cast = a.get_text(strip=True)
-                                kanji = re.findall(r'[\u3005\u3040-\u30FF\u4E00-\u9FFF]+', cast)
-                                latins = re.findall(r'[A-Za-z ]+', cast)
-                                latins = latins[0].split(' ')
-                                latin = latins[1] + ' ' + latins[0]
+        #                     for a in p.find_all("a"):
+        #                         cast = a.get_text(strip=True)
+        #                         kanji = re.findall(r'[\u3005\u3040-\u30FF\u4E00-\u9FFF]+', cast)
+        #                         latins = re.findall(r'[A-Za-z ]+', cast)
+        #                         latins = latins[0].split(' ')
+        #                         latin = latins[1] + ' ' + latins[0]
 
-                                if kanji not in actress_df['Name (Kanji)'].values:
-                                    casts.append([
-                                        'Not Checked',
-                                        st.secrets.indicators.PLACEHOLDER_IMG,
-                                        latin.strip(),
-                                        kanji[0].strip(),
-                                        '?',
-                                        '?',
-                                        '?',
-                                        '?',
-                                        '? cm',
-                                        '--',
-                                        '?',
-                                        '?',
-                                        '?',
-                                        'Active',
-                                        "https://javtrailers.com" + a.get("href")
-                                    ])
+        #                         if kanji not in actress_df['Name (Kanji)'].values:
+        #                             casts.append([
+        #                                 'Not Checked',
+        #                                 st.secrets.indicators.PLACEHOLDER_IMG,
+        #                                 latin.strip(),
+        #                                 kanji[0].strip(),
+        #                                 '?',
+        #                                 '?',
+        #                                 '?',
+        #                                 '?',
+        #                                 '? cm',
+        #                                 '--',
+        #                                 '?',
+        #                                 '?',
+        #                                 '?',
+        #                                 'Active',
+        #                                 "https://javtrailers.com" + a.get("href")
+        #                             ])
 
-                                actress_list.append(latin.strip())
+        #                         actress_list.append(latin.strip())
                     
-                    if actress_list:
-                        actress_name = ', '.join(actress_list)
-                    else:
-                        actress_name = 'Not Listed'
+        #             if actress_list:
+        #                 actress_name = ', '.join(actress_list)
+        #             else:
+        #                 actress_name = 'Not Listed'
 
-                    thumbnail = soup.find("div", id="thumbnailContainer").find("img").get("src")
-                    film_link = soup.find("link", rel="canonical")
-                    film_ref = film_link.get("href") if film_link else '--'
+        #             thumbnail = soup.find("div", id="thumbnailContainer").find("img").get("src")
+        #             film_link = soup.find("link", rel="canonical")
+        #             film_ref = film_link.get("href") if film_link else '--'
 
-                    if dvd_id in df["Code"].values:
-                        st.write(':blue-background[ℹ️ Film exist in database!]')
-                        match_film_data = df[df["Code"] == dvd_id]
+        #             if dvd_id in df["Code"].values:
+        #                 st.write(':blue-background[ℹ️ Film exist in database!]')
+        #                 match_film_data = df[df["Code"] == dvd_id]
 
-                        tags = match_film_data["Tags"].iloc[0]
-                        info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in INFO_OPTS else 0
+        #                 tags = match_film_data["Tags"].iloc[0]
+        #                 info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in ['Not Watched', 'Watched', 'Great', 'Goat'] else 0
                 
-                        a_index = match_film_data["A-Detector"].iloc[0]
-                    else:
-                        st.write(':blue-background[ℹ️ New Film!]')
-                        info_index = 0
-                        tags = 'No Tags'
-                        a_index = False
+        #                 a_index = match_film_data["A-Detector"].iloc[0]
+        #             else:
+        #                 st.write(':blue-background[ℹ️ New Film!]')
+        #                 info_index = 0
+        #                 tags = 'No Tags'
+        #                 a_index = False
                     
-                    st.space('small')
-                    input_info = st.selectbox(':yellow-background[Info:]', options=['🔴 Not Watched', '🟢 Watched', '🔵 Great', '🟣 Goat'], key='input_info', index=info_index)
-                    input_info = input_info.split(' ',1)[1]
-                    st.space('small')
-                    input_a = st.toggle('✨ A-Detector', value=a_index)
+        #             st.space('small')
+        #             input_info = st.selectbox(':yellow-background[Info:]', options=['🔴 Not Watched', '🟢 Watched', '🔵 Great', '🟣 Goat'], key='input_info', index=info_index)
+        #             input_info = input_info.split(' ',1)[1]
+        #             st.space('small')
+        #             input_a = st.toggle('✨ A-Detector', value=a_index)
                     
-                    st.space('small')
-                    background_text('Gallery:', 'yellow')
-                    try:
-                        gallery = soup.find("div", id="gallery-wrapper")
-                        # ambil semua img di dalamnya
-                        img_tags = gallery.find_all("img")
+        #             st.space('small')
+        #             background_text('Gallery:', 'yellow')
+        #             try:
+        #                 gallery = soup.find("div", id="gallery-wrapper")
+        #                 # ambil semua img di dalamnya
+        #                 img_tags = gallery.find_all("img")
 
-                        # ambil src
-                        img_srcs = ', '.join([img.get("src") for img in img_tags])
-                        if img_srcs:
-                            if 'prev_pic' not in st.session_state:  
-                                st.session_state.prev_pic = 0
+        #                 # ambil src
+        #                 img_srcs = ', '.join([img.get("src") for img in img_tags])
+        #                 if img_srcs:
+        #                     if 'prev_pic' not in st.session_state:  
+        #                         st.session_state.prev_pic = 0
                             
-                            pics = [img.get("src") for img in img_tags]
-                            count = len(pics)
+        #                     pics = [img.get("src") for img in img_tags]
+        #                     count = len(pics)
 
-                            st.markdown(
-                                """
-                                <style>
-                                div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
+        #                     st.markdown(
+        #                         """
+        #                         <style>
+        #                         div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
 
-                                .img-fit {
-                                    margin-top: -13px; 
-                                    padding-top: 0; 
-                                    display: flex;             /* gunakan flexbox */
-                                    justify-content: center;   /* horizontal center */
-                                    align-items: center;       /* vertical center jika container tinggi ditentukan */
-                                    background-color: #ffffff;
-                                    border-radius: 5px;
-                                    margin-bottom: 15px;
-                                }
+        #                         .img-fit {
+        #                             margin-top: -13px; 
+        #                             padding-top: 0; 
+        #                             display: flex;             /* gunakan flexbox */
+        #                             justify-content: center;   /* horizontal center */
+        #                             align-items: center;       /* vertical center jika container tinggi ditentukan */
+        #                             background-color: #ffffff;
+        #                             border-radius: 5px;
+        #                             margin-bottom: 15px;
+        #                         }
 
-                                .img-fit img {
-                                    max-width: 100%;
-                                    height: 400px;
-                                    width: auto;
-                                    object-fit: contain;
-                                    display: none;  /* default hidden semua gambar */
-                                }
+        #                         .img-fit img {
+        #                             max-width: 100%;
+        #                             height: 400px;
+        #                             width: auto;
+        #                             object-fit: contain;
+        #                             display: none;  /* default hidden semua gambar */
+        #                         }
 
-                                .img-fit img.active {
-                                    display: block; /* hanya gambar active yang terlihat */
-                                }
-                                </style>
-                                """,
-                                unsafe_allow_html=True
-                            )
+        #                         .img-fit img.active {
+        #                             display: block; /* hanya gambar active yang terlihat */
+        #                         }
+        #                         </style>
+        #                         """,
+        #                         unsafe_allow_html=True
+        #                     )
 
-                            # HTML untuk semua gambar, preload semuanya
-                            img_html = '<div class="img-fit">'
-                            for i, pic in enumerate(pics):
-                                active_class = 'active' if i == st.session_state.prev_pic else ''
-                                img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
-                            img_html += '</div>'
+        #                     # HTML untuk semua gambar, preload semuanya
+        #                     img_html = '<div class="img-fit">'
+        #                     for i, pic in enumerate(pics):
+        #                         active_class = 'active' if i == st.session_state.prev_pic else ''
+        #                         img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
+        #                     img_html += '</div>'
 
-                            st.markdown(img_html, unsafe_allow_html=True)
+        #                     st.markdown(img_html, unsafe_allow_html=True)
 
-                            with st.container(horizontal=True):
-                                # Tombol navigasi
-                                st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
-                                st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
-                    except Exception as e:
-                        st.error('Gallery Not Found! ❌')
-                        img_srcs = 'No Picture'
+        #                     with st.container(horizontal=True):
+        #                         # Tombol navigasi
+        #                         st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
+        #                         st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
+        #             except Exception as e:
+        #                 st.error('Gallery Not Found! ❌')
+        #                 img_srcs = 'No Picture'
 
-                    st.space('small')
-                    background_text('Thumbnail:', 'yellow')
-                    with st.container(horizontal_alignment='center'):
-                        st.image(thumbnail, width=180)
-                    st.space('small')
-                    background_text('Release Date:', 'yellow')
-                    st.write(f"{formatted_date} ({release_date.date()})")
-                    st.space('small')
-                    background_text('Link:', 'yellow')
-                    st.write(film_ref)
-                    st.space('small')
-                    background_text('Title:', 'yellow')
-                    st.write(film_title)
-                    st.space('small')
-                    background_text('Preview Image:', 'yellow')
-                    if img_srcs != 'No Picture':
-                        st.write(img_srcs)
-                    else:
-                        st.error('Gallery Not Found! ❌')
-                    st.space('small')
-                    background_text('Actress Name:', 'yellow')
-                    st.write(actress_name)
-                    st.space('small')
-                    st.markdown('### :orange-background[New Actress:]')
-                    st.write(casts)
+        #             st.space('small')
+        #             background_text('Thumbnail:', 'yellow')
+        #             with st.container(horizontal_alignment='center'):
+        #                 st.image(thumbnail, width=180)
+        #             st.space('small')
+        #             background_text('Release Date:', 'yellow')
+        #             st.write(f"{formatted_date} ({release_date.date()})")
+        #             st.space('small')
+        #             background_text('Link:', 'yellow')
+        #             st.write(film_ref)
+        #             st.space('small')
+        #             background_text('Title:', 'yellow')
+        #             st.write(film_title)
+        #             st.space('small')
+        #             background_text('Preview Image:', 'yellow')
+        #             if img_srcs != 'No Picture':
+        #                 st.write(img_srcs)
+        #             else:
+        #                 st.error('Gallery Not Found! ❌')
+        #             st.space('small')
+        #             background_text('Actress Name:', 'yellow')
+        #             st.write(actress_name)
+        #             st.space('small')
+        #             st.markdown('### :orange-background[New Actress:]')
+        #             st.write(casts)
                         
-                    scrap_new = [
-                        actress_name,
-                        dvd_id,
-                        film_title,
-                        formatted_date,
-                        thumbnail,
-                        tags,
-                        input_info,
-                        release_status,
-                        film_ref,
-                        img_srcs,
-                        input_a
-                    ]
+        #             scrap_new = [
+        #                 actress_name,
+        #                 dvd_id,
+        #                 film_title,
+        #                 formatted_date,
+        #                 thumbnail,
+        #                 tags,
+        #                 input_info,
+        #                 release_status,
+        #                 film_ref,
+        #                 img_srcs,
+        #                 input_a
+        #             ]
 
-                    st.session_state.actress_new = casts
-                    st.session_state.scrap_new = scrap_new
+        #             st.session_state.actress_new = casts
+        #             st.session_state.scrap_new = scrap_new
 
-                else: # Cast
-                    def extract_field(field, text):
-                        pattern = rf"{field}:\s*(.*?)\s*(?=\s*-\s*[A-Za-z ]+:|\n|$)"
-                        match = re.search(pattern, text)
-                        return match.group(1).strip() if match else None
+        #         else: # Cast
+        #             def extract_field(field, text):
+        #                 pattern = rf"{field}:\s*(.*?)\s*(?=\s*-\s*[A-Za-z ]+:|\n|$)"
+        #                 match = re.search(pattern, text)
+        #                 return match.group(1).strip() if match else None
                     
-                    dob = extract_field("DOB", st.session_state.html_bar)
-                    debut = extract_field("Debut", st.session_state.html_bar)
-                    if debut != '?':
-                        debut = datetime.strptime(debut, "%Y-%m-%d")
-                        debut_date = debut.strftime("%d/%m/%Y")
-                        period = relativedelta(date.today(), debut.date())
+        #             dob = extract_field("DOB", st.session_state.html_bar)
+        #             debut = extract_field("Debut", st.session_state.html_bar)
+        #             if debut != '?':
+        #                 debut = datetime.strptime(debut, "%Y-%m-%d")
+        #                 debut_date = debut.strftime("%d/%m/%Y")
+        #                 period = relativedelta(date.today(), debut.date())
 
-                        if period.months == 0:
-                            debut_period = f'{period.years} Year'
-                        else:
-                            debut_period = f'{period.years} Year {period.months} Month'
-                    else:
-                        debut_date = '?'
-                        debut_period = '?'
+        #                 if period.months == 0:
+        #                     debut_period = f'{period.years} Year'
+        #                 else:
+        #                     debut_period = f'{period.years} Year {period.months} Month'
+        #             else:
+        #                 debut_date = '?'
+        #                 debut_period = '?'
 
-                    data = {
-                        "DOB": datetime.strptime(dob, "%Y-%m-%d").strftime("%d/%m/%Y") if dob != '?' else '?',
-                        "Debut": debut_date,
-                        "Measurements": extract_field("Measurements", st.session_state.html_bar),
-                        "Cup": extract_field("Cup", st.session_state.html_bar),
-                        "Height": extract_field("Height", st.session_state.html_bar),
-                        "JP": extract_field("JP", st.session_state.html_bar)
-                    }
+        #             data = {
+        #                 "DOB": datetime.strptime(dob, "%Y-%m-%d").strftime("%d/%m/%Y") if dob != '?' else '?',
+        #                 "Debut": debut_date,
+        #                 "Measurements": extract_field("Measurements", st.session_state.html_bar),
+        #                 "Cup": extract_field("Cup", st.session_state.html_bar),
+        #                 "Height": extract_field("Height", st.session_state.html_bar),
+        #                 "JP": extract_field("JP", st.session_state.html_bar)
+        #             }
 
-                    age = calculate_age(data['DOB'])
-                    size_char = ['B','W','H']
-                    measurement = ' / '.join([f"{size_char[i]}{num}" for i, num in enumerate(data["Measurements"].split("-"))])
+        #             age = calculate_age(data['DOB'])
+        #             size_char = ['B','W','H']
+        #             measurement = ' / '.join([f"{size_char[i]}{num}" for i, num in enumerate(data["Measurements"].split("-"))])
 
-                    if data['JP'] in actress_df['Name (Kanji)'].values:
-                        st.write(':blue-background[ℹ️ Actress found in database!]')
-                        match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
-                        idx = match_data.index
+        #             if data['JP'] in actress_df['Name (Kanji)'].values:
+        #                 st.write(':blue-background[ℹ️ Actress found in database!]')
+        #                 match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
+        #                 idx = match_data.index
 
-                        if match_data['Retire Date'].iloc[0] != '?' and debut != '?':
-                            retire = datetime.strptime(match_data['Retire Date'].iloc[0], "%d/%m/%Y")
-                            period = relativedelta(retire.date(), debut.date())
+        #                 if match_data['Retire Date'].iloc[0] != '?' and debut != '?':
+        #                     retire = datetime.strptime(match_data['Retire Date'].iloc[0], "%d/%m/%Y")
+        #                     period = relativedelta(retire.date(), debut.date())
 
-                            if period.months == 0:
-                                debut_period = f'{period.years} Year'
-                            else:
-                                debut_period = f'{period.years} Year {period.months} Month'
+        #                     if period.months == 0:
+        #                         debut_period = f'{period.years} Year'
+        #                     else:
+        #                         debut_period = f'{period.years} Year {period.months} Month'
 
-                        row = idx + 2
-                        new_value = [
-                            match_data['Review'].iloc[0],
-                            match_data['Picture'].iloc[0],
-                            match_data['Name (Alphabet)'].iloc[0],
-                            match_data['Name (Kanji)'].iloc[0],
-                            data['DOB'],
-                            data['Debut'],
-                            data['Cup'],
-                            measurement,
-                            data['Height'],
-                            match_data['Notes'].iloc[0],
-                            age,
-                            debut_period,
-                            match_data['Retire Date'].iloc[0],
-                            match_data['Status'].iloc[0],
-                            match_data['Page'].iloc[0],
-                        ]
+        #                 row = idx + 2
+        #                 new_value = [
+        #                     match_data['Review'].iloc[0],
+        #                     match_data['Picture'].iloc[0],
+        #                     match_data['Name (Alphabet)'].iloc[0],
+        #                     match_data['Name (Kanji)'].iloc[0],
+        #                     data['DOB'],
+        #                     data['Debut'],
+        #                     data['Cup'],
+        #                     measurement,
+        #                     data['Height'],
+        #                     match_data['Notes'].iloc[0],
+        #                     age,
+        #                     debut_period,
+        #                     match_data['Retire Date'].iloc[0],
+        #                     match_data['Status'].iloc[0],
+        #                     match_data['Page'].iloc[0],
+        #                 ]
 
-                        with st.container(horizontal_alignment='center'):
-                            st.image(match_data['Picture'].iloc[0], width=120)
-                        st.write(f"Review : {match_data['Review'].iloc[0]}" )
-                        st.write(f"Latin : {match_data['Name (Alphabet)'].iloc[0]}" )
-                        st.write(f"Kanji : {match_data['Name (Kanji)'].iloc[0]}" )
-                        st.write(f"Birthdate : {data['DOB']}" )
-                        st.write(f"Debut Date : {data['Debut']}" )
-                        st.write(f"Debut Period : {debut_period}")
-                        st.write(f"Cup : {data['Cup']}" )
-                        st.write(f"Measurement : {measurement}" )
-                        st.write(f"Height : {data['Height']}" )
-                        st.session_state.scrap_new = new_value
-                    else:
-                        st.error('Actress not found in database! ❌')                        
-            else:
-                if soup.find():
-                    st.info('ℹ️ Scrapping Film')
-                else:
-                    st.info('ℹ️ Scrapping Cast')
+        #                 with st.container(horizontal_alignment='center'):
+        #                     st.image(match_data['Picture'].iloc[0], width=120)
+        #                 st.write(f"Review : {match_data['Review'].iloc[0]}" )
+        #                 st.write(f"Latin : {match_data['Name (Alphabet)'].iloc[0]}" )
+        #                 st.write(f"Kanji : {match_data['Name (Kanji)'].iloc[0]}" )
+        #                 st.write(f"Birthdate : {data['DOB']}" )
+        #                 st.write(f"Debut Date : {data['Debut']}" )
+        #                 st.write(f"Debut Period : {debut_period}")
+        #                 st.write(f"Cup : {data['Cup']}" )
+        #                 st.write(f"Measurement : {measurement}" )
+        #                 st.write(f"Height : {data['Height']}" )
+        #                 st.session_state.scrap_new = new_value
+        #             else:
+        #                 st.error('Actress not found in database! ❌')                        
+        #     else:
+        #         if soup.find():
+        #             st.info('ℹ️ Scrapping Film')
+        #         else:
+        #             st.info('ℹ️ Scrapping Cast')
 
-                st.success('✅ HTML Detected! (Ready to scrap)')
-        else:
-            st.warning('⚠️ HTML Empty')
+        #         st.success('✅ HTML Detected! (Ready to scrap)')
+        # else:
+        #     st.warning('⚠️ HTML Empty')
 
     with st.sidebar:
         if st.button('➕ Add New Film', width='stretch'):
@@ -3766,7 +4200,6 @@ def complex_film(device):
     """, unsafe_allow_html=True)
 
 def complex_actress(device):
-    st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Actress List</h1>", unsafe_allow_html=True)
 
     tag_df = init_dataframe_tags()
 
@@ -4194,6 +4627,14 @@ def complex_actress(device):
                 st.rerun()
 
     def show_view_mode(index):
+        st.markdown("""
+        <style>
+        div[data-testid="stExpanderDetails"] {
+            max-height: 600px !important;
+            overflow-y: auto !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
         actress = df.iloc[index]
         film_df = st.session_state.film_df
         actress_film = film_df[film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])]
@@ -5034,16 +5475,7 @@ def complex_actress(device):
 
     # Sidebar
     with st.sidebar:
-        if st.button('⬅️ Back', width='stretch'):
-            return 'home'
         st.header(f'Actress Listed : {len(st.session_state.actress_df)}')
-        st.markdown("---")
-        st.session_state.display_actress = st.radio(
-            "View Mode",
-            ["Gallery", "Detailed"],
-            key='display_mode_radio',
-            index=0 if st.session_state.display_actress == "Gallery" else 1
-        )
         st.markdown("---")
         with st.container(key='filter_container', horizontal=True):
             with st.container(key='status_filter'):
@@ -5100,334 +5532,368 @@ def complex_actress(device):
         show_actress_details()
         # st.session_state.viewing_index = Nonex
 
-    # # Tampilkan grid actress
-    # with mid:
-    if not df.empty and 'Picture' in df.columns:
-        if st.session_state.get('search_reset', False):
-            st.session_state.search_reset = False
-            st.session_state.search_bar = ''
-        dummy_container = st.container()
-        with dummy_container:
-            st.write('')
-        
-        dummy_container.float()
-        search_container = st.container(horizontal=True, vertical_alignment='bottom')
-
-        if st.session_state.scroll_to_here:
-            scroll_to_here(0,key='here')  # Scroll to the top of the page
-            st.session_state.scroll_to_here = False
-        with search_container:
-            search_query = st.text_input("🔍 Search actress by Name (Alphabet / Kanji):", 
-                            placeholder="Type name to search...", key='search_bar', on_change=reset_page_actress)
-            if st.button('Clear', on_click=reset_page_actress):
-                st.session_state.search_reset = True
-                st.rerun()
-
-        if device == 'Device 1':
-            img_width = 110
-        else:
-            img_width = 101
-
-        # Filter DataFrame berdasarkan status
-        filtered_df = df.copy()
-
-        # Buat kondisi filter
-        status_conditions = []
-        if show_active:
-            status_conditions.append(filtered_df['Status'].str.lower() == 'active')
-        if show_retired:
-            status_conditions.append(filtered_df['Status'].str.lower() == 'retired')
-        if show_no_info:
-            status_conditions.append(filtered_df['Status'].str.lower() == 'no info')
-        if show_slow_release:
-            status_conditions.append(filtered_df['Status'].str.lower() == 'slow release')
-        if show_problem:
-            status_conditions.append(filtered_df['Status'].str.lower() == 'problem')
-        
-        review_conditions = []
-        if show_review_drop:
-            review_conditions.append(filtered_df['Review'].str.lower() == 'drop')
-        if show_review_not_checked:
-            review_conditions.append(filtered_df['Review'].str.lower() == 'not checked')
-        if show_review_s:
-            review_conditions.append(filtered_df['Review'].str.lower() == 's-tier')
-        if show_review_a:
-            review_conditions.append(filtered_df['Review'].str.lower() == 'a-tier')
-        if show_review_b:
-            review_conditions.append(filtered_df['Review'].str.lower() == 'b-tier')
-        if show_review_c:
-            review_conditions.append(filtered_df['Review'].str.lower() == 'c-tier')
-        if show_review_d:
-            review_conditions.append(filtered_df['Review'].str.lower() == 'd-tier')
-        if show_review_e:
-            review_conditions.append(filtered_df['Review'].str.lower() == 'e-tier')
-        if show_review_f:
-            review_conditions.append(filtered_df['Review'].str.lower() == 'f-tier')
-
-        
-        if status_conditions:
-            status_mask = status_conditions[0]
-            for cond in status_conditions[1:]:
-                status_mask |= cond
-        else:
-            status_mask = pd.Series(False, index=filtered_df.index)
-        
-        if review_conditions:
-            review_mask = review_conditions[0]
-            for cond in review_conditions[1:]:
-                review_mask |= cond
-        else:
-            review_mask = pd.Series(False, index=filtered_df.index)
-        
-        final_mask = status_mask & review_mask
-        filtered_df = filtered_df[final_mask]
-        if search_query and not search_query.isspace() and not filtered_df.empty:
-            search_lower = search_query.lower().strip().split()
-            search_mask = (
-                filtered_df['Name (Alphabet)'].fillna('').str.lower().apply(lambda x: all(word in x for word in search_lower)) |
-                filtered_df['Name (Kanji)'].fillna('').apply(lambda x: all(word in x for word in search_lower))
-            )
-            filtered_df = filtered_df[search_mask]
-        filtered_df = filtered_df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=False)
-
-        total_actress_pages = max(1, (len(filtered_df) + 30 - 1) // 30)
-        st.markdown('---')
-        if 'actress_page' not in st.session_state:
-            st.session_state.actress_page = 1
-
-        def set_page(p):
-            st.session_state.actress_page = p
-        st.markdown(
-            f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Page {st.session_state.actress_page}</div>",
-            unsafe_allow_html=True
-        )
-
-        if total_actress_pages <= 6:
-            with st.container(key='page_button', horizontal=True, horizontal_alignment='center'):
-                for i in range(1, total_actress_pages + 1):
-                    st.button(
-                        str(i),
-                        key=f'page_top_{i}',
-                        disabled=(i == st.session_state.actress_page),
-                        on_click=set_page,
-                        args=(i,)
+    st.markdown(
+        """
+        <style>
+        .st-key-actress-navbar {
+            background-color: #1D546D;
+            padding: 5px;
+            border-radius: 10px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    actress_navbar = st.container(key='actress-navbar', width='stretch', horizontal=True, horizontal_alignment='distribute')
+    with actress_navbar:
+        if st.button('🏠 Home', width='content'):
+            st.session_state.first_load_film = True
+            return 'home'
+        if st.button('👁️ Display', width='content'):
+            @st.dialog('Display Settings', width='small') #viewmode
+            def display_setting():
+                layout_index = ["Gallery", "Detailed", "Actress Scrap"].index(st.session_state.display_actress) if st.session_state.display_actress in ["Gallery", "Detailed", "Actress Scrap"] else 0
+                with st.container(horizontal=True):
+                    st.session_state.display_actress = st.radio(
+                        "View Mode",
+                        ["Gallery", "Detailed", "Actress Scrap"],
+                        key='display_mode_radio',
+                        index=layout_index,
+                        horizontal=True
                     )
-        else:
-            with st.container(key='page_button_top', horizontal=True, horizontal_alignment='center'):
-                st.button('⬅️',key='previous_top', disabled=(st.session_state.actress_page == 1), on_click=set_page, args=(st.session_state.actress_page-1,))
-                
-                start_page = max(1, st.session_state.actress_page - 1)  
-                end_page = min(total_actress_pages, st.session_state.actress_page + 2)  
-                
-                pages_to_show = range(start_page, end_page + 1)
-                
-                if len(pages_to_show) < 4:
-                    if start_page == 1:
-                        pages_to_show = range(1, min(5, total_actress_pages + 1))
-                    else:
-                        pages_to_show = range(max(1, total_actress_pages - 3), total_actress_pages + 1)
-                
-                for i in pages_to_show:
-                    st.button(
-                        str(i),
-                        key=f'page_top_{i}',
-                        disabled=(i == st.session_state.actress_page),
-                        on_click=set_page,
-                        args=(i,)
-                    )
-                
-                st.button('➡️',key='next_top', disabled=(st.session_state.actress_page == total_actress_pages), on_click=set_page, args=(st.session_state.actress_page+1,))
-                
-        
-        page = st.session_state.actress_page
-        
-        start_idx = (page - 1) * 30 # page = 2 / Start idx = 8
-        end_idx = min(start_idx + 30, len(filtered_df)) # end idx = 16
-        st.markdown('---')
-        if len(filtered_df) > 0:
-            st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} films")
+                if st.button('Set', width='stretch'):
+                    st.rerun()
             
-            rows_to_display = filtered_df.iloc[start_idx:end_idx] #[8,15]
+            display_setting()   
+    
+    actress_navbar.float("top: 50px;z-index: 999990;")
+
+    if st.session_state.display_actress != 'Actress Scrap':
+        st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Actress List</h1>", unsafe_allow_html=True)
+        if not df.empty and 'Picture' in df.columns:
+            if st.session_state.get('search_reset', False):
+                st.session_state.search_reset = False
+                st.session_state.search_bar = ''
+            search_container = st.container(horizontal=True, vertical_alignment='bottom')
+            if st.session_state.scroll_to_here:
+                scroll_to_here(0,key='here')  # Scroll to the top of the page
+                st.session_state.scroll_to_here = False
+            with search_container:
+                search_query = st.text_input("🔍 Search actress by Name (Alphabet / Kanji):", 
+                                placeholder="Type name to search...", key='search_bar', on_change=reset_page_actress)
+                if st.button('Clear', on_click=reset_page_actress):
+                    st.session_state.search_reset = True
+                    st.rerun()
+
+            if device == 'Device 1':
+                img_width = 110
+            else:
+                img_width = 101
+
+            # Filter DataFrame berdasarkan status
+            filtered_df = df.copy()
+
+            # Buat kondisi filter
+            status_conditions = []
+            if show_active:
+                status_conditions.append(filtered_df['Status'].str.lower() == 'active')
+            if show_retired:
+                status_conditions.append(filtered_df['Status'].str.lower() == 'retired')
+            if show_no_info:
+                status_conditions.append(filtered_df['Status'].str.lower() == 'no info')
+            if show_slow_release:
+                status_conditions.append(filtered_df['Status'].str.lower() == 'slow release')
+            if show_problem:
+                status_conditions.append(filtered_df['Status'].str.lower() == 'problem')
+            
+            review_conditions = []
+            if show_review_drop:
+                review_conditions.append(filtered_df['Review'].str.lower() == 'drop')
+            if show_review_not_checked:
+                review_conditions.append(filtered_df['Review'].str.lower() == 'not checked')
+            if show_review_s:
+                review_conditions.append(filtered_df['Review'].str.lower() == 's-tier')
+            if show_review_a:
+                review_conditions.append(filtered_df['Review'].str.lower() == 'a-tier')
+            if show_review_b:
+                review_conditions.append(filtered_df['Review'].str.lower() == 'b-tier')
+            if show_review_c:
+                review_conditions.append(filtered_df['Review'].str.lower() == 'c-tier')
+            if show_review_d:
+                review_conditions.append(filtered_df['Review'].str.lower() == 'd-tier')
+            if show_review_e:
+                review_conditions.append(filtered_df['Review'].str.lower() == 'e-tier')
+            if show_review_f:
+                review_conditions.append(filtered_df['Review'].str.lower() == 'f-tier')
+
+            
+            if status_conditions:
+                status_mask = status_conditions[0]
+                for cond in status_conditions[1:]:
+                    status_mask |= cond
+            else:
+                status_mask = pd.Series(False, index=filtered_df.index)
+            
+            if review_conditions:
+                review_mask = review_conditions[0]
+                for cond in review_conditions[1:]:
+                    review_mask |= cond
+            else:
+                review_mask = pd.Series(False, index=filtered_df.index)
+            
+            final_mask = status_mask & review_mask
+            filtered_df = filtered_df[final_mask]
             if search_query and not search_query.isspace() and not filtered_df.empty:
-                st.info(f'Showing {len(filtered_df)} results')
-            elif search_query and not search_query.isspace() and filtered_df.empty:
-                st.warning("No actresses match the selected filters.")
-            
-            if st.session_state.display_actress == 'Detailed':
-                film_df = st.session_state.film_df
-                with st.container(horizontal=True, horizontal_alignment='center'):
-                    for idx in rows_to_display.index:
-                        actress = df.iloc[idx]    
-                        actress_film = film_df[film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])]
-                        watched_film = film_df[(film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])) & ((film_df['Info'] == 'Watched') | (film_df['Info'] == 'Great') | (film_df['Info'] == 'Goat'))]
-                        try:
-                            with st.container(width='content', key=f'card_container_{idx}'):
-                                cat_url = actress['Picture'] if pd.notna(actress['Picture']) else ""
-                                name_text = actress['Name (Alphabet)'] if pd.notna(actress['Name (Alphabet)']) else ""
-                                kanji_text = actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ""
-                                
-                                review_class = actress["Review"].lower().strip().replace(" ", "-")
-                                if actress['Status'] == 'Retired':
-                                    review_class = 'retired'
-                                
-                                if len(actress_film) != 0:
-                                    film_progress = (len(watched_film) / len(actress_film)) * 100
-                                else:
-                                    film_progress = 0
+                search_lower = search_query.lower().strip().split()
+                search_mask = (
+                    filtered_df['Name (Alphabet)'].fillna('').str.lower().apply(lambda x: all(word in x for word in search_lower)) |
+                    filtered_df['Name (Kanji)'].fillna('').apply(lambda x: all(word in x for word in search_lower))
+                )
+                filtered_df = filtered_df[search_mask]
+            filtered_df = filtered_df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=False)
 
-                                # Buat card dengan HTML lengkap
-                                card_html = f"""
-                                <div class="card-wrapper">
-                                    <div class="cat-card review-{review_class}">
-                                        <div class="badge-stack">
-                                            <div class="review-badge review-{review_class}">
-                                                {actress["Review"]}
+            total_actress_pages = max(1, (len(filtered_df) + 30 - 1) // 30)
+            st.markdown('---')
+            if 'actress_page' not in st.session_state:
+                st.session_state.actress_page = 1
+
+            def set_page(p, total):
+                if p>0 and p<=total:
+                    st.session_state.actress_page = p
+            st.markdown(
+                f"<div style='text-align:center; font-weight:600;padding-bottom:15px'>Page {st.session_state.actress_page}</div>",
+                unsafe_allow_html=True
+            )
+
+            if total_actress_pages <= 6:
+                with st.container(key='page_button', horizontal=True, horizontal_alignment='center'):
+                    for i in range(1, total_actress_pages + 1):
+                        st.button(
+                            str(i),
+                            key=f'page_top_{i}',
+                            disabled=(i == st.session_state.actress_page),
+                            on_click=set_page,
+                            args=(i,)
+                        )
+            else:
+                with st.container(key='page_button_top', horizontal=True, horizontal_alignment='center'):
+                    st.button('⬅️',key='previous_top', disabled=(st.session_state.actress_page == 1), on_click=set_page, args=(st.session_state.actress_page-1,total_actress_pages))
+                    
+                    start_page = max(1, st.session_state.actress_page - 1)  
+                    end_page = min(total_actress_pages, st.session_state.actress_page + 2)  
+                    
+                    pages_to_show = range(start_page, end_page + 1)
+                    
+                    if len(pages_to_show) < 4:
+                        if start_page == 1:
+                            pages_to_show = range(1, min(5, total_actress_pages + 1))
+                        else:
+                            pages_to_show = range(max(1, total_actress_pages - 3), total_actress_pages + 1)
+                    
+                    for i in pages_to_show:
+                        st.button(
+                            str(i),
+                            key=f'page_top_{i}',
+                            disabled=(i == st.session_state.actress_page),
+                            on_click=set_page,
+                            args=(i,total_actress_pages)
+                        )
+                    
+                    st.button('➡️',key='next_top', disabled=(st.session_state.actress_page == total_actress_pages), on_click=set_page, args=(st.session_state.actress_page+1,total_actress_pages))
+                    
+            
+            page = st.session_state.actress_page
+            
+            start_idx = (page - 1) * 30 # page = 2 / Start idx = 8
+            end_idx = min(start_idx + 30, len(filtered_df)) # end idx = 16
+            st.markdown('---')
+            if len(filtered_df) > 0:
+                st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} films")
+                
+                rows_to_display = filtered_df.iloc[start_idx:end_idx] #[8,15]
+                if search_query and not search_query.isspace() and not filtered_df.empty:
+                    st.info(f'Showing {len(filtered_df)} results')
+                elif search_query and not search_query.isspace() and filtered_df.empty:
+                    st.warning("No actresses match the selected filters.")
+                
+                if st.session_state.display_actress == 'Detailed':
+                    film_df = st.session_state.film_df
+                    with st.container(horizontal=True, horizontal_alignment='center'):
+                        for idx in rows_to_display.index:
+                            actress = df.iloc[idx]    
+                            actress_film = film_df[film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])]
+                            watched_film = film_df[(film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])) & ((film_df['Info'] == 'Watched') | (film_df['Info'] == 'Great') | (film_df['Info'] == 'Goat'))]
+                            try:
+                                with st.container(width='content', key=f'card_container_{idx}'):
+                                    cat_url = actress['Picture'] if pd.notna(actress['Picture']) else ""
+                                    name_text = actress['Name (Alphabet)'] if pd.notna(actress['Name (Alphabet)']) else ""
+                                    kanji_text = actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ""
+                                    
+                                    review_class = actress["Review"].lower().strip().replace(" ", "-")
+                                    if actress['Status'] == 'Retired':
+                                        review_class = 'retired'
+                                    
+                                    if len(actress_film) != 0:
+                                        film_progress = (len(watched_film) / len(actress_film)) * 100
+                                    else:
+                                        film_progress = 0
+
+                                    # Buat card dengan HTML lengkap
+                                    card_html = f"""
+                                    <div class="card-wrapper">
+                                        <div class="cat-card review-{review_class}">
+                                            <div class="badge-stack">
+                                                <div class="review-badge review-{review_class}">
+                                                    {actress["Review"]}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="cat-image-container">
-                                            <img src="{cat_url}" class="cat-image review-{review_class}" width="150" height="150">
-                                        </div>
-                                        <div class="card-divider"></div>
-                                        <div class="total-badge" style="background: linear-gradient(
-                                            to right,
-                                            #ff8b8b {film_progress}%,
-                                            #6b6b72 {film_progress}%
-                                        );">
-                                            {len(watched_film)}/{len(actress_film)} Watched
-                                        </div>
+                                            <div class="cat-image-container">
+                                                <img src="{cat_url}" class="cat-image review-{review_class}" width="150" height="150">
+                                            </div>
+                                            <div class="card-divider"></div>
+                                            <div class="total-badge" style="background: linear-gradient(
+                                                to right,
+                                                #ff8b8b {film_progress}%,
+                                                #6b6b72 {film_progress}%
+                                            );">
+                                                {len(watched_film)}/{len(actress_film)} Watched
+                                            </div>
+                                            """
+                                    
+                                    if name_text and kanji_text:
+                                        card_html += f"""<div class="cat-name">{name_text}</div>
+                                            <div class="cat-kanji">{kanji_text}</div>
                                         """
-                                
-                                if name_text and kanji_text:
-                                    card_html += f"""<div class="cat-name">{name_text}</div>
-                                        <div class="cat-kanji">{kanji_text}</div>
+                                    elif name_text:
+                                        card_html += f'<div class="cat-name">{name_text}</div>'
+                                    elif kanji_text:
+                                        card_html += f'<div class="cat-kanji">{kanji_text}</div>'
+                                    
+                                    card_html += """</div>
+                                    </div>
                                     """
-                                elif name_text:
-                                    card_html += f'<div class="cat-name">{name_text}</div>'
-                                elif kanji_text:
-                                    card_html += f'<div class="cat-kanji">{kanji_text}</div>'
-                                
-                                card_html += """</div>
+                                    st.markdown(card_html, unsafe_allow_html=True)
+                                    
+                                    # Button container untuk View Details
+                                    if st.button("View Details", key=f"view_{idx}", type='primary', width='stretch'):
+                                        st.session_state.viewing_index = idx
+                                        st.session_state.editing_index = None
+                                        st.rerun()
+                                    copy_button(actress['Name (Kanji)'],key=f'copy_btn_{idx}', copied_label=f'Copied {actress["Name (Alphabet)"]}!')
+
+                                            
+                            except Exception as e:
+                                # with col:
+                                error_html = f"""
+                                <div class="card-wrapper">
+                                    <div class="cat-card">
+                                        <div style="text-align: center; color: #e74c3c;">
+                                            <div style="font-size: 24px; margin-bottom: 10px;">😿</div>
+                                            <div style="font-size: 14px;">Failed to load image : {e}</div>
+                                        </div>
+                                    </div>
                                 </div>
                                 """
-                                st.markdown(card_html, unsafe_allow_html=True)
-                                
-                                # Button container untuk View Details
-                                if st.button("View Details", key=f"view_{idx}", type='primary', width='stretch'):
-                                    st.session_state.viewing_index = idx
-                                    st.session_state.editing_index = None
-                                    st.rerun()
-                                copy_button(actress['Name (Kanji)'],key=f'copy_btn_{idx}', copied_label=f'Copied {actress["Name (Alphabet)"]}!')
-
-                                        
-                        except Exception as e:
-                            # with col:
-                            error_html = f"""
-                            <div class="card-wrapper">
-                                <div class="cat-card">
-                                    <div style="text-align: center; color: #e74c3c;">
-                                        <div style="font-size: 24px; margin-bottom: 10px;">😿</div>
-                                        <div style="font-size: 14px;">Failed to load image : {e}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            """
-                            st.markdown(error_html, unsafe_allow_html=True)
-            else:
-                with st.container(horizontal=True,horizontal_alignment='center'):
-                    for idx in rows_to_display.index:
-                        actress = df.iloc[idx]
-                        status = actress['Status']
-                        if status == 'Problem':
-                            status_text = 'red'
-                        elif status == 'Retired':
-                            status_text = 'gray'
-                        elif status == 'No Info':
-                            status_text = 'blue'
-                        else:
-                            status_text = 'orange'
-
-                        with st.container(width=img_width+5):
-                            st.markdown(f"""
-                                    <div class="review-avatar review-{'-'.join(actress['Review'].lower().split(' '))}" style="
-                                        width: {img_width}px;
-                                        height: {img_width}px;
-                                        border-radius: 50%;
-                                        overflow: hidden;
-                                        display: flex;
-                                        justify-content: center;
-                                        align-items: center;
-                                        margin: 0 auto 8px auto;
-                                        background: white;
-                                    ">
-                                        <img src="{actress['Picture']}" 
-                                            style="
-                                                width: 100%;
-                                                height: 100%;
-                                                object-fit: cover;
-                                            ">
-                                        <div class="review-badge-gallery review-{'-'.join(actress['Review'].lower().split(' '))}">
-                                            {actress['Review'].replace('-Tier','')}
-                                        </div>
-                                    </div>
-                                """, unsafe_allow_html=True)
-                            if status != 'Active':
-                                if st.button(f':{status_text}[{actress["Name (Alphabet)"]}]', width='stretch', type='tertiary', key=f'{actress["Name (Alphabet)"]}_{idx}'):
-                                    st.session_state.viewing_index = idx
-                                    st.session_state.editing_index = None
-                                    st.rerun()
+                                st.markdown(error_html, unsafe_allow_html=True)
+                else:
+                    with st.container(horizontal=True,horizontal_alignment='center'):
+                        for idx in rows_to_display.index:
+                            actress = df.iloc[idx]
+                            status = actress['Status']
+                            if status == 'Problem':
+                                status_text = 'red'
+                            elif status == 'Retired':
+                                status_text = 'gray'
+                            elif status == 'No Info':
+                                status_text = 'blue'
                             else:
-                                if st.button(actress["Name (Alphabet)"], width='stretch', type='tertiary', key=f'{actress["Name (Alphabet)"]}_{idx}'):
-                                    st.session_state.viewing_index = idx
-                                    st.session_state.editing_index = None
-                                    st.rerun()
-        else:
-            st.info('No actress match the selected filter')
-        st.markdown('---')
-        if total_actress_pages <= 6:
-            with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
-                for i in range(1, total_actress_pages + 1):
-                    if st.button(
-                        str(i),
-                        key=f'page_bottom_{i}',
-                        disabled=(i == st.session_state.actress_page),
-                        on_click=set_page,
-                        args=(i,)
-                    ):
+                                status_text = 'orange'
+
+                            with st.container(width=img_width+5):
+                                st.markdown(f"""
+                                        <div class="review-avatar review-{'-'.join(actress['Review'].lower().split(' '))}" style="
+                                            width: {img_width}px;
+                                            height: {img_width}px;
+                                            border-radius: 50%;
+                                            overflow: hidden;
+                                            display: flex;
+                                            justify-content: center;
+                                            align-items: center;
+                                            margin: 0 auto 8px auto;
+                                            background: white;
+                                        ">
+                                            <img src="{actress['Picture']}" 
+                                                style="
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    object-fit: cover;
+                                                ">
+                                            <div class="review-badge-gallery review-{'-'.join(actress['Review'].lower().split(' '))}">
+                                                {actress['Review'].replace('-Tier','')}
+                                            </div>
+                                        </div>
+                                    """, unsafe_allow_html=True)
+                                if status != 'Active':
+                                    if st.button(f':{status_text}[{actress["Name (Alphabet)"]}]', width='stretch', type='tertiary', key=f'{actress["Name (Alphabet)"]}_{idx}'):
+                                        st.session_state.viewing_index = idx
+                                        st.session_state.editing_index = None
+                                        st.rerun()
+                                else:
+                                    if st.button(actress["Name (Alphabet)"], width='stretch', type='tertiary', key=f'{actress["Name (Alphabet)"]}_{idx}'):
+                                        st.session_state.viewing_index = idx
+                                        st.session_state.editing_index = None
+                                        st.rerun()
+            else:
+                st.info('No actress match the selected filter')
+            st.markdown('---')
+            if total_actress_pages <= 6:
+                with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
+                    for i in range(1, total_actress_pages + 1):
+                        if st.button(
+                            str(i),
+                            key=f'page_bottom_{i}',
+                            disabled=(i == st.session_state.actress_page),
+                            on_click=set_page,
+                            args=(i,)
+                        ):
+                            st.session_state.scroll_to_here = True
+                            st.rerun()
+            else:
+                with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
+                    if st.button('⬅️',key='previous_bottom', disabled=(st.session_state.actress_page == 1), on_click=set_page, args=(st.session_state.actress_page-1,total_actress_pages)):
                         st.session_state.scroll_to_here = True
                         st.rerun()
-        else:
-            with st.container(key='page_button_bottom', horizontal=True, horizontal_alignment='center'):
-                if st.button('⬅️',key='previous_bottom', disabled=(st.session_state.actress_page == 1), on_click=set_page, args=(st.session_state.actress_page-1,)):
-                    st.session_state.scroll_to_here = True
-                    st.rerun()
-                
-                start_page = max(1, st.session_state.actress_page - 1)  
-                end_page = min(total_actress_pages, st.session_state.actress_page + 2)  
-                
-                pages_to_show = range(start_page, end_page + 1)
-                
-                if len(pages_to_show) < 4:
-                    if start_page == 1:
-                        pages_to_show = range(1, min(5, total_actress_pages + 1))
-                    else:
-                        pages_to_show = range(max(1, total_actress_pages - 3), total_actress_pages + 1)
-                
-                for i in pages_to_show:
-                    if st.button(
-                        str(i),
-                        key=f'page_bottom_{i}',
-                        disabled=(i == st.session_state.actress_page),
-                        on_click=set_page,
-                        args=(i,)
-                    ):
-                        st.session_state.scroll_to_here = True
+                    
+                    start_page = max(1, st.session_state.actress_page - 1)  
+                    end_page = min(total_actress_pages, st.session_state.actress_page + 2)  
+                    
+                    pages_to_show = range(start_page, end_page + 1)
+                    
+                    if len(pages_to_show) < 4:
+                        if start_page == 1:
+                            pages_to_show = range(1, min(5, total_actress_pages + 1))
+                        else:
+                            pages_to_show = range(max(1, total_actress_pages - 3), total_actress_pages + 1)
+                    
+                    for i in pages_to_show:
+                        if st.button(
+                            str(i),
+                            key=f'page_bottom_{i}',
+                            disabled=(i == st.session_state.actress_page),
+                            on_click=set_page,
+                            args=(i,total_actress_pages)
+                        ):
+                            st.session_state.scroll_to_here = True
+                            st.rerun()
+                    
+                    if st.button('➡️',key='next_bottom', disabled=(st.session_state.actress_page == total_actress_pages), on_click=set_page, args=(st.session_state.actress_page+1,total_actress_pages)):
+                        st.session_state.scroll_to_here = True    
                         st.rerun()
-                
-                if st.button('➡️',key='next_bottom', disabled=(st.session_state.actress_page == total_actress_pages), on_click=set_page, args=(st.session_state.actress_page+1,)):
-                    st.session_state.scroll_to_here = True    
-                    st.rerun()
+        else:
+            st.info("No actress data available. Click 'Add New Actress' to get started!")
+    
     else:
-        st.info("No actress data available. Click 'Add New Actress' to get started!")
+        display_scrap_manual()
     
     # CSS untuk styling card yang estetik
     st.markdown("""
