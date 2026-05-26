@@ -2180,46 +2180,7 @@ def complex_film(device):
                 st.badge(label='', icon='⭐', color='yellow')
             
  
-        with st.container(horizontal=True, width='content'):
-            with st.container(width='content'):
-                st.markdown('### Tags')
-            # st.markdown(
-            #     "<div style='text-align:center; font-size:24px;'>|</div>",
-            #     unsafe_allow_html=True
-            # )
-            # if film['Info'] == 'Not Watched' and "Downloaded" not in film['Tags']:
-            #     if st.button(':blue-background[📥]', width='content', type='tertiary'): # :download-quick
-            #         row = filtered_index + 2
-            #         if film['Tags'] == 'No Tags':
-            #             tag_text = 'Downloaded'
-            #         elif 'Want to watch' in film['Tags']:
-            #             tag_text = film['Tags'].replace('Want to watch', 'Downloaded')
-            #         else:
-            #             tag_text = film['Tags'] + ', Downloaded'
-
-            #         film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-            #         df.at[filtered_index, 'Tags'] = tag_text
-            #         st.session_state.film_df = values_handling(df,'film')
-            #         st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-            #         st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-            #         st.toast(f'📥 {film["Code"]} is downloaded!')
-            #         time.sleep(.5)
-            #         st.rerun()
-            # if film['Info'] == 'Not Watched' and "Want to watch" not in film['Tags'] and "Downloaded" not in film['Tags']:
-            #     if st.button(':yellow-background[👁️]', width='content', type='tertiary'): # :download-quick
-            #         row = filtered_index + 2
-            #         if film['Tags'] == 'No Tags':
-            #             tag_text = 'Want to watch'
-            #         else:
-            #             tag_text = film['Tags'] + ', Want to watch'
-            #         film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-            #         df.at[filtered_index, 'Tags'] = tag_text
-            #         st.session_state.film_df = values_handling(df,'film')
-            #         st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-            #         st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-            #         st.toast(f'📥 {film["Code"]} is listed to watch!')
-            #         time.sleep(.5)
-            #         st.rerun()
+        st.markdown('### Tags')
         tags = film['Tags'].split(', ')
 
         with st.container(horizontal=True):
