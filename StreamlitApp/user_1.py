@@ -12,7 +12,6 @@ from google.oauth2.service_account import Credentials
 from st_copy import copy_button
 from bs4 import BeautifulSoup
 from streamlit_float import *
-import requests
 
 @st.cache_resource
 def get_gsheet_client():
@@ -1882,8 +1881,8 @@ def display_scrap_manual():
         st.session_state.start_scrap = False
 
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Scrap Manual</h1>", unsafe_allow_html=True)
-    url_link = st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar', on_change=reset_scrap)
-    html = requests.get(html).text
+    st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar', on_change=reset_scrap)
+    
     if st.button('Clear HTML', width='stretch', type='primary'):
         st.session_state.html_reset = True
         st.rerun()
@@ -1957,7 +1956,7 @@ def display_scrap_manual():
     #    START SCRAPPING
     # =======================
     if st.session_state.html_bar:
-        soup = BeautifulSoup(html, "html.parser")
+        soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
         if soup.find():
             st.session_state.s_type = 'film'
         else:
