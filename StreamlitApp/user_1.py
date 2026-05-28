@@ -1891,6 +1891,7 @@ def display_scrap_manual():
         st.session_state.start_scrap = True
     if st.button('Close', width='stretch', key='close_scrap'):
         st.session_state.scrap_dialog = False
+        st.rerun()
 
     st.markdown('---')
     with st.container(horizontal=True):
