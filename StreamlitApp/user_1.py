@@ -1847,6 +1847,7 @@ def display_film_grid(df, tag_df):
     if st.button('⬆️ Back to top', width='stretch'):
         st.session_state.scroll_to_here = True                   
 
+@st.dialog('Scrap', width='small')
 def display_scrap_manual():
     df = init_dataframe_film()
     actress_df = init_dataframe_actress()
@@ -1888,6 +1889,8 @@ def display_scrap_manual():
         st.rerun()
     if st.button('Scrap', width='stretch'):
         st.session_state.start_scrap = True
+    if st.button('Close' width='stretch', key='close_scrap'):
+        st.session_state.scrap_dialog = False
 
     st.markdown('---')
     with st.container(horizontal=True):
@@ -2030,18 +2033,15 @@ def display_scrap_manual():
                     match_film_data = df[df["Code"] == dvd_id]
 
                     tags = match_film_data["Tags"].iloc[0]
-                    info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in ['Not Watched', 'Watched', 'Great', 'Goat'] else 0
+                    input_info = match_film_data["Info"].iloc[0]
             
                     a_index = match_film_data["A-Detector"].iloc[0]
                 else:
                     st.write(':blue-background[ℹ️ New Film!]')
-                    info_index = 0
+                    input_info = "Not Watched"
                     tags = 'No Tags'
                     a_index = False
                 
-                st.space('small')
-                input_info = st.selectbox(':yellow-background[Info:]', options=['🔴 Not Watched', '🟢 Watched', '🔵 Great', '🟣 Goat'], key='input_info', index=info_index)
-                input_info = input_info.split(' ',1)[1]
                 st.space('small')
                 input_a = st.toggle('✨ A-Detector', value=a_index)
                 
@@ -2388,6 +2388,8 @@ def complex_film(device):
         st.session_state.filtered_film_data = None
     if 'filtered_data_position' not in st.session_state:
         st.session_state.filtered_data_position = None
+    if 'scrap_dialog' not in st.session_state:
+        st.session_state.scrap_dialog = False
 
     if st.session_state.scroll_to_top:
         scroll_to_here(0,key='top')  # Scroll to the top of the page
@@ -3441,7 +3443,9 @@ def complex_film(device):
             return 'home'
         
         with st.container(horizontal_alignment='right', horizontal=True):
-            if st.button('📌 Feature', width='content'):
+            if st.button('💻' width='content'):
+                st.session_state.scrap_dialog = True
+            if st.button('📌', width='content'):
                 @st.dialog('Features', width='small')
                 def features(tag_df):
                     with st.expander('Gacha', key='expander_gacha'):
@@ -3588,11 +3592,11 @@ def complex_film(device):
             if st.button('👁️ Display', width='content'):
                 @st.dialog('Display Settings', width='small') #viewmode
                 def display_setting():
-                    layout_index = ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"].index(st.session_state.film_layout) if st.session_state.film_layout in ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"] else 0
+                    layout_index = ["Detailed", "Simple", "Calender Scrap"].index(st.session_state.film_layout) if st.session_state.film_layout in ["Detailed", "Simple", "Calender Scrap"] else 0
                     with st.container(horizontal=True):
                         st.session_state.film_layout = st.radio(
                             "View Mode",
-                            ["Detailed", "Simple", "Scrap Manual", "Calender Scrap"],
+                            ["Detailed", "Simple", "Calender Scrap"],
                             index= layout_index,
                             key='film_display_mode',
                             on_change=reset_page,
@@ -3608,6 +3612,8 @@ def complex_film(device):
     if st.session_state.viewing_film_index is not None:
         show_film_details()
 
+    if st.session_state.scrap_dialog:
+        display_scrap_manual()
     st.space('small')
     if st.session_state.first_load_film:
         st.session_state.scroll_to_top = True
@@ -3629,8 +3635,6 @@ def complex_film(device):
     elif st.session_state.film_layout == "Calender Scrap":
         st.markdown("<h1 style='text-align: center;'>Calendar Scrap</h1>", unsafe_allow_html=True)
         display_film_calender(df)
-    else:  # Scrap Manual
-        display_scrap_manual()
 
         # def reset_scrap():
         #     st.session_state.start_scrap = False
