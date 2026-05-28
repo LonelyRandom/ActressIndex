@@ -3443,7 +3443,7 @@ def complex_film(device):
             return 'home'
         
         with st.container(horizontal_alignment='right', horizontal=True):
-            if st.button('💻' width='content'):
+            if st.button('💻', width='content'):
                 st.session_state.scrap_dialog = True
             if st.button('📌', width='content'):
                 @st.dialog('Features', width='small')
