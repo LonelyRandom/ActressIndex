@@ -1889,7 +1889,7 @@ def display_scrap_manual():
         st.rerun()
     if st.button('Scrap', width='stretch'):
         st.session_state.start_scrap = True
-    if st.button('Close' width='stretch', key='close_scrap'):
+    if st.button('Close', width='stretch', key='close_scrap'):
         st.session_state.scrap_dialog = False
 
     st.markdown('---')
@@ -4271,6 +4271,8 @@ def complex_actress(device):
         st.session_state.show_review_f = True
     if 'show_review_drop' not in st.session_state:
         st.session_state.show_review_drop = False
+    if 'scrap_dialog' not in st.session_state:
+        st.session_state.scrap_dialog = False
 
         
     # Fungsi untuk refresh data dari Google Sheets
@@ -5582,14 +5584,16 @@ def complex_actress(device):
         if st.button('🏠 Home', width='content'):
             st.session_state.first_load_film = True
             return 'home'
+        if st.button('💻', width='content'):
+            st.session_state.scrap_dialog = True
         if st.button('👁️ Display', width='content'):
             @st.dialog('Display Settings', width='small') #viewmode
             def display_setting():
-                layout_index = ["Gallery", "Detailed", "Scrap"].index(st.session_state.display_actress) if st.session_state.display_actress in ["Gallery", "Detailed", "Scrap"] else 0
+                layout_index = ["Gallery", "Detailed"].index(st.session_state.display_actress) if st.session_state.display_actress in ["Gallery", "Detailed"] else 0
                 with st.container(horizontal=True):
                     st.session_state.display_actress = st.radio(
                         "View Mode",
-                        ["Gallery", "Detailed", "Scrap"],
+                        ["Gallery", "Detailed"],
                         key='display_mode_radio',
                         index=layout_index,
                         horizontal=True
@@ -5601,7 +5605,9 @@ def complex_actress(device):
     
     actress_navbar.float("top: 50px;z-index: 999990;")
 
-    if st.session_state.display_actress != 'Scrap':
+    if st.session_state.display_actress != 'Scrap': #fix
+        if st.session_state.scrap_dialog:
+            display_scrap_manual()
         st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Actress List</h1>", unsafe_allow_html=True)
         if not df.empty and 'Picture' in df.columns:
             if st.session_state.get('search_reset', False):
