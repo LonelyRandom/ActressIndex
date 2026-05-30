@@ -864,6 +864,8 @@ def set_calender_flag(index):
         edit_flag = 'Not Checked'
     st.toast(f"{st.session_state.calender_data.at[index, 'Code']} Flag changed to {edit_flag}")
     st.session_state.calender_data.at[index, 'Flag'] = edit_flag
+    row = index+2
+    calendar_worksheet().update(f'E{row}:E{row}', [[edit_flag]])
 
 def set_calender_a(index):
     st.toast(f"✨️ {st.session_state.calender_data.at[index, 'Code']} A-Detector {st.session_state.get(f'{index}_toggle')}")
