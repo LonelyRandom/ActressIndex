@@ -1879,13 +1879,13 @@ def display_scrap_manual():
     if st.button('Clear HTML', width='stretch', type='primary'):
         st.session_state.html_reset = True
         st.rerun()
-    if st.button('Scrap', width='stretch'):
-        st.session_state.start_scrap = True
     if st.button('Close', width='stretch', key='close_scrap'):
         st.session_state.scrap_dialog = False
         st.rerun()
 
     st.markdown('---')
+    if st.button('Scrap', width='stretch'):
+        st.session_state.start_scrap = True
     with st.container(horizontal=True):
         st.button('Show Scrap', width='stretch', key='show_scrap')
         st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
@@ -2166,13 +2166,17 @@ def display_scrap_manual():
                 else:
                     debut_date = '?'
                     debut_period = '?'
+                
+                height = extract_field("Height", st.session_state.html_bar)
+                if height == '?':
+                    height = '? cm'
 
                 data = {
                     "DOB": datetime.strptime(dob, "%Y-%m-%d").strftime("%d/%m/%Y") if '?' not in dob else '?',
                     "Debut": debut_date,
                     "Measurements": extract_field("Measurements", st.session_state.html_bar),
                     "Cup": extract_field("Cup", st.session_state.html_bar),
-                    "Height": extract_field("Height", st.session_state.html_bar),
+                    "Height": height,
                     "JP": extract_field("JP", st.session_state.html_bar)
                 }
 
@@ -2213,11 +2217,12 @@ def display_scrap_manual():
                         match_data['Page'].iloc[0],
                     ]
 
-                    st.markdown("## Comparison Table")
 
+                    st.markdown("## Picture")
                     with st.container(horizontal_alignment='center'):
                         st.image(match_data['Picture'].iloc[0], width=120)
 
+                    st.markdown("## Comparison Table")
                     after_data = {
                         "Field": [
                             "Review",
