@@ -5709,7 +5709,7 @@ def complex_actress(device):
                         key=f'page_top_{i}',
                         disabled=(i == st.session_state.actress_page),
                         on_click=set_page,
-                        args=(i,)
+                        args=(i,total_actress_pages)
                     )
         else:
             with st.container(key='page_button_top', horizontal=True, horizontal_alignment='center'):
