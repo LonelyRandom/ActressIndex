@@ -94,7 +94,7 @@ REVIEW_OPTS = [
     'C-Tier',
     'D-Tier',
     'E-Tier',
-    'F-Tier'
+    'F-Tier',
     'Drop',
 ]
 
@@ -2890,11 +2890,30 @@ def complex_film(device):
                 st.button('➡️', width='stretch', key='next_film_bottom', disabled=(st.session_state.filtered_data_position==len(st.session_state.filtered_film_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(st.session_state.filtered_film_data)))
                     
         st.markdown('---')
-                        
-        if pd.isna(film['Link']) :
-            st.button('🔗 No Link Found!', type='primary', width='stretch')
+        if film['Link'] == '--' :
+            film_url = 'https://www.google.com/search?q='
+            if 'WEST-' not in film['Code']:
+                url_text = film['Code'].split('-')
+                total = len(url_text)
+                for i in range(total):
+                    if i+1 != total:
+                        film_url += url_text[i] + '+'
+                    else:
+                        film_url += url_text[i] + '+jav+video'
+            else:
+                url_text = film['Title'].lower().split(' ')
+                total = len(url_text)
+                for i in range(total):
+                    if i+1 != total:
+                        film_url += url_text[i] + '+'
+                    else:
+
+                        film_url += url_text[i] + '+porn'
+
         else:
-            st.link_button("🎬 Preview", film['Link'], width='stretch', type='primary')
+            film_url = film['Link']
+
+        st.link_button("🎬 Preview", film_url, width='stretch', type='primary')
         with st.container(key='view_film_edit_container_button', horizontal=True):
             if st.button('✏️ Edit', width='stretch', key='edited'):
                 st.session_state.editing_film_index = st.session_state.filtered_data_position
@@ -2914,8 +2933,9 @@ def complex_film(device):
         with st.container(horizontal_alignment='center'): 
             st.markdown(f"### ✏️ Editing: {film['Code']}")
             st.image(film['Picture'], width=250)
-            new_pic = st.file_uploader('Change Image', type=['png', 'jpg', 'jpeg'], key=f'film_picture_{index}')
-            if new_pic is not None:
+
+            new_pic = st.text_input('Change Image', placeholder='Enter your poster url link...', key=f'film_picture_{index}')
+            if new_pic:
                 st.image(new_pic, width=250)
     
         
@@ -2934,7 +2954,7 @@ def complex_film(device):
             edited_link = '--'  
 
         selected_actress = st.multiselect(
-            'Actress', 
+            'Actress:red[*]', 
             options = ACTRESS_OPTS, 
             default = [
                 j.strip() for j in film['Actress Name'].split(',')
@@ -2961,10 +2981,10 @@ def complex_film(device):
             edited_actress = 'Not Listed'
             edited_actress_input = '?'
 
-        edited_code = st.text_input('Code', placeholder='Enter film code (e.g. MIDV-791)', value=film['Code'], key=f'film_code_{index}')
+        edited_code = st.text_input('Code:red[*]', placeholder='Enter film code (e.g. MIDV-791)', value=film['Code'], key=f'film_code_{index}')
         edited_code = edited_code.upper().replace(' ','-')
 
-        edited_title = st.text_area('Title', placeholder='Enter film title..', value=film['Title'], key=f'film_title_{index}')
+        edited_title = st.text_area('Title:red[*]', placeholder='Enter film title..', value=film['Title'], key=f'film_title_{index}')
         
         if film['Release Date'] == '?':
             release_date = date.today()
@@ -3138,10 +3158,15 @@ def complex_film(device):
                         except Exception as e:
                             st.warning(f"Could not delete old image: {e}")
                             st.stop()
-                    final_picture_url = upload_to_database(new_pic, clean_code)
+                    if 'WEST-' not in film['Code']:
+                        final_picture_url = upload_to_database(new_pic, clean_code)
+                    else:
+                        final_picture_url = new_pic
+
                     if not final_picture_url:
                         st.error("Failed to upload new image")
                         st.stop()
+                    st.toast('ℹ️ Photo Changed!')
                 # kalau ganti foto dan code
                 elif new_pic and (film['Code'] != edited_code.upper()):
                     if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower() and "pics.dmm.co.jp" not in str(film['Picture']).lower():
@@ -3150,13 +3175,19 @@ def complex_film(device):
                         except Exception as e:
                             st.warning(f"Could not delete old image: {e}")
                             st.stop()
-                        final_picture_url = upload_to_database(new_pic, clean_code)
+
+                        if 'WEST-' not in film['Code']:
+                            final_picture_url = upload_to_database(new_pic, clean_code)
+                        else:
+                            final_picture_url = new_pic
+
                         if not final_picture_url:
                             st.error("Failed to upload new image")
                             st.stop()
+                    st.toast('ℹ️ Photo and Code Changed!')
                 # kalau cuma ganti code
                 elif not new_pic and (film['Code'] != edited_code.upper()):
-                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower() and "pics.dmm.co.jp" not in str(film['Picture']).lower():
+                    if pd.notna(film['Picture']) and film['Picture'] and "placeholder" not in str(film['Picture']).lower() and "pics.dmm.co.jp" not in str(film['Picture']).lower() and 'WEST-' not in film['Code']:
                         try:
                             final_picture_url = rename_cloudinary_image(old_public_id, clean_code)
                         except Exception as e:
@@ -3164,8 +3195,10 @@ def complex_film(device):
                             st.stop()
                     else:
                         final_picture_url = film['Picture']
+                    st.toast('ℹ️ Code Changed!')
                 else:
                     final_picture_url = film['Picture']
+                    st.toast('ℹ️ Nothing Changed!')
                 
                 # Update data di DataFrame
                 row = index + 2
@@ -3263,9 +3296,9 @@ def complex_film(device):
         
         reset_film = st.session_state.new_film_reset
 
-        new_picture = st.file_uploader('Image', type=['png', 'jpg', 'jpeg'], key=f'new_film_picture_{reset_film}')
+        new_picture = st.text_input('Image', placeholder='Enter your poster URL Link...', key=f'new_film_picture_{reset_film}')
         
-        if not new_picture is None:
+        if new_picture:
             with st.container(horizontal_alignment='center'):
                 st.image(new_picture, width=200)
         
@@ -3274,7 +3307,7 @@ def complex_film(device):
             if not new_link:
                 new_link = '--'
 
-        selected_actress = st.multiselect('Actress*', key='new_actresses', options=ACTRESS_OPTS)
+        selected_actress = st.multiselect('Actress:red[*]', key='new_actresses', options=ACTRESS_OPTS)
 
         if st.checkbox('New Actress', key='new_actress_check'):
             new_actress = '?'
@@ -3290,11 +3323,11 @@ def complex_film(device):
             new_actress = '?'
             new_actress_input = '?'
 
-        new_code = st.text_input('Code*', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
+        new_code = st.text_input('Code:red[*]', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
         new_code = new_code.upper().replace(' ','-')
 
         if not is_simple:
-            new_title = st.text_area('Title*', key='new_title', placeholder='Enter movie title...')
+            new_title = st.text_area('Title:red[*]', key='new_title', placeholder='Enter movie title...')
 
             new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
             if new_release < date.today():
@@ -3378,10 +3411,11 @@ def complex_film(device):
                         st.stop()
                     else:
                         if new_picture:
-                            join_name = new_code.upper()
-                            clean_name = re.sub(r'[^\w]', '', join_name)
-                            clean_name = "N" + clean_name
-                            picture_url = upload_to_database(new_picture, clean_name)
+                            picture_url = new_picture
+                            # join_name = new_code.upper()
+                            # clean_name = re.sub(r'[^\w]', '', join_name)
+                            # clean_name = "N" + clean_name
+                            # picture_url = upload_to_database(new_picture, clean_name)
                         else:
                             picture_url = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
 
@@ -3410,7 +3444,6 @@ def complex_film(device):
                         st.rerun()
                 else:
                     st.error('Fill mandatory fields first! (*)')
-                    st.stop()
 
             if st.button('Close', type='primary', width='stretch'):
                 st.rerun()
@@ -4832,6 +4865,7 @@ def complex_actress(device):
         else:
             img_width = 127
             img_height = 181
+        
         with st.expander(f"### ✅ Watched Movies - :green[({len(film_watched_df)})]"):
             with st.container(horizontal=True):
                 for idx in range(len(film_watched_df)):
