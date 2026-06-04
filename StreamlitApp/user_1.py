@@ -5929,7 +5929,7 @@ def complex_actress(device):
                         key=f'page_bottom_{i}',
                         disabled=(i == st.session_state.actress_page),
                         on_click=set_page,
-                        args=(i,)
+                        args=(i,total_actress_pages)
                     ):
                         st.session_state.scroll_to_here = True
                         st.rerun()
