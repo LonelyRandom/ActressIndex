@@ -868,10 +868,20 @@ def set_calender_flag(index):
     calendar_worksheet().update(f'E{row}:E{row}', [[edit_flag]])
 
 def set_calender_a(index):
-    st.toast(f"✨️ {st.session_state.calender_data.at[index, 'Code']} A-Detector {st.session_state.get(f'{index}_toggle')}")
-    st.session_state.calender_data.at[index, 'A-Detector'] = st.session_state.get(f'{index}_toggle')
+    st.toast(f"✨️ {st.session_state.calender_data.at[index, 'Code']} A-Detector Flag changed to {st.session_state.get(f'{index}_a_toggle')}")
+    st.session_state.calender_data.at[index, 'A-Detector'] = st.session_state.get(f'{index}_a_toggle')
+    row = index+2
+    calendar_worksheet().update(f'F{row}:F{row}', [[st.session_state.get(f'{index}_a_toggle')]])
+
+def set_calender_debut(index):
+    st.toast(f"🆕 {st.session_state.calender_data.at[index, 'Code']} Debut Flag changed to {st.session_state.get(f'{index}_debut_toggle')}")
+    st.session_state.calender_data.at[index, 'is_Debut'] = st.session_state.get(f'{index}_debut_toggle')
+    row = index+2
+    calendar_worksheet().update(f'G{row}:G{row}', [[st.session_state.get(f'{index}_debut_toggle')]])
 
 def display_film_calender(df):
+    if 'scroll_to_date' not in st.session_state:
+        st.session_state.scroll_to_date = False
     if 'calender_data' not in st.session_state:
         calender_data = pd.DataFrame(calendar_worksheet().get_all_records())
         calender_data = values_handling(calender_data, "calender")
@@ -966,6 +976,9 @@ def display_film_calender(df):
         elif day_name == 'Sat':
             index = 6
     
+    if st.session_state.scroll_to_date:
+        scroll_to_here(0,key='here')  # Scroll to the top of the page
+        st.session_state.scroll_to_date = False
     st.markdown('---')
     with st.container(horizontal=True, width='stretch'):
         st.button('⬅️ Previous', width='stretch', on_click=set_month_year, args=(st.session_state.selected_date - relativedelta(months=1),))
@@ -1014,7 +1027,7 @@ def display_film_calender(df):
         calender_search = '-'.join(calender_search)
         mask = filtered_df['Code'].str.contains(calender_search, case=False, na=False)
         filtered_df = filtered_df[mask].copy()
-
+    
     if st.session_state.date_clicked:
         filtered_df = filtered_df[filtered_df['filtered_date'].dt.date == st.session_state.show_date]
         with st.container(horizontal=True, vertical_alignment='bottom'):
@@ -1096,6 +1109,12 @@ def display_film_calender(df):
             data = pass_data.iloc[i]
             if '-HZGD' in data['Code']:
                 data['Code'] = data['Code'][1:]
+            
+            if data['is_Debut'] == True:
+                tags = 'AV Debut'
+            else:
+                tags = 'No Tags'
+
 
             if data['Code'] not in df['Code'].values:
                 new_rows.append([
@@ -1104,7 +1123,7 @@ def display_film_calender(df):
                     '--',
                     '?',
                     st.secrets.indicators.PLACEHOLDER_IMG_POSTER,
-                    'No Tags',
+                    tags,
                     'Not Watched',
                     '?',
                     '--',
@@ -1119,9 +1138,9 @@ def display_film_calender(df):
         st.toast('✅ Succesfully sent data to database!')
         time.sleep(.5)        
             
-    if st.button(f'Drop this month - {dates.strftime("%B").upper()}', width='stretch', type='primary'):
+    if st.button(f'Drop this month -- {dates.strftime("%B").upper()}', width='stretch', type='primary'):
         set_this_drop(filtered_df, 'Month')
-    if st.button(f'Drop this month - {st.session_state.show_date.strftime("%d %B %Y").upper()}', width='stretch', type='primary'):
+    if st.button(f'Drop this date -- {st.session_state.show_date.strftime("%d %B %Y").upper()}', width='stretch', type='primary'):
         set_this_drop(filtered_df, 'Date')
     with st.container(horizontal=True):
         st.button('Drop All', on_click=set_all_drop, width='stretch')
@@ -1224,9 +1243,12 @@ def display_film_calender(df):
                         url = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
                     else:
                         url = film['Picture']
+                    
                     st.image(url, caption=film['Code'], width=image_width)
                     st.radio('Flag', options=['🟢 P','🔴 D','⚪️ ?', '🟡 U'], index=flag_idx, key=f'{real_index}_radio', horizontal=True, on_change=set_calender_flag, args=(real_index,))
-                    st.toggle('✨', key=f'{real_index}_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
+                    with st.container(horizontal=True):
+                        st.toggle('✨', key=f'{real_index}_a_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
+                        st.toggle('🆕', key=f'{real_index}_debut_toggle', value=film['is_Debut'], on_change=set_calender_debut, args=(real_index,))
                     st.link_button('Preview', film['Link'], width='stretch', type='primary')
                     st.markdown('---')
         st.markdown('---')
@@ -1276,7 +1298,8 @@ def display_film_calender(df):
     else:
         st.info('No film match the filter')
     if st.button('⬆️ Back to top', width='stretch'):
-        st.session_state.scroll_to_here = True                   
+        st.session_state.scroll_to_date = True  
+        st.rerun()                 
 
 def set_prev_pic(pic, total):
     if pic < total and pic >=0:
@@ -6059,6 +6082,7 @@ def complex_actress(device):
             max-width: 190px;
             cursor: pointer;
         }
+                
         /* ===== BORDER BASED ON TIER ===== */
         .review-wrapper {
             position: relative;
@@ -6101,27 +6125,38 @@ def complex_actress(device):
             background-color: #2ecc71 !important; 
             color: #2c3e50 !important;
         }
+                
         .status-retired { 
             background-color: #e74c3c !important; 
             color: #ffffff !important;
         }
+                
         .status-active { 
             background-color: #2ecc71 !important; 
             color: #2c3e50 !important;
         }
+                
         .status-active { 
             background-color: #2ecc71 !important; 
             color: #2c3e50 !important;
         }
 
         .review-retired { border-color: #8b0000 !important; }
+                
         .review-s-tier { border-color: #FFD700 !important; }
+        
         .review-a-tier { border-color: #9b59b6 !important; }
+        
         .review-b-tier { border-color: #3498db !important; }
+        
         .review-c-tier { border-color: #2ecc71 !important; }
+        
         .review-d-tier { border-color: #e67e22 !important; }
+        
         .review-e-tier { border-color: #ff8c42 !important; }
+        
         .review-f-tier { border-color: #e74c3c !important; }
+        
         .cat-image-container {
             display: flex;
             justify-content: center;
@@ -6133,6 +6168,7 @@ def complex_actress(device):
             border-radius: 10px;
             background: linear-gradient(135deg, #F5E5E1 0%, #f8f9fa 100%);
         }
+                
         .cat-image {
             border-radius: 10px;
             object-fit: cover;
@@ -6140,6 +6176,7 @@ def complex_actress(device):
             max-height: 115px;
             border: 2.5px solid transparent;
         }
+                
         .cat-name {
             font-weight: 700;
             font-size: 13px;
@@ -6147,6 +6184,7 @@ def complex_actress(device):
             margin: 5px 0;
             line-height: 1.3;
         }
+                
         .cat-kanji {
             font-size: 15px;
             color: #e74c3c;
@@ -6154,6 +6192,7 @@ def complex_actress(device):
             font-weight: 500;
             line-height: 1.3;
         }
+                
         .card-divider {
             width: 50px;
             height: 2px;
@@ -6161,6 +6200,7 @@ def complex_actress(device):
             margin: 8px 0;
             border-radius: 2px;
         }
+                
         .card-wrapper {
             display: flex;
             justify-content: center;
@@ -6168,12 +6208,14 @@ def complex_actress(device):
             padding: 5px;
             width: 100%;
         }
+                
         .button-container {
             display: flex;
             gap: 5px;
             margin-top: 10px;
             width: 100%;
         }
+                
         .button-container button {
             flex: 1;
         }

@@ -19,14 +19,14 @@ def values_handling(df, type):
             '1' : True,
             '0' : False
         })
-        # df['is_Anchor'] = df['is_Anchor'].map({
-        #     1 : True,
-        #     0 : False,
-        #     'TRUE': True,
-        #     'FALSE' : False,
-        #     '1' : True,
-        #     '0' : False
-        # })
+        df['is_Debut'] = df['is_Debut'].map({
+            1 : True,
+            0 : False,
+            'TRUE': True,
+            'FALSE' : False,
+            '1' : True,
+            '0' : False
+        })
     else:
         df['Release Date'] = df['Release Date'].astype(str)
         df['A-Detector'] = df['A-Detector'].map({
