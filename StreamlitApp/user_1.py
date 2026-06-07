@@ -4384,9 +4384,11 @@ def complex_actress(device):
         st.session_state.adding_new = False
     if "is_simple" not in st.session_state:
         st.session_state.is_simple = False
-
-    # Fungsi untuk menghitung usia berdasarkan birthdate
-        
+    if 'tab_film_info' not in st.session_state:
+        st.session_state.tab_film_info = '❌ None'
+    
+    def set_film_info():
+        st.session_state.tab_film_info = '✅ Selected!'
 
     # Dialog untuk menampilkan detail lengkap
     @st.dialog("🎬 Actress Details", width="medium")
@@ -4399,8 +4401,6 @@ def complex_actress(device):
             
         if st.session_state.editing_index == index:
             show_edit_mode(index)
-        elif st.session_state.actress_film_index:
-            actress_view_film()
         else:
             show_view_mode(index)
     
@@ -4694,9 +4694,24 @@ def complex_actress(device):
                     edited_a
                 ]
 
+                filtered_new_values = [
+                    film['Actress Name'],
+                    film['Code'],
+                    film['Title'],
+                    film['Release Date'],
+                    film['Picture'],
+                    edited_tags,
+                    edited_info,
+                    film['Release Status'],
+                    film['Link'],
+                    film['Preview Picture'],
+                    edited_a,
+                    film['filtered_date']
+                ]
+
                 st.session_state.film_df.loc[index] = new_values
                 st.session_state.film_df = values_handling(st.session_state.film_df,'film')
-                st.session_state.actress_film_data.iloc[pos] = new_values
+                st.session_state.actress_film_data.iloc[pos] = filtered_new_values
                 st.session_state.actress_edit_film_index = None
                 st.toast("✅ Data Edited Successfully!")
                 film_worksheet().update(f"A{row}:K{row}", [new_values])
@@ -4715,6 +4730,7 @@ def complex_actress(device):
                 st.rerun()
             if st.button('❌ Close', width='stretch'):
                 st.session_state.actress_film_index = None
+                st.session_state.tab_film_info = '❌ None'
                 st.toast('❌ Close View Mode!')
                 time.sleep(.5)
                 st.rerun()
@@ -4728,312 +4744,352 @@ def complex_actress(device):
         }
         </style>
         """, unsafe_allow_html=True)
+
         actress = df.iloc[index]
-        film_df = st.session_state.film_df
-        actress_film = film_df[film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])]
-        film_watched_df = film_df[
-            (film_df['Actress Name'].str.contains(
-        actress['Name (Alphabet)'],
-        na=False)) &
-            (film_df['Info'] != 'Not Watched')
-        ]
-        film_not_watched_df = film_df[
-            (film_df['Actress Name'].str.contains(
-        actress['Name (Alphabet)'],
-        na=False)) &
-            (film_df['Info'] == 'Not Watched')
-        ]
 
-        # Layout utama dengan gambar dan info dasar
-        col1, col2 = st.columns([1, 2])
-        
-        with col1:
-            with st.container(horizontal_alignment='center'):
-                st.image(actress['Picture'] if pd.notna(actress['Picture']) else "", width=200)
-                # st.markdown(f"### {actress['Name (Alphabet)']}")
-                # st.markdown(f"# {actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ''}")
+        tab_info, tab_film = st.tabs(tabs=['Info','Filmography'])
+
+        with tab_info:
+            # Layout utama dengan gambar dan info dasar
+            col1, col2 = st.columns([1, 2])
             
-            st.markdown(
-                f"""
-                <div style="text-align: center;">
-                    <h2>{actress['Name (Alphabet)']}</h2>
-                    <h2>{actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ''}</h1>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-            # Tombol Edit dan Close
-            button_container = st.container(key='view_edit_close', horizontal=True)
-            with button_container:
-                if st.button("✏️ Edit", width='stretch', key=f"edit_btn_{index}"):
-                    st.session_state.editing_index = index
-                    st.rerun()
+            with col1:
+                with st.container(horizontal_alignment='center'):
+                    st.image(actress['Picture'] if pd.notna(actress['Picture']) else "", width=200)
+                    # st.markdown(f"### {actress['Name (Alphabet)']}")
+                    # st.markdown(f"# {actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ''}")
+                
+                st.markdown(
+                    f"""
+                    <div style="text-align: center;">
+                        <h2>{actress['Name (Alphabet)']}</h2>
+                        <h2>{actress['Name (Kanji)'] if pd.notna(actress['Name (Kanji)']) else ''}</h1>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                # Tombol Edit dan Close
+                button_container = st.container(key='view_edit_close', horizontal=True)
+                with button_container:
+                    if st.button("✏️ Edit", width='stretch', key=f"edit_btn_{index}"):
+                        st.session_state.editing_index = index
+                        st.rerun()
 
-                if st.button("❌ Close", width='stretch', key=f"close_{index}"):
+                    if st.button("❌ Close", width='stretch', key=f"close_{index}"):
+                        st.session_state.viewing_index = None
+                        st.session_state.editing_index = None
+                        st.rerun()
+                pages = actress['Page']
+                if pages == '--':
+                    if st.button('Actress Page', width='stretch', type='primary'):
+                        st.warning('No link found')
+                else:
+                    st.link_button(f"Actress Page", actress['Page'], width='stretch', type='primary')
+                
+            
+            with col2:
+                # Info dasar dalam metrics
+                st.markdown("### Basic Information")
+                
+                with st.container(horizontal=True):
+                    with st.container():
+                        # Review
+                        review_text = actress['Review'] if pd.notna(actress['Review']) else "N/A"
+                        st.metric("Review", review_text)
+                        
+                        # Height
+                        height_text = actress['Height (cm)'] if pd.notna(actress['Height (cm)']) else "N/A"
+                        st.metric("Height", height_text)
+
+                    with st.container():
+                        # Age
+                        age_text = actress['Age'] if pd.notna(actress['Age']) else ""
+                        if not age_text and pd.notna(actress['Birthdate']):
+                            calculated_age = calculate_age(actress['Birthdate'])
+                            if calculated_age:
+                                age_text = f"{calculated_age}"
+                        
+                        if age_text:
+                            st.metric("Age", f"{age_text} years")
+                    
+                        # Size
+                        size_text = actress['Size'] if pd.notna(actress['Size']) else "N/A"
+                        st.metric("Size", size_text)
+                
+                # Birthdate
+                if actress['Birthdate'] != '?':
+                    birthdate_text = datetime.strptime(str(actress['Birthdate']), '%d/%m/%Y').date().strftime("%d %b %Y")
+                else:
+                    birthdate_text = '?'
+
+                st.metric("Birthdate", str(birthdate_text))
+
+                # Status dengan badge warna
+                status_text = actress['Status'] if pd.notna(actress['Status']) else "Active"
+                if str(status_text).lower() == "active":
+                    st.metric("Status", f"🟢 {status_text}")
+                elif str(status_text).lower() == "retired":
+                    st.metric("Status", f"🔴 {status_text}")
+                else:
+                    st.metric("Status", f"⚪ {status_text}")
+
+            st.markdown("---")
+            
+            # Measurement dan Physical Info
+            
+            with st.container(horizontal=True):
+                with st.container():
+                    st.markdown("### Physical")
+                    if pd.notna(actress['Measurement']) and actress['Measurement']:
+                        st.markdown("#### 📏 Measurements")
+                        st.info(actress['Measurement'])
+                
+                    if pd.notna(actress['Size']) and actress['Size']:
+                        st.markdown("#### 📐 Size")
+                        st.info(f"**{actress['Size']}**")
+                with st.container():
+                    st.markdown("### Career Timeline")
+                    with st.container():
+                        if actress['Debut Date'] != '?':
+                            debut_date_text = datetime.strptime(actress['Debut Date'], '%d/%m/%Y').strftime("%d %b %Y")
+                        else:
+                            debut_date_text = '?'
+
+                        if pd.notna(actress['Debut Date']) and actress['Debut Date']:
+                            with st.container():
+                                st.markdown("#### 🎭 Debut")
+                                st.write('- ', debut_date_text)
+                        
+                    with st.container():
+                        if pd.notna(actress['Debut Period']) and actress['Debut Period']:
+                            with st.container():
+                                st.markdown("#### ⏳ Experience")
+                                st.write('- ', str(actress['Debut Period']))
+                    
+                    with st.container():
+                        if pd.notna(actress['Retire Date']) and actress['Retire Date']:
+                            with st.container():
+                                st.markdown("#### 🏁 Retire Date")
+                                if actress['Retire Date'] == '?':
+                                    st.write('- Still Active')
+                                else:
+                                    st.write('- ', datetime.strptime(actress['Retire Date'], '%d/%m/%Y').strftime("%d %b %Y"))
+                        else:
+                            with st.container():
+                                st.markdown("#### 🏁 Retire Date")
+                                st.write("Still Active")
+            st.markdown("---")
+            
+            # Notes/Review
+            st.markdown("### 📝 Notes")
+            if pd.notna(actress['Notes']) and actress['Notes']:
+                st.warning(actress['Notes'])
+            else:
+                st.warning('--')
+            
+            st.markdown("---")
+            
+            # Personal Notes Section
+            st.write("### 📖 Your Personal Notes")
+
+            if st.session_state.get('reset_notes', False):
+                st.session_state.reset_notes = False
+                key = f'personal_notes_{index}'
+                if key in st.session_state:
+                    st.session_state[key] = None
+
+
+            personal_notes = st.text_input(
+                "Add your own notes about this actress...", 
+                placeholder="Write your thoughts, reviews, or observations about this actress...",
+                key=f"personal_notes_{index}"
+            )
+            
+            button_container = st.container(horizontal=True, horizontal_alignment='center', key='view_editNotes')
+            with button_container:
+                if st.button("💾 Save Notes", width='stretch', key=f"save_{index}"):
+                    st.session_state.reset_notes = True
+                    if personal_notes:
+                        current_notes = df['Notes'].iloc[index]
+                        if current_notes == '' or current_notes == '--':
+                            edited_notes = f'- {personal_notes}'
+                        else:
+                            edited_notes = f'{current_notes}\n - {personal_notes}'
+                        df.at[index, 'Notes'] = edited_notes
+                    
+                        update_google_sheets(edited_notes,'edit',index)
+                        st.session_state.actress_df = values_handling(df,'actress')  # Update session state
+                        st.rerun()
+                    else:
+                        st.warning('Note empty!')
+                        st.stop()
+                if st.button("Close", width='stretch', key=f'cancel_{index}', type='primary'):
                     st.session_state.viewing_index = None
                     st.session_state.editing_index = None
                     st.rerun()
-            pages = actress['Page']
-            if pages == '--':
-                if st.button('Actress Page', width='stretch', type='primary'):
-                    st.warning('No link found')
-            else:
-                st.link_button(f"Actress Page", actress['Page'], width='stretch', type='primary')
-            
-        
-        with col2:
-            # Info dasar dalam metrics
-            st.markdown("### Basic Information")
-            
-            with st.container(horizontal=True):
-                with st.container():
-                    # Review
-                    review_text = actress['Review'] if pd.notna(actress['Review']) else "N/A"
-                    st.metric("Review", review_text)
-                    
-                    # Height
-                    height_text = actress['Height (cm)'] if pd.notna(actress['Height (cm)']) else "N/A"
-                    st.metric("Height", height_text)
 
-                with st.container():
-                    # Age
-                    age_text = actress['Age'] if pd.notna(actress['Age']) else ""
-                    if not age_text and pd.notna(actress['Birthdate']):
-                        calculated_age = calculate_age(actress['Birthdate'])
-                        if calculated_age:
-                            age_text = f"{calculated_age}"
-                    
-                    if age_text:
-                        st.metric("Age", f"{age_text} years")
-                
-                    # Size
-                    size_text = actress['Size'] if pd.notna(actress['Size']) else "N/A"
-                    st.metric("Size", size_text)
-            
-            # Birthdate
-            if actress['Birthdate'] != '?':
-                birthdate_text = datetime.strptime(str(actress['Birthdate']), '%d/%m/%Y').date().strftime("%b, %d %Y")
-            else:
-                birthdate_text = '?'
+        with tab_film:
+            st.markdown("""
+            <style>
+            button[data-baseweb="tab"] {
+                flex-grow: 1;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            film_df = st.session_state.film_df
+            actress_film = film_df[film_df['Actress Name'].str.contains(actress['Name (Alphabet)'])]
 
-            st.metric("Birthdate", str(birthdate_text))
+            film_watched_df = film_df[
+                (film_df['Actress Name'].str.contains(
+                actress['Name (Alphabet)'],
+                na=False)) &
+                (film_df['Info'] != 'Not Watched')
+            ]
 
-            # Status dengan badge warna
-            status_text = actress['Status'] if pd.notna(actress['Status']) else "Active"
-            if str(status_text).lower() == "active":
-                st.metric("Status", f"🟢 {status_text}")
-            elif str(status_text).lower() == "retired":
-                st.metric("Status", f"🔴 {status_text}")
-            else:
-                st.metric("Status", f"⚪ {status_text}")
+            film_watched_df['filtered_date'] = pd.to_datetime(
+                film_watched_df['Release Date'],
+                format='%d/%m/%Y'
+            )
 
-        st.markdown("---")
-        
-        # Measurement dan Physical Info
-        st.markdown("### Physical Information")
-        
-        col3, col4 = st.columns(2)
-        
-        with col3:
-            if pd.notna(actress['Measurement']) and actress['Measurement']:
-                st.markdown("#### 📏 Measurements")
-                st.info(actress['Measurement'])
-        
-        with col4:
-            if pd.notna(actress['Size']) and actress['Size']:
-                st.markdown("#### 📐 Size")
-                st.info(f"**{actress['Size']}**")
-        
-        st.markdown("---")
-        
-        # Career Timeline
-        st.markdown("### Career Timeline")
-        
-        timeline_col1, timeline_col2, timeline_col3 = st.columns(3)
-        with timeline_col1:
-            if actress['Debut Date'] != '?':
-                debut_date_text = datetime.strptime(actress['Debut Date'], '%d/%m/%Y').strftime("%b, %d %Y")
-            else:
-                debut_date_text = '?'
+            film_watched_df = film_watched_df.sort_values('filtered_date', ascending=False)
 
-            if pd.notna(actress['Debut Date']) and actress['Debut Date']:
-                with st.container():
-                    st.markdown("#### 🎭 Debut")
-                    st.write(debut_date_text)
-            
-        with timeline_col2:
-            if pd.notna(actress['Debut Period']) and actress['Debut Period']:
-                with st.container():
-                    st.markdown("#### ⏳ Experience")
-                    st.write(str(actress['Debut Period']))
-        
-        with timeline_col3:
-            if pd.notna(actress['Retire Date']) and actress['Retire Date']:
-                with st.container():
-                    st.markdown("#### 🏁 Retire Date")
-                    if actress['Retire Date'] == '?':
-                        st.write('Still Active')
-                    else:
-                        st.write(datetime.strptime(actress['Retire Date'], '%d/%m/%Y').strftime("%b, %d %Y"))
-            else:
-                with st.container():
-                    st.markdown("#### 🏁 Retire Date")
-                    st.write("Still Active")
-        
-        st.markdown("---")
-        st.markdown(f"### 🎬 Filmography - {len(actress_film)} Films")
-        if st.session_state.width_option == 'Device 1':
-            img_width = 140
-            img_height = 199
-        else:
-            img_width = 127
-            img_height = 181
-        
-        with st.expander(f"### ✅ Watched Movies - :green[({len(film_watched_df)})]"):
-            with st.container(horizontal=True):
-                for idx in range(len(film_watched_df)):
-                    if film_watched_df['Release Date'].iloc[idx] == '?':
-                        release = '?'
-                    else:
-                        release = datetime.strptime(film_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
-                    
-                    if film_watched_df['A-Detector'].iloc[idx] == True:
-                        release += ' 🟡'
+            film_not_watched_df = film_df[
+                (film_df['Actress Name'].str.contains(
+                actress['Name (Alphabet)'],
+                na=False)) &
+                (film_df['Info'] == 'Not Watched')
+            ].sort_values('Release Date', ascending=False)
 
-                    with st.container(width=img_width):
-                        st.markdown(f"""
-                                <div style="
-                                    height: {img_height}px;  /* Atur tinggi tetap */
-                                    width: 100%;
-                                    overflow: hidden;
-                                    display: flex;
-                                    justify-content: center;
-                                    align-items: center;
-                                    margin-bottom: 10px;
-                                    border-radius: 5px;
-                                ">
-                                    <img src="{film_watched_df['Picture'].iloc[idx]}" 
-                                        style="
-                                            width: 100%;
-                                            height: 100%;
-                                            object-fit: cover;
-                                            object-position: center;
-                                        ">
-                                </div>
-                                <div style="
-                                    text-align: center;
-                                    font-size: 12px;
-                                    color: gray;
-                                    margin-bottom: 10px;
-                                ">
-                                    {release}
-                                </div>
-                            """, unsafe_allow_html=True)
-                        if st.button(film_watched_df['Code'].iloc[idx], key=f'{film_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
-                            st.session_state.actress_film_index = film_watched_df.index[idx]
-                            st.session_state.position = idx
-                            st.session_state.actress_film_data = film_watched_df
-                            st.rerun()
-        with st.expander(f"### ❌ Unwatched Movies - :red[({len(film_not_watched_df)})]"):
-            with st.container(horizontal=True):
-                for idx in range(len(film_not_watched_df)):
-                    if film_not_watched_df['Release Date'].iloc[idx] == '?':
-                        release = '?'
-                    else:
-                        release = datetime.strptime(film_not_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
+            film_not_watched_df['filtered_date'] = pd.to_datetime(
+                film_not_watched_df['Release Date'],
+                format='%d/%m/%Y'
+            )
 
-                    if film_not_watched_df['A-Detector'].iloc[idx] == True:
-                        release += ' 🟡'
-                    
-                    if 'Downloaded' in film_not_watched_df['Tags'].iloc[idx]:
-                        release += ' ✅'
+            film_not_watched_df = film_not_watched_df.sort_values('filtered_date', ascending=False)
 
-                    with st.container(width=img_width):
-                        st.markdown(f"""
-                                <div style="
-                                    height: {img_height}px;  /* Atur tinggi tetap */
-                                    width: 100%;
-                                    overflow: hidden;
-                                    display: flex;
-                                    justify-content: center;
-                                    align-items: center;
-                                    margin-bottom: 10px;
-                                    border-radius: 5px;
-                                ">
-                                    <img src="{film_not_watched_df['Picture'].iloc[idx]}" 
-                                        style="
-                                            width: 100%;
-                                            height: 100%;
-                                            object-fit: cover;
-                                            object-position: center;
-                                        ">
-                                </div>
-                                <div style="
-                                    text-align: center;
-                                    font-size: 12px;
-                                    color: gray;
-                                    margin-bottom: 10px;
-                                ">
-                                    {release}
-                                </div>
-                            """, unsafe_allow_html=True)
-                        if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch'):
-                            st.session_state.actress_film_index = film_not_watched_df.index[idx]
-                            st.session_state.position = idx
-                            st.session_state.actress_film_data = film_not_watched_df
-                            st.rerun()
-
-        st.markdown("---")
-        
-        # Notes/Review
-        st.markdown("### 📝 Notes")
-        if pd.notna(actress['Notes']) and actress['Notes']:
-            st.warning(actress['Notes'])
-        else:
-            st.warning('--')
-        
-        st.markdown("---")
-        
-        # Personal Notes Section
-        st.write("### 📖 Your Personal Notes")
-
-        if st.session_state.get('reset_notes', False):
-            st.session_state.reset_notes = False
-            key = f'personal_notes_{index}'
-            if key in st.session_state:
-                st.session_state[key] = None
-
-
-        personal_notes = st.text_input(
-            "Add your own notes about this actress...", 
-            placeholder="Write your thoughts, reviews, or observations about this actress...",
-            key=f"personal_notes_{index}"
-        )
-        
-        button_container = st.container(horizontal=True, horizontal_alignment='center', key='view_editNotes')
-        with button_container:
-            if st.button("💾 Save Notes", width='stretch', key=f"save_{index}"):
-                st.session_state.reset_notes = True
-                if personal_notes:
-                    current_notes = df['Notes'].iloc[index]
-                    if current_notes == '' or current_notes == '--':
-                        edited_notes = f'- {personal_notes}'
-                    else:
-                        edited_notes = f'{current_notes}\n - {personal_notes}'
-                    df.at[index, 'Notes'] = edited_notes
-                
-                    update_google_sheets(edited_notes,'edit',index)
-                    st.session_state.actress_df = values_handling(df,'actress')  # Update session state
-                    st.rerun()
+            tab_film_list, tab_film_detail = st.tabs(tabs=['Film List', st.session_state.tab_film_info], width='stretch')
+            with tab_film_list:
+                st.markdown(f"### 🎬 Filmography - {len(actress_film)} Films")
+                if st.session_state.width_option == 'Device 1':
+                    img_width = 140
+                    img_height = 199
                 else:
-                    st.warning('Note empty!')
-                    st.stop()
-                
+                    img_width = 127
+                    img_height = 181
+                with st.expander(f"### ✅ Watched Movies - :green[({len(film_watched_df)})]"):
+                    with st.container(horizontal=True):
+                        for idx in range(len(film_watched_df)):
+                            if film_watched_df['Info'].iloc[idx] == 'Goat':
+                                release = '🟣 '
+                            elif film_watched_df['Info'].iloc[idx] == 'Great':
+                                release = '🔵 '
+                            elif film_watched_df['Info'].iloc[idx] == 'Watched':
+                                release = '🟢 '
 
-            if st.button("Close", width='stretch', key=f'cancel_{index}', type='primary'):
-                st.session_state.viewing_index = None
-                st.session_state.editing_index = None
-                st.rerun()
+                            if film_watched_df['Release Date'].iloc[idx] == '?':
+                                release += '?'
+                            else:
+                                release += datetime.strptime(film_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
+                            
+                            if film_watched_df['A-Detector'].iloc[idx] == True:
+                                release += ' 🟡'
+
+                            with st.container(width=img_width):
+                                st.markdown(f"""
+                                        <div style="
+                                            height: {img_height}px;  /* Atur tinggi tetap */
+                                            width: 100%;
+                                            overflow: hidden;
+                                            display: flex;
+                                            justify-content: center;
+                                            align-items: center;
+                                            margin-bottom: 10px;
+                                            border-radius: 5px;
+                                        ">
+                                            <img src="{film_watched_df['Picture'].iloc[idx]}" 
+                                                style="
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    object-fit: cover;
+                                                    object-position: center;
+                                                ">
+                                        </div>
+                                        <div style="
+                                            text-align: center;
+                                            font-size: 12px;
+                                            color: gray;
+                                            margin-bottom: 10px;
+                                        ">
+                                            {release}
+                                        </div>
+                                    """, unsafe_allow_html=True)
+                                if st.button(film_watched_df['Code'].iloc[idx], key=f'{film_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch', on_click=set_film_info):
+                                    st.session_state.actress_film_index = film_watched_df.index[idx]
+                                    st.session_state.position = idx
+                                    st.session_state.actress_film_data = film_watched_df
+                                    st.rerun()
+                with st.expander(f"### ❌ Unwatched Movies - :red[({len(film_not_watched_df)})]"):
+                    with st.container(horizontal=True):
+                        for idx in range(len(film_not_watched_df)):
+                            if film_not_watched_df['Release Date'].iloc[idx] == '?':
+                                release = '?'
+                            else:
+                                release = datetime.strptime(film_not_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
+
+                            if film_not_watched_df['A-Detector'].iloc[idx] == True:
+                                release += ' 🟡'
+                            
+                            if 'Downloaded' in film_not_watched_df['Tags'].iloc[idx]:
+                                release += ' ✅'
+
+                            with st.container(width=img_width):
+                                st.markdown(f"""
+                                        <div style="
+                                            height: {img_height}px;  /* Atur tinggi tetap */
+                                            width: 100%;
+                                            overflow: hidden;
+                                            display: flex;
+                                            justify-content: center;
+                                            align-items: center;
+                                            margin-bottom: 10px;
+                                            border-radius: 5px;
+                                        ">
+                                            <img src="{film_not_watched_df['Picture'].iloc[idx]}" 
+                                                style="
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    object-fit: cover;
+                                                    object-position: center;
+                                                ">
+                                        </div>
+                                        <div style="
+                                            text-align: center;
+                                            font-size: 12px;
+                                            color: gray;
+                                            margin-bottom: 10px;
+                                        ">
+                                            {release}
+                                        </div>
+                                    """, unsafe_allow_html=True)
+                                if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch', on_click=set_film_info):
+                                    st.session_state.actress_film_index = film_not_watched_df.index[idx]
+                                    st.session_state.position = idx
+                                    st.session_state.actress_film_data = film_not_watched_df
+                                    st.rerun()
+                if st.button("Close", width='stretch', key=f'cancel_filmography', type='primary'):
+                    st.session_state.viewing_index = None
+                    st.session_state.editing_index = None
+                    st.rerun()
+        
+            with tab_film_detail:
+                if st.session_state.actress_film_index:
+                    actress_view_film()
+                else:
+                    st.warning('No Film Selected!')
+                    if st.button("Close", width='stretch', key=f'cancel_filmography_detail', type='primary'):
+                        st.session_state.viewing_index = None
+                        st.session_state.editing_index = None
+                        st.rerun()
 
     def show_edit_mode(index):
         df = st.session_state.actress_df
