@@ -4461,7 +4461,7 @@ def complex_actress(device):
             with st.container(horizontal=True, horizontal_alignment=is_center):
                 for idx in matching_actresses.index:
                     actress_name = matching_actresses['Name (Alphabet)'][idx]
-                    container_key = f"film_{actress_name}_{index}"
+                    container_key = f"picture_{actress_name}_{index}"
 
                     with st.container(width=80, key=container_key):
                         # Display image as circle using HTML
@@ -4487,7 +4487,7 @@ def complex_actress(device):
                         """, unsafe_allow_html=True)
                         
                         # Button
-                        if st.button(actress_name, width='stretch', type='tertiary', key=f"{actress_name}_{idx}", on_click=reset_page):
+                        if st.button(actress_name, width='stretch', type='tertiary', key=f"actress_{actress_name}_{idx}", on_click=reset_page):
                             st.session_state.viewing_film_index = None
                             st.session_state.editing_film_index = None
                             st.session_state.search_text = actress_name
