@@ -4386,9 +4386,12 @@ def complex_actress(device):
         st.session_state.is_simple = False
     if 'tab_film_info' not in st.session_state:
         st.session_state.tab_film_info = '❌ None'
+    if 'film_clicked' not in st.session_state:
+        st.session_state.film_clicked = None
     
-    def set_film_info():
+    def set_film_info(code):
         st.session_state.tab_film_info = '✅ Selected!'
+        st.session_state.film_clicked = code
 
     # Dialog untuk menampilkan detail lengkap
     @st.dialog("🎬 Actress Details", width="medium")
@@ -4405,9 +4408,10 @@ def complex_actress(device):
             show_view_mode(index)
     
     def actress_view_film(): 
-        def set_actress_film_page(p, total):
+        def set_actress_film_page(p, total, code):
             if p < total and p >= 0:
                 st.session_state.position = p
+                st.session_state.film_clicked = code.iloc[p]
                 reset_pic()
         def reset_pic():
             st.session_state.prev_pic = 0
@@ -4425,8 +4429,8 @@ def complex_actress(device):
         total_film = len(film_df)
         film = film_df.iloc[pos]
         with st.container(horizontal=True):
-            st.button('⬅️', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1, total_film), disabled=(st.session_state.position == 0))
-            st.button('➡️', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position+1, total_film), disabled=(st.session_state.position == int(total_film)-1))
+            st.button('⬅️', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position-1, total_film, film_df['Code']), disabled=(st.session_state.position == 0))
+            st.button('➡️', width='stretch', on_click=set_actress_film_page, args=(st.session_state.position+1, total_film, film_df['Code']), disabled=(st.session_state.position == int(total_film)-1))
 
 
         with st.container(key='poster_code', horizontal_alignment='center'):
@@ -4731,6 +4735,7 @@ def complex_actress(device):
             if st.button('❌ Close', width='stretch'):
                 st.session_state.actress_film_index = None
                 st.session_state.tab_film_info = '❌ None'
+                st.session_state.film_clicked = 'None'
                 st.toast('❌ Close View Mode!')
                 time.sleep(.5)
                 st.rerun()
@@ -5023,10 +5028,16 @@ def complex_actress(device):
                                             {release}
                                         </div>
                                     """, unsafe_allow_html=True)
-                                if st.button(film_watched_df['Code'].iloc[idx], key=f'{film_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch', on_click=set_film_info):
+                                if st.session_state.film_clicked == film_watched_df['Code'].iloc[idx]:
+                                    btn_type = 'primary'
+                                else:
+                                    btn_type = 'secondary'
+                                if st.button(film_watched_df['Code'].iloc[idx], key=f'{film_watched_df["Code"].iloc[idx]}', type=btn_type, width='stretch', on_click=set_film_info, args=(film_watched_df['Code'].iloc[idx],)):
                                     st.session_state.actress_film_index = film_watched_df.index[idx]
                                     st.session_state.position = idx
                                     st.session_state.actress_film_data = film_watched_df
+                                    st.toast(f'👆 {film_watched_df["Code"].iloc[idx]} Clicked!')
+                                    time.sleep(.5)
                                     st.rerun()
                 with st.expander(f"### ❌ Unwatched Movies - :red[({len(film_not_watched_df)})]"):
                     with st.container(horizontal=True):
@@ -5071,10 +5082,16 @@ def complex_actress(device):
                                             {release}
                                         </div>
                                     """, unsafe_allow_html=True)
-                                if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type='secondary', width='stretch', on_click=set_film_info):
+                                if st.session_state.film_clicked == film_not_watched_df['Code'].iloc[idx]:
+                                    btn_type = 'primary'
+                                else:
+                                    btn_type = 'secondary'
+                                if st.button(film_not_watched_df['Code'].iloc[idx], key=f'{film_not_watched_df["Code"].iloc[idx]}', type=btn_type, width='stretch', on_click=set_film_info, args=(film_not_watched_df['Code'].iloc[idx],)):
                                     st.session_state.actress_film_index = film_not_watched_df.index[idx]
                                     st.session_state.position = idx
                                     st.session_state.actress_film_data = film_not_watched_df
+                                    st.toast(f'👆 {film_not_watched_df["Code"].iloc[idx]} Clicked!')
+                                    time.sleep(.5)
                                     st.rerun()
                 if st.button("Close", width='stretch', key=f'cancel_filmography', type='primary'):
                     st.session_state.viewing_index = None
