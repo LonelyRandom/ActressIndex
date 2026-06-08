@@ -2455,6 +2455,28 @@ def complex_film(device):
             st.button('➡️', width='stretch', disabled=(st.session_state.filtered_data_position==len(filtered_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(filtered_data)))
 
         film = filtered_data.iloc[pos]
+        if pos == 0:
+            film_prev = [
+                '',
+                st.secrets.indicators.PLACEHOLDER_IMG_POSTER
+            ]
+        else:
+            film_prev = [
+                filtered_data['Code'].iloc[pos-1],
+                filtered_data['Picture'].iloc[pos-1]
+            ]
+        
+        if pos == len(filtered_data)-1:
+            film_next = [
+                '',
+                st.secrets.indicators.PLACEHOLDER_IMG_POSTER
+            ]
+        else:
+            film_next = [
+                filtered_data['Code'].iloc[pos+1],
+                filtered_data['Picture'].iloc[pos+1]
+            ]
+
         idx = filtered_data.index[pos]
    
         if index is None or index >= len(df):
@@ -2464,12 +2486,19 @@ def complex_film(device):
         if st.session_state.editing_film_index == index:
             show_edit_film(film, idx)
         else:
-            show_view_film(film, idx)
+            show_view_film(film, idx, film_prev, film_next)
 
-    def show_view_film(film, filtered_index):
-        with st.container(key='poster_code', horizontal_alignment='center'):
-            st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
-            st.image(film['Picture'], width=200)
+    def show_view_film(film, filtered_index, film_prev, film_next):
+        with st.container(key='poster_code', horizontal_alignment='center', horizontal=True, vertical_alignment='center'):
+            with st.container(width='content'):
+                st.markdown(f"<p style='text-align: center; color: gray;'>{film_prev[0]}</p>", unsafe_allow_html=True)
+                st.image(film_prev[1], width=100)
+            with st.container(width='content'):
+                st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
+                st.image(film['Picture'], width=200)
+            with st.container(width='content'):
+                st.markdown(f"<p style='text-align: center; color: gray;'>{film_next[0]}</p>", unsafe_allow_html=True)
+                st.image(film_next[1], width=100)
         
         st.markdown('### Title')
         st.write(film['Title'])
@@ -4783,6 +4812,8 @@ def complex_actress(device):
                     if st.button("❌ Close", width='stretch', key=f"close_{index}"):
                         st.session_state.viewing_index = None
                         st.session_state.editing_index = None
+                        st.session_state.tab_film_info = '❌ None'
+                        st.session_state.film_clicked = 'None'
                         st.rerun()
                 pages = actress['Page']
                 if pages == '--':
@@ -4931,6 +4962,8 @@ def complex_actress(device):
                 if st.button("Close", width='stretch', key=f'cancel_{index}', type='primary'):
                     st.session_state.viewing_index = None
                     st.session_state.editing_index = None
+                    st.session_state.tab_film_info = '❌ None'
+                    st.session_state.film_clicked = 'None'
                     st.rerun()
 
         with tab_film:
@@ -4949,28 +4982,37 @@ def complex_actress(device):
                 actress['Name (Alphabet)'],
                 na=False)) &
                 (film_df['Info'] != 'Not Watched')
-            ]
+            ].copy()
 
-            film_watched_df['filtered_date'] = pd.to_datetime(
-                film_watched_df['Release Date'],
-                format='%d/%m/%Y'
-            )
+            if (~film_watched_df['Code'].str.contains('WEST', na=False)).any():
+                film_watched_df['filtered_date'] = pd.to_datetime(
+                    film_watched_df['Release Date'],
+                    format='%d/%m/%Y'
+                )
 
-            film_watched_df = film_watched_df.sort_values('filtered_date', ascending=False)
+                film_watched_df = film_watched_df.sort_values('filtered_date', ascending=False)
+            
+            else:
+                film_watched_df['filtered_date'] = 'Unknown'
+                film_watched_df = film_watched_df.sort_values('Code', ascending=True)
 
             film_not_watched_df = film_df[
                 (film_df['Actress Name'].str.contains(
                 actress['Name (Alphabet)'],
                 na=False)) &
                 (film_df['Info'] == 'Not Watched')
-            ].sort_values('Release Date', ascending=False)
+            ].copy()
 
-            film_not_watched_df['filtered_date'] = pd.to_datetime(
-                film_not_watched_df['Release Date'],
-                format='%d/%m/%Y'
-            )
+            if (~film_not_watched_df['Code'].str.contains('WEST', na=False)).any():
+                film_not_watched_df['filtered_date'] = pd.to_datetime(
+                    film_not_watched_df['Release Date'],
+                    format='%d/%m/%Y'
+                )
 
-            film_not_watched_df = film_not_watched_df.sort_values('filtered_date', ascending=False)
+                film_not_watched_df = film_not_watched_df.sort_values('filtered_date', ascending=False)
+            else:
+                film_not_watched_df['filtered_date'] = 'Unknown'
+                film_not_watched_df = film_not_watched_df.sort_values('Code', ascending=True)
 
             tab_film_list, tab_film_detail = st.tabs(tabs=['Film List', st.session_state.tab_film_info], width='stretch')
             with tab_film_list:
@@ -4992,7 +5034,7 @@ def complex_actress(device):
                                 release = '🟢 '
 
                             if film_watched_df['Release Date'].iloc[idx] == '?':
-                                release += '?'
+                                release += 'Unknown'
                             else:
                                 release += datetime.strptime(film_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
                             
@@ -5043,7 +5085,7 @@ def complex_actress(device):
                     with st.container(horizontal=True):
                         for idx in range(len(film_not_watched_df)):
                             if film_not_watched_df['Release Date'].iloc[idx] == '?':
-                                release = '?'
+                                release = 'Unknown'
                             else:
                                 release = datetime.strptime(film_not_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
 
@@ -5096,6 +5138,8 @@ def complex_actress(device):
                 if st.button("Close", width='stretch', key=f'cancel_filmography', type='primary'):
                     st.session_state.viewing_index = None
                     st.session_state.editing_index = None
+                    st.session_state.tab_film_info = '❌ None'
+                    st.session_state.film_clicked = 'None'
                     st.rerun()
         
             with tab_film_detail:
