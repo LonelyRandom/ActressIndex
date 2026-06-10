@@ -99,14 +99,14 @@ def log_in_auth():
                 else:
                     st.session_state.login_error = "❌ Username not found!"
             
+            else:
+                st.warning('Input Username and Password first!')
             # Tampilkan error jika ada
             if st.session_state.login_error:
                 st.error(st.session_state.login_error)
                 check_login = False
                 usn = None
                 page = 'login'
-        else:
-            st.warning('Input Username and Password first!')
 
     return check_login, usn, page
 
