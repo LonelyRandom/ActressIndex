@@ -64,46 +64,49 @@ def log_in_auth():
         login_button = st.button("Login", width="stretch", type="primary")
         
         if login_button:
-            pass_hash = hash_password(username+password)
-            st.session_state.login_error = None
-            
-            user = st.session_state.login_data[
-                st.session_state.login_data["Username"] == username
-            ]
-            
-            if not user.empty and int(user['Login Attempt'].iloc[0]) < 3:
-                stored_password = user["Password"].iloc[0]
+            if username and password:
+                pass_hash = hash_password(username+password)
+                st.session_state.login_error = None
                 
-                if pass_hash == stored_password:
-                    st.toast("✅ Login Success!")
-                    time.sleep(.5)
-                    st.session_state.login_error = None
-                    check_login = True
-                    usn = username
-                    page = 'home'
-                    row = user.index[0]+ 2
-                    if login_worksheet().update(f"C{row}", 0):
-                        st.session_state.login_data['Login Attempt'].loc[user.index[0]] = 0
-                else:
-                    row = user.index[0]+ 2
-                    st.session_state.login_error = "❌ Incorrect Password!"
-                    if login_worksheet().update(f"C{row}", int(st.session_state.login_data['Login Attempt'].iloc[user.index[0]])+1):
-                        st.session_state.login_data['Login Attempt'].loc[user.index[0]] += 1
+                user = st.session_state.login_data[
+                    st.session_state.login_data["Username"] == username
+                ]
+                
+                if not user.empty and int(user['Login Attempt'].iloc[0]) < 3:
+                    stored_password = user["Password"].iloc[0]
                     
-                    if st.session_state.login_data['Login Attempt'].iloc[user.index[0]] == 2:
-                        st.warning('You only have 1 more chance to gues the password!')
+                    if pass_hash == stored_password:
+                        st.toast("✅ Login Success!")
+                        time.sleep(.5)
+                        st.session_state.login_error = None
+                        check_login = True
+                        usn = username
+                        page = 'home'
+                        row = user.index[0]+ 2
+                        if login_worksheet().update(f"C{row}", 0):
+                            st.session_state.login_data['Login Attempt'].loc[user.index[0]] = 0
+                    else:
+                        row = user.index[0]+ 2
+                        st.session_state.login_error = "❌ Incorrect Password!"
+                        if login_worksheet().update(f"C{row}", int(st.session_state.login_data['Login Attempt'].iloc[user.index[0]])+1):
+                            st.session_state.login_data['Login Attempt'].loc[user.index[0]] += 1
+                        
+                        if st.session_state.login_data['Login Attempt'].iloc[user.index[0]] == 2:
+                            st.warning('You only have 1 more chance to gues the password!')
 
-            elif int(user['Login Attempt'].iloc[0]) >= 3:
-                st.error('Blocked caused too many failed login attempt!')
-            else:
-                st.session_state.login_error = "❌ Username not found!"
-        
-        # Tampilkan error jika ada
-        if st.session_state.login_error:
-            st.error(st.session_state.login_error)
-            check_login = False
-            usn = None
-            page = 'login'
+                elif int(user['Login Attempt'].iloc[0]) >= 3:
+                    st.error('Blocked caused too many failed login attempt!')
+                else:
+                    st.session_state.login_error = "❌ Username not found!"
+            
+            # Tampilkan error jika ada
+            if st.session_state.login_error:
+                st.error(st.session_state.login_error)
+                check_login = False
+                usn = None
+                page = 'login'
+        else:
+            st.warning('Input Username and Password first!')
 
     return check_login, usn, page
 

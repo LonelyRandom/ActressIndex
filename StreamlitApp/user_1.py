@@ -2448,6 +2448,9 @@ def complex_film(device):
     def show_film_details():
         index = st.session_state.viewing_film_index
         
+        if "show_gallery" not in st.session_state:
+            st.session_state.show_gallery = False
+
         filtered_data = st.session_state.filtered_film_data
         pos = st.session_state.filtered_data_position
         with st.container(horizontal=True):
@@ -2489,16 +2492,71 @@ def complex_film(device):
             show_view_film(film, idx, film_prev, film_next)
 
     def show_view_film(film, filtered_index, film_prev, film_next):
-        with st.container(key='poster_code', horizontal_alignment='center', horizontal=True, vertical_alignment='center'):
-            with st.container(width='content'):
-                st.markdown(f"<p style='text-align: center; color: gray;'>{film_prev[0]}</p>", unsafe_allow_html=True)
-                st.image(film_prev[1], width=100)
-            with st.container(width='content'):
-                st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
+
+        st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
+        if st.session_state.show_gallery:
+            if film['Preview Picture'] != 'No Picture' and film['Preview Picture'] != '--':
+                if 'prev_pic' not in st.session_state:  
+                    st.session_state.prev_pic = 0
+
+                pics = [film['Picture']]
+                pics.extend(film['Preview Picture'].split(', '))
+                count = len(pics)
+
+                st.markdown(
+                    """
+                    <style>
+                    div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
+
+                    .img-fit {
+                        margin-top: -13px; 
+                        padding-top: 0; 
+                        display: flex;             /* gunakan flexbox */
+                        justify-content: center;   /* horizontal center */
+                        align-items: center;       /* vertical center jika container tinggi ditentukan */
+                        background-color: #ffffff;
+                        border-radius: 5px;
+                        margin-bottom: 15px;
+                    }
+
+                    .img-fit img {
+                        max-width: 100%;
+                        height: 350px;
+                        width: auto;
+                        object-fit: contain;
+                        display: none;  /* default hidden semua gambar */
+                    }
+
+                    .img-fit img.active {
+                        display: block; /* hanya gambar active yang terlihat */
+                    }
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                # HTML untuk semua gambar, preload semuanya
+                img_html = '<div class="img-fit">'
+                for i, pic in enumerate(pics):
+                    active_class = 'active' if i == st.session_state.prev_pic else ''
+                    img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
+                img_html += '</div>'
+
+                st.markdown(img_html, unsafe_allow_html=True)
+
+
+                with st.container(horizontal=True):
+                    # Tombol navigasi
+                    st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1, count), on_click=set_prev_pic, width='stretch')
+                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1, count), on_click=set_prev_pic, width='stretch')
+            else:
+                st.warning('Picture Unavailable')
+        else:
+            with st.container(horizontal_alignment='center'):
                 st.image(film['Picture'], width=200)
-            with st.container(width='content'):
-                st.markdown(f"<p style='text-align: center; color: gray;'>{film_next[0]}</p>", unsafe_allow_html=True)
-                st.image(film_next[1], width=100)
+        
+        with st.container(horizontal_alignment='center'):
+            st.toggle('Gallery', on_change=reset_pic, key='show_gallery')
         
         st.markdown('### Title')
         st.write(film['Title'])
@@ -2714,66 +2772,10 @@ def complex_film(device):
                         st.session_state.tag_bar = tag_bar
                     st.session_state.viewing_film_index = None
                     st.rerun()
-        st.markdown('---')
 
-        st.markdown('### Gallery')
-        if st.checkbox('Show', on_change=reset_pic):
-            if film['Preview Picture'] != 'No Picture' and film['Preview Picture'] != '--':
-                if 'prev_pic' not in st.session_state:  
-                    st.session_state.prev_pic = 0
-                
-                pics = film['Preview Picture'].split(', ')
-                count = len(pics)
-
-                st.markdown(
-                    """
-                    <style>
-                    div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
-
-                    .img-fit {
-                        margin-top: -13px; 
-                        padding-top: 0; 
-                        display: flex;             /* gunakan flexbox */
-                        justify-content: center;   /* horizontal center */
-                        align-items: center;       /* vertical center jika container tinggi ditentukan */
-                        background-color: #ffffff;
-                        border-radius: 5px;
-                        margin-bottom: 15px;
-                    }
-
-                    .img-fit img {
-                        max-width: 100%;
-                        height: 400px;
-                        width: auto;
-                        object-fit: contain;
-                        display: none;  /* default hidden semua gambar */
-                    }
-
-                    .img-fit img.active {
-                        display: block; /* hanya gambar active yang terlihat */
-                    }
-                    </style>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-                # HTML untuk semua gambar, preload semuanya
-                img_html = '<div class="img-fit">'
-                for i, pic in enumerate(pics):
-                    active_class = 'active' if i == st.session_state.prev_pic else ''
-                    img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
-                img_html += '</div>'
-
-                st.markdown(img_html, unsafe_allow_html=True)
-
-
-                with st.container(horizontal=True):
-                    # Tombol navigasi
-                    st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1, count), on_click=set_prev_pic, width='stretch')
-                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1, count), on_click=set_prev_pic, width='stretch')
-            else:
-                st.warning('Picture Unavailable')
+        if st.session_state.show_gallery:
             st.markdown('---')
+            st.markdown('### 🔧Quick Tools')
             info_btn = [
                 {
                     "Label": "❌️",
@@ -2984,10 +2986,72 @@ def complex_film(device):
         info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
         with st.container(horizontal_alignment='center'): 
             st.markdown(f"### ✏️ Editing: {film['Code']}")
-            st.image(film['Picture'], width=250)
 
-            new_pic = st.text_input('Change Image', placeholder='Enter your poster url link...', key=f'film_picture_{index}')
-            if new_pic:
+            if st.session_state.show_gallery:
+                if film['Preview Picture'] != 'No Picture' and film['Preview Picture'] != '--':
+                    if 'prev_pic' not in st.session_state:  
+                        st.session_state.prev_pic = 0
+                    
+                    pics = [film['Picture']]
+                    pics.extend(film['Preview Picture'].split(', '))
+                    count = len(pics)
+
+                    st.markdown(
+                        """
+                        <style>
+                        div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
+
+                        .img-fit {
+                            margin-top: -13px; 
+                            padding-top: 0; 
+                            display: flex;             /* gunakan flexbox */
+                            justify-content: center;   /* horizontal center */
+                            align-items: center;       /* vertical center jika container tinggi ditentukan */
+                            background-color: #ffffff;
+                            border-radius: 5px;
+                            margin-bottom: 15px;
+                        }
+
+                        .img-fit img {
+                            max-width: 100%;
+                            height: 350px;
+                            width: auto;
+                            object-fit: contain;
+                            display: none;  /* default hidden semua gambar */
+                        }
+
+                        .img-fit img.active {
+                            display: block; /* hanya gambar active yang terlihat */
+                        }
+                        </style>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                    # HTML untuk semua gambar, preload semuanya
+                    img_html = '<div class="img-fit">'
+                    for i, pic in enumerate(pics):
+                        active_class = 'active' if i == st.session_state.prev_pic else ''
+                        img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
+                    img_html += '</div>'
+
+                    st.markdown(img_html, unsafe_allow_html=True)
+
+
+                    with st.container(horizontal=True):
+                        # Tombol navigasi
+                        st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
+                        st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
+                else:
+                    st.warning('Picture Unavailable')
+            else:
+                st.image(film['Picture'], width=250)
+
+            st.toggle('Gallery', on_change=reset_pic, key='show_gallery')
+
+        new_pic = st.text_input('Change Image', placeholder='Enter your poster url link...', key=f'film_picture_{index}')
+        if new_pic:
+            with st.container(horizontal_alignment='center'):
                 st.image(new_pic, width=250)
     
         
@@ -3094,64 +3158,7 @@ def complex_film(device):
         st.write(edited_tags)
 
         st.markdown('### Gallery')
-        if st.checkbox('Show', on_change=reset_pic):
-            if film['Preview Picture'] != 'No Pics' and film['Preview Picture'] != '--':
-
-                if 'prev_pic' not in st.session_state:  
-                    st.session_state.prev_pic = 0
-                
-                pics = film['Preview Picture'].split(', ')
-                count = len(pics)
-
-                st.markdown(
-                    """
-                    <style>
-                    div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
-
-                    .img-fit {
-                        margin-top: -13px; 
-                        padding-top: 0; 
-                        display: flex;             /* gunakan flexbox */
-                        justify-content: center;   /* horizontal center */
-                        align-items: center;       /* vertical center jika container tinggi ditentukan */
-                        background-color: #ffffff;
-                        border-radius: 5px;
-                        margin-bottom: 15px;
-                    }
-
-                    .img-fit img {
-                        max-width: 100%;
-                        height: 400px;
-                        width: auto;
-                        object-fit: contain;
-                        display: none;  /* default hidden semua gambar */
-                    }
-
-                    .img-fit img.active {
-                        display: block; /* hanya gambar active yang terlihat */
-                    }
-                    </style>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-                # HTML untuk semua gambar, preload semuanya
-                img_html = '<div class="img-fit">'
-                for i, pic in enumerate(pics):
-                    active_class = 'active' if i == st.session_state.prev_pic else ''
-                    img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
-                img_html += '</div>'
-
-                st.markdown(img_html, unsafe_allow_html=True)
-
-
-                with st.container(horizontal=True):
-                    # Tombol navigasi
-                    st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
-                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
-            else:
-                st.warning('Picture Unavailable')
-
+        
         # Tombol aksi
         if 'delete_btn' not in st.session_state:
             st.session_state.delete_btn = False
@@ -4764,7 +4771,7 @@ def complex_actress(device):
             if st.button('❌ Close', width='stretch'):
                 st.session_state.actress_film_index = None
                 st.session_state.tab_film_info = '❌ None'
-                st.session_state.film_clicked = 'None'
+                st.session_state.film_clicked = None
                 st.toast('❌ Close View Mode!')
                 time.sleep(.5)
                 st.rerun()
@@ -4813,7 +4820,8 @@ def complex_actress(device):
                         st.session_state.viewing_index = None
                         st.session_state.editing_index = None
                         st.session_state.tab_film_info = '❌ None'
-                        st.session_state.film_clicked = 'None'
+                        st.session_state.film_clicked = None
+                        st.session_state.actress_film_index = None
                         st.rerun()
                 pages = actress['Page']
                 if pages == '--':
@@ -4963,7 +4971,8 @@ def complex_actress(device):
                     st.session_state.viewing_index = None
                     st.session_state.editing_index = None
                     st.session_state.tab_film_info = '❌ None'
-                    st.session_state.film_clicked = 'None'
+                    st.session_state.film_clicked = None
+                    st.session_state.actress_film_index = None
                     st.rerun()
 
         with tab_film:
@@ -5139,7 +5148,8 @@ def complex_actress(device):
                     st.session_state.viewing_index = None
                     st.session_state.editing_index = None
                     st.session_state.tab_film_info = '❌ None'
-                    st.session_state.film_clicked = 'None'
+                    st.session_state.film_clicked = None
+                    st.session_state.actress_film_index = None
                     st.rerun()
         
             with tab_film_detail:
@@ -5150,6 +5160,7 @@ def complex_actress(device):
                     if st.button("Close", width='stretch', key=f'cancel_filmography_detail', type='primary'):
                         st.session_state.viewing_index = None
                         st.session_state.editing_index = None
+                        st.session_state.actress_film_index = None
                         st.rerun()
 
     def show_edit_mode(index):
