@@ -1245,10 +1245,10 @@ def display_film_calender(df):
                         url = film['Picture']
                     
                     st.image(url, caption=film['Code'], width=image_width)
-                    st.radio('Flag', options=['🟢 P','🔴 D','⚪️ ?', '🟡 U'], index=flag_idx, key=f'{real_index}_radio', horizontal=True, on_change=set_calender_flag, args=(real_index,))
                     with st.container(horizontal=True):
                         st.toggle('✨', key=f'{real_index}_a_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
                         st.toggle('🆕', key=f'{real_index}_debut_toggle', value=film['is_Debut'], on_change=set_calender_debut, args=(real_index,))
+                    st.radio('Flag', options=['🟢 P','🔴 D','⚪️ ?', '🟡 U'], index=flag_idx, key=f'{real_index}_radio', horizontal=True, on_change=set_calender_flag, args=(real_index,))
                     st.link_button('Preview', film['Link'], width='stretch', type='primary')
                     st.markdown('---')
         st.markdown('---')
