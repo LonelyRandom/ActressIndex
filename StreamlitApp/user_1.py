@@ -386,6 +386,13 @@ def display_film_card(df, tag_df):
                     tag_text.append('Want to watch')
                     st.session_state.tag_text = tag_text
                     st.rerun()
+            if 'Western' not in tags_filter:
+                if st.button(':blue-background[:blue[Western]]', on_click=reset_page, key='tag_west', type='tertiary', width='content'):
+                    tag_text = []
+                    st.session_state.set_tag = True
+                    tag_text.append('Western')
+                    st.session_state.tag_text = tag_text
+                    st.rerun()
             
         sort_type = st.selectbox(
             'Sort Type', 
@@ -2411,6 +2418,10 @@ def complex_film(device):
         st.session_state.filtered_data_position = None
     if 'scrap_dialog' not in st.session_state:
         st.session_state.scrap_dialog = False
+    if 'simple_edit' not in st.session_state:
+        st.session_state.simple_edit = False
+    if 'first_load_a' not in st.session_state:
+        st.session_state.first_load_a = True
 
     if st.session_state.scroll_to_top:
         scroll_to_here(0,key='top')  # Scroll to the top of the page
@@ -2443,6 +2454,15 @@ def complex_film(device):
         if p < total and p >= 0:
             st.session_state.filtered_data_position = p
             st.session_state.prev_pic = 0
+    
+    def set_edit():
+        st.session_state.simple_edit = True
+    
+    def set_a_button_type():
+        if st.session_state.a_button == 'primary':
+            st.session_state.a_button = 'secondary'
+        else:
+            st.session_state.a_button = 'primary'
 
     @st.dialog("🎬 Film Details", width='small')
     def show_film_details():
@@ -2458,28 +2478,6 @@ def complex_film(device):
             st.button('➡️', width='stretch', disabled=(st.session_state.filtered_data_position==len(filtered_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(filtered_data)))
 
         film = filtered_data.iloc[pos]
-        if pos == 0:
-            film_prev = [
-                '',
-                st.secrets.indicators.PLACEHOLDER_IMG_POSTER
-            ]
-        else:
-            film_prev = [
-                filtered_data['Code'].iloc[pos-1],
-                filtered_data['Picture'].iloc[pos-1]
-            ]
-        
-        if pos == len(filtered_data)-1:
-            film_next = [
-                '',
-                st.secrets.indicators.PLACEHOLDER_IMG_POSTER
-            ]
-        else:
-            film_next = [
-                filtered_data['Code'].iloc[pos+1],
-                filtered_data['Picture'].iloc[pos+1]
-            ]
-
         idx = filtered_data.index[pos]
    
         if index is None or index >= len(df):
@@ -2489,10 +2487,9 @@ def complex_film(device):
         if st.session_state.editing_film_index == index:
             show_edit_film(film, idx)
         else:
-            show_view_film(film, idx, film_prev, film_next)
+            show_view_film(film, idx)
 
-    def show_view_film(film, filtered_index, film_prev, film_next):
-
+    def show_view_film(film, filtered_index):
         st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
         if st.session_state.show_gallery:
             if film['Preview Picture'] != 'No Picture' and film['Preview Picture'] != '--':
@@ -2578,60 +2575,38 @@ def complex_film(device):
         )
 
         st.markdown('### Actress')
-        if 'Not Listed' not in film['Actress Name'] and 'Many' not in film['Actress Name']:
-            unmatched_actress_list = []
-            actress_list = film['Actress Name'].split(', ')
-            matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
-            for actress in actress_list:
-                if actress not in matching_actresses['Name (Alphabet)'].values:
-                    unmatched_actress_list.append(actress)
+        if st.session_state.simple_edit:
+            selected_actress = st.multiselect(
+                'Actress:red[*]', 
+                options = ACTRESS_OPTS, 
+                default = [
+                    j.strip() for j in film['Actress Name'].split(',')
+                    if j.strip() in ACTRESS_OPTS
+                ]
+            )
 
-            if len(actress_list)>2:
-                is_center = 'center'
-            else:
-                is_center = 'left'
-            with st.container(horizontal=True, horizontal_alignment=is_center):
-                for idx in matching_actresses.index:
-                    actress_name = matching_actresses['Name (Alphabet)'][idx]
-                    container_key = f"{actress_name}_{st.session_state.filtered_data_position}_{idx}"
-                    status_color = "#FFD700" if matching_actresses['Review'][idx] == 'S-Tier' else "#9b59b6" if matching_actresses['Review'][idx] == 'A-Tier' else "#3498db" if matching_actresses['Review'][idx] == 'B-Tier' else "#2ecc71" if matching_actresses['Review'][idx] == 'C-Tier' else '#e67e22' if matching_actresses['Review'][idx] == 'D-Tier' else "#ff8c42" if matching_actresses['Review'][idx] == 'E-Tier' else "#e74c3c" if matching_actresses['Review'][idx] == 'F-Tier' else "#8b0000" if matching_actresses['Review'][idx] == 'Drop' else '#7f8c8d'
+            edited_actress = ", ".join(selected_actress)
+        
+        else:
+            if 'Not Listed' not in film['Actress Name'] and 'Many' not in film['Actress Name']:
+                unmatched_actress_list = []
+                actress_list = film['Actress Name'].split(', ')
+                matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
+                for actress in actress_list:
+                    if actress not in matching_actresses['Name (Alphabet)'].values:
+                        unmatched_actress_list.append(actress)
 
-                    with st.container(width=80, key=container_key):
-                        # Display image as circle using HTML
-                        st.markdown(f"""
-                            <div style="
-                                width: 70px;
-                                height: 70px;
-                                border-radius: 50%;
-                                overflow: hidden;
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                margin: 0 auto 8px auto;
-                                background: white;
-                                border: 1.5px solid {status_color};
-                            ">
-                                <img src="{matching_actresses['Picture'][idx]}" 
-                                    style="
-                                        width: 100%;
-                                        height: 100%;
-                                        object-fit: cover;
-                                    ">
-                            </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Button
-                        if st.button(actress_name, width='stretch', type='tertiary', key=f"actress_matched_{actress_name}_{idx}", on_click=reset_page):
-                            st.session_state.viewing_film_index = None
-                            st.session_state.editing_film_index = None
-                            st.session_state.search_text = actress_name
-                            st.session_state.set_search = True
-                            st.session_state.scroll_to_top = True
-                            st.rerun()
-                
-                if unmatched_actress_list:
-                    for actress in unmatched_actress_list:
-                        with st.container(width=80, key=actress):
+                if len(actress_list)>2:
+                    is_center = 'center'
+                else:
+                    is_center = 'left'
+                with st.container(horizontal=True, horizontal_alignment=is_center):
+                    for idx in matching_actresses.index:
+                        actress_name = matching_actresses['Name (Alphabet)'][idx]
+                        container_key = f"{actress_name}_{st.session_state.filtered_data_position}_{idx}"
+                        status_color = "#FFD700" if matching_actresses['Review'][idx] == 'S-Tier' else "#9b59b6" if matching_actresses['Review'][idx] == 'A-Tier' else "#3498db" if matching_actresses['Review'][idx] == 'B-Tier' else "#2ecc71" if matching_actresses['Review'][idx] == 'C-Tier' else '#e67e22' if matching_actresses['Review'][idx] == 'D-Tier' else "#ff8c42" if matching_actresses['Review'][idx] == 'E-Tier' else "#e74c3c" if matching_actresses['Review'][idx] == 'F-Tier' else "#8b0000" if matching_actresses['Review'][idx] == 'Drop' else '#7f8c8d'
+
+                        with st.container(width=80, key=container_key):
                             # Display image as circle using HTML
                             st.markdown(f"""
                                 <div style="
@@ -2644,9 +2619,9 @@ def complex_film(device):
                                     align-items: center;
                                     margin: 0 auto 8px auto;
                                     background: white;
-                                    border: 1.5px solid #7f8c8d;
+                                    border: 1.5px solid {status_color};
                                 ">
-                                    <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
+                                    <img src="{matching_actresses['Picture'][idx]}" 
                                         style="
                                             width: 100%;
                                             height: 100%;
@@ -2656,72 +2631,107 @@ def complex_film(device):
                             """, unsafe_allow_html=True)
                             
                             # Button
-                            if st.button(f':violet[{actress}]', width='stretch', type='tertiary', key=f"actress_unmatched_{actress}", on_click=reset_page):
+                            if st.button(actress_name, width='stretch', type='tertiary', key=f"actress_matched_{actress_name}_{idx}", on_click=reset_page):
                                 st.session_state.viewing_film_index = None
                                 st.session_state.editing_film_index = None
-                                st.session_state.search_text = actress
+                                st.session_state.search_text = actress_name
                                 st.session_state.set_search = True
                                 st.session_state.scroll_to_top = True
                                 st.rerun()
+                    
+                    if unmatched_actress_list:
+                        for actress in unmatched_actress_list:
+                            with st.container(width=80, key=actress):
+                                # Display image as circle using HTML
+                                st.markdown(f"""
+                                    <div style="
+                                        width: 70px;
+                                        height: 70px;
+                                        border-radius: 50%;
+                                        overflow: hidden;
+                                        display: flex;
+                                        justify-content: center;
+                                        align-items: center;
+                                        margin: 0 auto 8px auto;
+                                        background: white;
+                                        border: 1.5px solid #7f8c8d;
+                                    ">
+                                        <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
+                                            style="
+                                                width: 100%;
+                                                height: 100%;
+                                                object-fit: cover;
+                                            ">
+                                    </div>
+                                """, unsafe_allow_html=True)
+                                
+                                # Button
+                                if st.button(f':violet[{actress}]', width='stretch', type='tertiary', key=f"actress_unmatched_{actress}", on_click=reset_page):
+                                    st.session_state.viewing_film_index = None
+                                    st.session_state.editing_film_index = None
+                                    st.session_state.search_text = actress
+                                    st.session_state.set_search = True
+                                    st.session_state.scroll_to_top = True
+                                    st.rerun()
 
-        elif 'Many' in film['Actress Name']:
-            with st.container(width=80):
-                st.markdown(f"""
-                    <div style="
-                        width: 70px;
-                        height: 70px;
-                        border-radius: 50%;
-                        overflow: hidden;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        margin: 0 auto 8px auto;
-                        background: white;
-                    ">
-                        <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
-                            style="
-                                width: 100%;
-                                height: 100%;
-                                object-fit: cover;
-                            ">
-                    </div>
-                """, unsafe_allow_html=True)
-                if st.button('Many', width='stretch', type='tertiary', key="actress_matched_many_profile", on_click=reset_page):
-                    st.session_state.viewing_film_index = None
-                    st.session_state.editing_film_index = None
-                    st.session_state.search_text = 'Many'
-                    st.session_state.set_search = True
-                    st.session_state.scroll_to_top = True
-                    st.rerun()
-        elif 'Not Listed' in film['Actress Name']:
-            with st.container(width=80):
-                st.markdown(f"""
-                    <div style="
-                        width: 70px;
-                        height: 70px;
-                        border-radius: 50%;
-                        overflow: hidden;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        margin: 0 auto 8px auto;
-                        background: white;
-                    ">
-                        <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
-                            style="
-                                width: 100%;
-                                height: 100%;
-                                object-fit: cover;
-                            ">
-                    </div>
-                """, unsafe_allow_html=True)
-                if st.button('Not Listed', width='stretch', type='tertiary', key="actress_matched_not_listed_profile", on_click=reset_page):
-                    st.session_state.viewing_film_index = None
-                    st.session_state.editing_film_index = None
-                    st.session_state.search_text = 'Not Listed'
-                    st.session_state.set_search = True
-                    st.session_state.scroll_to_top = True
-                    st.rerun()
+            elif 'Many' in film['Actress Name']:
+                with st.container(width=80):
+                    st.markdown(f"""
+                        <div style="
+                            width: 70px;
+                            height: 70px;
+                            border-radius: 50%;
+                            overflow: hidden;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            margin: 0 auto 8px auto;
+                            background: white;
+                        ">
+                            <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
+                                style="
+                                    width: 100%;
+                                    height: 100%;
+                                    object-fit: cover;
+                                ">
+                        </div>
+                    """, unsafe_allow_html=True)
+                    if st.button('Many', width='stretch', type='tertiary', key="actress_matched_many_profile", on_click=reset_page):
+                        st.session_state.viewing_film_index = None
+                        st.session_state.editing_film_index = None
+                        st.session_state.search_text = 'Many'
+                        st.session_state.set_search = True
+                        st.session_state.scroll_to_top = True
+                        st.rerun()
+            elif 'Not Listed' in film['Actress Name']:
+                with st.container(width=80):
+                    st.markdown(f"""
+                        <div style="
+                            width: 70px;
+                            height: 70px;
+                            border-radius: 50%;
+                            overflow: hidden;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            margin: 0 auto 8px auto;
+                            background: white;
+                        ">
+                            <img src="{st.secrets.indicators.PLACEHOLDER_IMG}" 
+                                style="
+                                    width: 100%;
+                                    height: 100%;
+                                    object-fit: cover;
+                                ">
+                        </div>
+                    """, unsafe_allow_html=True)
+                    if st.button('Not Listed', width='stretch', type='tertiary', key="actress_matched_not_listed_profile", on_click=reset_page):
+                        st.session_state.viewing_film_index = None
+                        st.session_state.editing_film_index = None
+                        st.session_state.search_text = 'Not Listed'
+                        st.session_state.set_search = True
+                        st.session_state.scroll_to_top = True
+                        st.rerun()
 
         if film['Release Date'] != '?':
             release_date_text = datetime.strptime(film['Release Date'], '%d/%m/%Y').strftime("%b, %d %Y")
@@ -2731,9 +2741,6 @@ def complex_film(device):
         st.markdown('### Release Date')
         st.write(release_date_text)
 
-        with st.container(horizontal=True):      
-            with st.container(width='content', horizontal=True):
-                st.markdown('### Status')
         icons = ''
         colors = ''
         if film['Info'] == 'Goat':
@@ -2748,30 +2755,73 @@ def complex_film(device):
         else:
             icons = '🔴'
             colors = 'red'
+
+        st.markdown('### Status')
+        if st.session_state.simple_edit:
+            with st.container(horizontal=True, vertical_alignment='bottom'): 
+                if 'a_button' not in st.session_state:
+                    st.session_state.a_button = None
+                
+                if st.session_state.first_load_a:
+                    if film['A-Detector']:
+                        st.session_state.a_button = 'primary'
+                    else:
+                        st.session_state.a_button = 'secondary'
+                    st.session_state.first_load_a = False
+
+
+                info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
+
+                edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
+                st.button('✨', type=st.session_state.a_button, on_click=set_a_button_type)
             
-        with st.container(horizontal=True):
-            st.badge(label=film['Info'], icon=icons, color=colors)
-            if film['A-Detector'] == 1:
-                st.badge(label='', icon='⭐', color='yellow')
-            
+        else: 
+            with st.container(horizontal=True):   
+                st.badge(label=film['Info'], icon=icons, color=colors)
+                if film['A-Detector'] == 1:
+                    st.badge(label='', icon='⭐', color='yellow')
+        
  
         st.markdown('### Tags')
-        tags = film['Tags'].split(', ')
+        if st.session_state.simple_edit:
+            if film['Tags'] == 'No Tags':
+                tags = []
+            else:
+                tags = [
+                    j.strip() for j in film['Tags'].split(',')
+                    if j.strip() in TAGS_OPTS
+                ]
 
-        with st.container(horizontal=True):
-            for tag in tags:
-                if tag == 'No Tags':
-                    dis_values = True
-                else:
-                    dis_values = False
+            edited_selected_tags = st.multiselect(
+                'Tags', 
+                options=TAGS_OPTS, 
+                default=tags, 
+                key=f'film_Tags_{filtered_index}'
+            )
 
-                if st.button(f':gray-background[{tag}]', width='content', type='tertiary', disabled=dis_values):
-                    tag_bar = st.session_state.tag_bar
-                    if tag not in tag_bar:
-                        tag_bar.append(tag)
-                        st.session_state.tag_bar = tag_bar
-                    st.session_state.viewing_film_index = None
-                    st.rerun()
+            if edited_selected_tags:
+                edited_tags = ', '.join(edited_selected_tags)
+            else:
+                edited_tags = 'No Tags'
+
+            st.write(edited_tags)
+        else:
+            tags = film['Tags'].split(', ')
+
+            with st.container(horizontal=True):
+                for tag in tags:
+                    if tag == 'No Tags':
+                        dis_values = True
+                    else:
+                        dis_values = False
+
+                    if st.button(f':gray-background[{tag}]', width='content', type='tertiary', disabled=dis_values):
+                        tag_bar = st.session_state.tag_bar
+                        if tag not in tag_bar:
+                            tag_bar.append(tag)
+                            st.session_state.tag_bar = tag_bar
+                        st.session_state.viewing_film_index = None
+                        st.rerun()
 
         if st.session_state.show_gallery:
             st.markdown('---')
@@ -2968,19 +3018,59 @@ def complex_film(device):
             film_url = film['Link']
 
         st.link_button("🎬 Preview", film_url, width='stretch', type='primary')
-        with st.container(key='view_film_edit_container_button', horizontal=True):
-            if st.button('✏️ Edit', width='stretch', key='edited'):
+        if st.session_state.simple_edit:
+            if st.button('Advanced Edit', width='stretch'):
                 st.session_state.editing_film_index = st.session_state.filtered_data_position
                 st.session_state.viewing_film_index = st.session_state.filtered_data_position
-                st.toast('✏️ Edit Mode!')
+                st.toast('✏️ Advanced Edit Mode!')
                 time.sleep(.5)
                 st.rerun()
-            if st.button('❌ Close', width='stretch'):
-                st.session_state.viewing_film_index = None
-                st.session_state.editing_film_index = None
-                st.toast('❌ Close View Mode!')
-                time.sleep(.5)
-                st.rerun()
+        with st.container(key='view_film_edit_container_button', horizontal=True):
+            if st.session_state.simple_edit:
+                if st.button('💾 Save', width='stretch'):
+                    df.at[filtered_index, 'Actress Name'] = edited_actress
+                    df.at[filtered_index, 'Info'] = edited_info
+                    df.at[filtered_index, 'Tags'] = edited_tags
+                    if st.session_state.a_button == 'primary':
+                        df.at[filtered_index, 'A-Detector'] = bool(True)
+                    else:
+                        df.at[filtered_index, 'A-Detector'] = bool(False)
+
+                    st.session_state.film_df = values_handling(df,'film')
+
+                    new_row = df.loc[filtered_index].tolist()
+                    new_row[-1] = bool(new_row[-1])
+                    st.session_state.filtered_film_data.iloc[st.session_state.filtered_data_position] = new_row 
+
+                    row = filtered_index + 2
+
+                    film_worksheet().update(f'A{row}:K{row}', [new_row])
+
+                    st.session_state.simple_edit = False
+                    st.session_state.first_load_a = True
+                    st.toast('✅ Edit saved successfully!')
+                    time.sleep(.5)
+                    st.rerun()
+                if st.button('❌ Cancel Edit', width='stretch'):
+                    st.session_state.simple_edit = False
+                    st.session_state.first_load_a = True
+                    st.toast('❌ Close View Mode!')
+                    time.sleep(.5)
+                    st.rerun()
+            else:
+                if st.button('✏️ Edit', width='stretch', key='edited', on_click=set_edit):
+                    # st.session_state.editing_film_index = st.session_state.filtered_data_position
+                    st.session_state.viewing_film_index = st.session_state.filtered_data_position
+                    st.toast('✏️ Edit Mode!')
+                    time.sleep(.5)
+                    st.rerun()
+                if st.button('❌ Close', width='stretch'):
+                    st.session_state.viewing_film_index = None
+                    st.session_state.editing_film_index = None
+                    st.session_state.first_load_a = True
+                    st.toast('❌ Close View Mode!')
+                    time.sleep(.5)
+                    st.rerun()
 
     def show_edit_film(film, index):
         info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
@@ -3047,7 +3137,8 @@ def complex_film(device):
             else:
                 st.image(film['Picture'], width=250)
 
-            st.toggle('Gallery', on_change=reset_pic, key='show_gallery')
+            with st.container(horizontal=True, horizontal_alignment='center'):
+                st.toggle('Gallery', on_change=reset_pic, key='show_gallery')
 
         new_pic = st.text_input('Change Image', placeholder='Enter your poster url link...', key=f'film_picture_{index}')
         if new_pic:
@@ -3056,15 +3147,19 @@ def complex_film(device):
     
         
         st.subheader("Basic Information")
-        
-        edited_a = st.toggle('✨', value=film['A-Detector'])
+        with st.container(horizontal=True):
+            edited_a = st.toggle('✨', value=film['A-Detector'])
+            
         
         film_link = film['Link']
 
         if film_link == '--':
             film_link = ''
-
+        
         edited_link = st.text_input('Link Page', key=f'film_link_{index}', placeholder='https://...', value=film_link)
+            # st.markdown('<p style="font-size: 14px;">Link Page</p>', unsafe_allow_html=True)
+            # edited_link = st.text_input('Link Page', key=f'film_link_{index}', placeholder='https://...', value=film_link, disabled=True)
+            # edited_link = film_link
 
         if edited_link == '':
             edited_link = '--'  
@@ -3295,6 +3390,7 @@ def complex_film(device):
         
             if st.button('❌ Close Edit', width='stretch'):
                 st.session_state.editing_film_index = None
+                st.session_state.simple_edit = False
                 st.toast('❌ Close Edit Mode!')
                 time.sleep(.5)
                 st.rerun()
@@ -3338,8 +3434,11 @@ def complex_film(device):
 
     @st.dialog("➕ Add New Film", width='small')
     def add_new_film():
-        st.session_state.film_simple_edit = st.toggle('Simple Input', value=st.session_state.film_simple_edit)
-        is_simple = st.session_state.film_simple_edit
+        with st.container(horizontal=True):
+            st.session_state.film_simple_edit = st.toggle('Simple Input', value=st.session_state.film_simple_edit)
+            is_simple = st.session_state.film_simple_edit
+
+            st.toggle('Western', key='western')
 
         new_actress_input = '?'
 
@@ -3362,9 +3461,12 @@ def complex_film(device):
                 st.image(new_picture, width=200)
         
         if not is_simple:
-            new_link = st.text_input('Link Page', key='new_link', placeholder='https://...')
-            if not new_link:
+            if st.session_state.western:
                 new_link = '--'
+            else:
+                new_link = st.text_input('Link Page', key='new_link', placeholder='https://...')
+                if not new_link:
+                    new_link = '--'
 
         selected_actress = st.multiselect('Actress:red[*]', key='new_actresses', options=ACTRESS_OPTS)
 
@@ -3382,24 +3484,32 @@ def complex_film(device):
             new_actress = '?'
             new_actress_input = '?'
 
-        new_code = st.text_input('Code:red[*]', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
-        new_code = new_code.upper().replace(' ','-')
+        if st.session_state.western:
+            western_df = st.session_state.film_df.loc[st.session_state.film_df['Code'].str.contains('WEST')].copy()
+            new_code = 'WEST-' + str(len(western_df)+1).zfill(3)
+        else:
+            new_code = st.text_input('Code:red[*]', key='new_code', placeholder='MIDV-791, MIDV 791, midv 791 or midv-791')
+            new_code = new_code.upper().replace(' ','-')
 
         if not is_simple:
             new_title = st.text_area('Title:red[*]', key='new_title', placeholder='Enter movie title...')
 
-            new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
-            if new_release < date.today():
-                new_status = 0
-            else:
-                new_status = 1
-
-            if st.checkbox('No Info', key='film_code_check'):
+            if st.session_state.western:
                 new_release = '?'
                 new_status = '?'
             else:
-                st.write(new_release.strftime("%b, %d %Y"))
-                new_release = new_release.strftime('%d/%m/%Y')
+                new_release = st.date_input('Release Date', key='new_release', min_value=date(1980,1,1))
+                if new_release < date.today():
+                    new_status = 0
+                else:
+                    new_status = 1
+
+                if st.checkbox('No Info', key='film_code_check'):
+                    new_release = '?'
+                    new_status = '?'
+                else:
+                    st.write(new_release.strftime("%b, %d %Y"))
+                    new_release = new_release.strftime('%d/%m/%Y')
 
             new_tags = st.multiselect('Tags', key='new_tags', options=TAGS_OPTS)
 
