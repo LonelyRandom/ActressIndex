@@ -465,7 +465,11 @@ def display_film_card(df, tag_df):
             )
             filtered_df = filtered_df.sort_values(by='release_date', ascending=False)
 
-        if st.toggle('Date filter', key='date_filter', on_change=reset_page):
+        with st.container(horizontal=True):
+            st.toggle('Date filter', key='date_filter', on_change=reset_page)
+            st.toggle('Released', key='date_release', on_change=reset_page)
+
+        if st.session_state.date_filter:
             select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width='stretch', on_change=reset_page)
             filtered_df['filtered_date'] = pd.to_datetime(
                 filtered_df['Release Date'],
@@ -559,6 +563,10 @@ def display_film_card(df, tag_df):
                         filtered_df['filtered_date'].dt.year == st.session_state.selected_date.year
                     ]
                 st.write(f'Filter by Year : {st.session_state.selected_date.strftime("%B %Y")} :green[({len(filtered_df)} Films)]')
+        
+        if st.session_state.date_release:
+            filtered_df = filtered_df[filtered_df['release_date'].dt.date <= date.today()]
+
     if st.session_state.width_option == 'Device 1': 
         img_card_height = 215
         img_card_width = 115
@@ -717,21 +725,21 @@ def display_film_card(df, tag_df):
     st.markdown("---")
     
     filtered_df_data = filtered_df.copy()
-    filtered_df_data = filtered_df_data.drop(columns=['filtered_date'], errors='ignore')
+    filtered_df_data = filtered_df_data.drop(columns=['filtered_date', 'release_date'], errors='ignore')
     
     page = st.session_state.film_page
     
-    start_idx = (page - 1) * items_per_page # page = 2 / Start idx = 8
-    end_idx = min(start_idx + items_per_page, len(filtered_df)) # end idx = 16
+    start_idx = (page - 1) * items_per_page
+    end_idx = min(start_idx + items_per_page, len(filtered_df))
     
     st.caption(f"Showing {start_idx+1}-{end_idx} from {len(filtered_df)} films")
     
     rows_to_display = filtered_df.iloc[start_idx:end_idx] #[8,15]
 
     with st.container(horizontal=True, horizontal_alignment='center'):
-        for i in range(0, len(rows_to_display)): # len = 8 // i = [0,8]
+        for i in range(0, len(rows_to_display)):
             actress = rows_to_display.iloc[i]
-            real_index = rows_to_display.index[i]  # ⬅️ INI KUNCI
+            real_index = rows_to_display.index[i]
             display_single_card('main', img_card_height, img_card_width, actress, real_index, filtered_df_data, i, start_idx)
     st.markdown('---')
     st.markdown(
