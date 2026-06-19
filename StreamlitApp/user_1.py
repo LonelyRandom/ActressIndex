@@ -471,11 +471,7 @@ def display_film_card(df, tag_df):
 
         if st.session_state.date_filter:
             select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width='stretch', on_change=reset_page)
-            filtered_df['filtered_date'] = pd.to_datetime(
-                filtered_df['Release Date'],
-                format='%d/%m/%Y',
-                errors='coerce'
-            )
+
             today_date = st.session_state.selected_date
             today_month = today_date.month
             today_year = today_date.year
@@ -523,8 +519,8 @@ def display_film_card(df, tag_df):
 
                     for i in range(1 ,day_month+1):
                         selected_date = date(calender_year, calender_month, i)
-                        if len(filtered_df[filtered_df['filtered_date'].dt.date == selected_date]) > 0:
-                            film_date = len(filtered_df[filtered_df["filtered_date"].dt.date == selected_date])
+                        if len(filtered_df[filtered_df['release_date'].dt.date == selected_date]) > 0:
+                            film_date = len(filtered_df[filtered_df["release_date"].dt.date == selected_date])
                             if selected_date == st.session_state.show_date:
                                 if st.button(f'{str(i)} :gray[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),), type='primary'):
                                     st.session_state.date_clicked = True
@@ -546,21 +542,21 @@ def display_film_card(df, tag_df):
             
             if st.session_state.date_clicked and select_date_type == 'Date':
                 if select_date_type == 'Date':
-                    filtered_df = filtered_df[filtered_df['filtered_date'].dt.date == st.session_state.show_date]
+                    filtered_df = filtered_df[filtered_df['release_date'].dt.date == st.session_state.show_date]
                     with st.container(horizontal=True, vertical_alignment='bottom'):
                         with st.container(width='content'):
                             st.write(f'Filter by date : {st.session_state.show_date.strftime("%d %B %Y")} :green[({len(filtered_df)} Films)]')
             elif select_date_type == 'Month/Year':
                 filtered_df = filtered_df[
-                    (filtered_df['filtered_date'].dt.month == st.session_state.selected_date.month) &
-                    (filtered_df['filtered_date'].dt.year == st.session_state.selected_date.year)
+                    (filtered_df['release_date'].dt.month == st.session_state.selected_date.month) &
+                    (filtered_df['release_date'].dt.year == st.session_state.selected_date.year)
                 ]
                 with st.container(horizontal=True, vertical_alignment='bottom'):
                     with st.container(width='content'):
                         st.write(f'Filter by Month : {st.session_state.selected_date.strftime("%B %Y")} :green[({len(filtered_df)} Films)]')
             elif select_date_type == 'Year':
                 filtered_df = filtered_df[
-                        filtered_df['filtered_date'].dt.year == st.session_state.selected_date.year
+                        filtered_df['release_date'].dt.year == st.session_state.selected_date.year
                     ]
                 st.write(f'Filter by Year : {st.session_state.selected_date.strftime("%B %Y")} :green[({len(filtered_df)} Films)]')
         
