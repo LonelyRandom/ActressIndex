@@ -471,6 +471,11 @@ def display_film_card(df, tag_df):
 
         if st.session_state.date_filter:
             select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width='stretch', on_change=reset_page)
+            filtered_df['release_date'] = pd.to_datetime(
+                filtered_df['Release Date'],
+                format='%d/%m/%Y',
+                errors='coerce'
+            )
 
             today_date = st.session_state.selected_date
             today_month = today_date.month
@@ -561,6 +566,11 @@ def display_film_card(df, tag_df):
                 st.write(f'Filter by Year : {st.session_state.selected_date.strftime("%B %Y")} :green[({len(filtered_df)} Films)]')
         
         if st.session_state.date_release:
+            filtered_df['release_date'] = pd.to_datetime(
+                filtered_df['Release Date'],
+                format='%d/%m/%Y',
+                errors='coerce'
+            )
             filtered_df = filtered_df[filtered_df['release_date'].dt.date <= date.today()]
 
     if st.session_state.width_option == 'Device 1': 
@@ -1645,6 +1655,11 @@ def display_film_grid(df, tag_df):
             st.toggle('Released', key='date_release',on_change=reset_page)
 
         if st.session_state.date_filter:
+            filtered_df['release_date'] = pd.to_datetime(
+                filtered_df['Release Date'],
+                format='%d/%m/%Y',
+                errors='coerce'
+            )
             select_date_type = st.selectbox('Date Search', options=['Date', 'Month/Year', 'Year'], key='date_type',width='stretch', on_change=reset_page)
            
             today_date = st.session_state.selected_date
@@ -1736,6 +1751,11 @@ def display_film_grid(df, tag_df):
                 st.write(f'Filter by Year : {st.session_state.selected_date.strftime("%B %Y")} :green[({len(filtered_df)} Films)]')
         
         if st.session_state.date_release:
+            filtered_df['release_date'] = pd.to_datetime(
+                filtered_df['Release Date'],
+                format='%d/%m/%Y',
+                errors='coerce'
+            )
             filtered_df = filtered_df[filtered_df['release_date'].dt.date <= date.today()]
 
 
