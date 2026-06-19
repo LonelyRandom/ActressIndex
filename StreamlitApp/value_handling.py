@@ -90,7 +90,7 @@ def initial_load(df, type):
 
         for idx in copy_df.index:
             if pd.notna(copy_df.at[idx, 'Release Date']):
-                if copy_df.at[idx, 'Release Date'] < today:
+                if copy_df.at[idx, 'Release Date'] <= today:
                     df.at[idx, 'Release Status'] = 1
                 else:
                     df.at[idx, 'Release Status'] = 0
