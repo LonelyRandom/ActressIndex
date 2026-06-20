@@ -988,22 +988,10 @@ def display_film_calender(df):
     if 'scroll_to_date' not in st.session_state:
         st.session_state.scroll_to_date = False
     if 'calender_data' not in st.session_state:
-        calender_data = pd.DataFrame(calendar_worksheet().get_all_records())
-        calender_data = values_handling(calender_data, "calender")
-        st.session_state.calender_data = calender_data
-    
-    values = calendar_worksheet().get_all_values()
-
-    header_len = len(values[0])
-
-    bad_rows = []
-
-    for i, row in enumerate(values[1:], start=2):
-        if len(row) != header_len:
-            bad_rows.append((i, len(row)))
-
-    st.write("Jumlah row tidak sesuai header:", len(bad_rows))
-    st.write(bad_rows[:20])
+        calender_data = calendar_worksheet().get_all_values()
+        calender_df = pd.DataFrame(calender_data[1:], columns=calender_data[0])
+        calender_df = values_handling(calender_df, "calender")
+        st.session_state.calender_data = calender_df
     
     if 'calender_page' not in st.session_state:
         st.session_state.calender_page = 1
