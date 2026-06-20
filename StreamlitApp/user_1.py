@@ -1002,8 +1002,8 @@ def display_film_calender(df):
         if len(row) != header_len:
             bad_rows.append((i, len(row)))
 
-    print("Jumlah row tidak sesuai header:", len(bad_rows))
-    print(bad_rows[:20])
+    st.write("Jumlah row tidak sesuai header:", len(bad_rows))
+    st.write(bad_rows[:20])
     
     if 'calender_page' not in st.session_state:
         st.session_state.calender_page = 1
