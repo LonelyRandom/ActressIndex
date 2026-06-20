@@ -27,6 +27,7 @@ def values_handling(df, type):
             '1' : True,
             '0' : False
         })
+        df['Month'] = df['Month'].astype(str)
     else:
         df['Release Date'] = df['Release Date'].astype(str)
         df['A-Detector'] = df['A-Detector'].map({
