@@ -1042,6 +1042,7 @@ def display_film_calender(df):
         format='%d/%m/%Y',
         errors='coerce'
     )
+    st.write(filtered_df)
     selected_flag = st.selectbox('Flag', options=['🔵 All', '🟢 Pass','🔴 Drop', '⚪️ Not Checked', '🟡 Unsure'], width='stretch', on_change=reset_calender_page, key='calender_flag')
     selected_flag = selected_flag.split(" ",1)[1]
     if selected_flag != 'All':
@@ -2972,6 +2973,20 @@ def complex_film(device):
                 edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
                 st.button('✨', type=st.session_state.a_button, on_click=set_a_button_type)
             
+            if edited_info == 'Watched' or edited_info == 'Goat' or edited_info == 'Great':
+                if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
+                    new_review = []
+                    actress_list = selected_actress
+                    matching_actresses = actress_df[actress_df['Name (Alphabet)'].isin(actress_list)]
+
+                    for i in matching_actresses.index:
+                        review_index = REVIEW_OPTS.index(actress_df['Review'].iloc[i]) if actress_df['Review'].iloc[i] in REVIEW_OPTS else 0
+                        with st.container(horizontal=True):
+                            with st.container(width=80):
+                                st.image(actress_df['Picture'].iloc[i],width=80)
+                            with st.container():
+                                new_review.append((i,st.selectbox(f'Review "{actress_df["Name (Alphabet)"].iloc[i]}"', options=REVIEW_OPTS, index=review_index, key=f'review_actress_{i}')))
+            
         else: 
             with st.container(horizontal=True):   
                 st.badge(label=film['Info'], icon=icons, color=colors)
@@ -3234,6 +3249,11 @@ def complex_film(device):
                         df.at[filtered_index, 'A-Detector'] = bool(False)
 
                     st.session_state.film_df = values_handling(df,'film')
+                    if edited_info != 'Not Watched':
+                        if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
+                            for review in new_review:
+                                actress_df.at[review[0], 'Review'] = review[1]
+                                actress_worksheet().update(f'A{int(review[0]+2)}', review[1])
 
                     new_row = df.loc[filtered_index].tolist()
                     new_row[-1] = bool(new_row[-1])
