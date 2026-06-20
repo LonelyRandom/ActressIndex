@@ -136,8 +136,8 @@ PASS_OPTS = [
 
 def load_data_actress():
     try:
-        actress_data = actress_worksheet().get_all_records()
-        df = pd.DataFrame(actress_data)
+        actress_data = actress_worksheet().get_all_values()
+        df = pd.DataFrame(actress_data[1:], columns=actress_data[0])
         df = values_handling(df,'actress')
         df = initial_load(df,'actress')
         return df
@@ -147,8 +147,8 @@ def load_data_actress():
 
 def load_data_film():
     try:
-        film_data = film_worksheet().get_all_records()
-        df = pd.DataFrame(film_data)
+        film_data = film_worksheet().get_all_values()
+        df = pd.DataFrame(film_data[1:], columns=film_data[0])
         df = values_handling(df, 'film')
         df = initial_load(df, 'film')
         return df
@@ -157,8 +157,8 @@ def load_data_film():
     
 def load_data_tag():
     try:
-        tag_data = tags_worksheet().get_all_records()
-        df = pd.DataFrame(tag_data)
+        tag_data = tags_worksheet().get_all_values()
+        df = pd.DataFrame(tag_data[1:], columns=tag_data[0])
         return df
     except Exception as e:
         return pd.DataFrame()
@@ -1043,7 +1043,6 @@ def display_film_calender(df):
         format='%d/%m/%Y',
         errors='coerce'
     )
-    st.write(filtered_df)
     selected_flag = st.selectbox('Flag', options=['🔵 All', '🟢 Pass','🔴 Drop', '⚪️ Not Checked', '🟡 Unsure'], width='stretch', on_change=reset_calender_page, key='calender_flag')
     selected_flag = selected_flag.split(" ",1)[1]
     if selected_flag != 'All':
