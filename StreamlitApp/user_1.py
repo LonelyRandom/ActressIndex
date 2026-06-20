@@ -993,10 +993,17 @@ def display_film_calender(df):
         st.session_state.calender_data = calender_data
     
     values = calendar_worksheet().get_all_values()
-    st.write(len(values))
 
-    records = calendar_worksheet().get_all_records()
-    st.write(len(records))
+    header_len = len(values[0])
+
+    bad_rows = []
+
+    for i, row in enumerate(values[1:], start=2):
+        if len(row) != header_len:
+            bad_rows.append((i, len(row)))
+
+    print("Jumlah row tidak sesuai header:", len(bad_rows))
+    print(bad_rows[:20])
     
     if 'calender_page' not in st.session_state:
         st.session_state.calender_page = 1
