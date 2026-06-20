@@ -991,7 +991,13 @@ def display_film_calender(df):
         calender_data = pd.DataFrame(calendar_worksheet().get_all_records())
         calender_data = values_handling(calender_data, "calender")
         st.session_state.calender_data = calender_data
+    
+    values = calendar_worksheet().get_all_values()
+    st.write(len(values))
 
+    records = calendar_worksheet().get_all_records()
+    st.write(len(records))
+    
     if 'calender_page' not in st.session_state:
         st.session_state.calender_page = 1
     
