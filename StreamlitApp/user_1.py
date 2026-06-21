@@ -411,7 +411,7 @@ def display_film_card(df, tag_df):
             
         sort_type = st.selectbox(
             'Sort Type', 
-            options=['🔤 (A-Z)', '🔤 (Z-A)', '🗓️ Oldest', '🗓️ Newest'], 
+            options=['🗓️ Newest', '🗓️ Oldest', '🔤 (A-Z)', '🔤 (Z-A)'], 
             key='sort_type', 
             on_change=reset_page
         ).split(' ',1)[1]
@@ -2655,6 +2655,7 @@ def complex_film(device):
     
     def set_edit():
         st.session_state.simple_edit = True
+        st.session_state.show_gallery = True
     
     def set_a_button_type():
         if st.session_state.a_button == 'primary':
@@ -2690,62 +2691,60 @@ def complex_film(device):
     def show_view_film(film, filtered_index):
         st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
         if st.session_state.show_gallery:
+            if 'prev_pic' not in st.session_state:  
+                st.session_state.prev_pic = 0
+
+            pics = [film['Picture']]
             if film['Preview Picture'] != 'No Picture' and film['Preview Picture'] != '--':
-                if 'prev_pic' not in st.session_state:  
-                    st.session_state.prev_pic = 0
-
-                pics = [film['Picture']]
                 pics.extend(film['Preview Picture'].split(', '))
-                count = len(pics)
+            count = len(pics)
 
-                st.markdown(
-                    """
-                    <style>
-                    div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
+            st.markdown(
+                """
+                <style>
+                div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
 
-                    .img-fit {
-                        margin-top: -13px; 
-                        padding-top: 0; 
-                        display: flex;             /* gunakan flexbox */
-                        justify-content: center;   /* horizontal center */
-                        align-items: center;       /* vertical center jika container tinggi ditentukan */
-                        background-color: #ffffff;
-                        border-radius: 5px;
-                        margin-bottom: 15px;
-                    }
+                .img-fit {
+                    margin-top: -13px; 
+                    padding-top: 0; 
+                    display: flex;             /* gunakan flexbox */
+                    justify-content: center;   /* horizontal center */
+                    align-items: center;       /* vertical center jika container tinggi ditentukan */
+                    background-color: #ffffff;
+                    border-radius: 5px;
+                    margin-bottom: 15px;
+                }
 
-                    .img-fit img {
-                        max-width: 100%;
-                        height: 350px;
-                        width: auto;
-                        object-fit: contain;
-                        display: none;  /* default hidden semua gambar */
-                    }
+                .img-fit img {
+                    max-width: 100%;
+                    height: 350px;
+                    width: auto;
+                    object-fit: contain;
+                    display: none;  /* default hidden semua gambar */
+                }
 
-                    .img-fit img.active {
-                        display: block; /* hanya gambar active yang terlihat */
-                    }
-                    </style>
-                    """,
-                    unsafe_allow_html=True
-                )
+                .img-fit img.active {
+                    display: block; /* hanya gambar active yang terlihat */
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
 
-                # HTML untuk semua gambar, preload semuanya
-                img_html = '<div class="img-fit">'
-                for i, pic in enumerate(pics):
-                    active_class = 'active' if i == st.session_state.prev_pic else ''
-                    img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
-                img_html += '</div>'
+            # HTML untuk semua gambar, preload semuanya
+            img_html = '<div class="img-fit">'
+            for i, pic in enumerate(pics):
+                active_class = 'active' if i == st.session_state.prev_pic else ''
+                img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
+            img_html += '</div>'
 
-                st.markdown(img_html, unsafe_allow_html=True)
+            st.markdown(img_html, unsafe_allow_html=True)
 
 
-                with st.container(horizontal=True):
-                    # Tombol navigasi
-                    st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1, count), on_click=set_prev_pic, width='stretch')
-                    st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1, count), on_click=set_prev_pic, width='stretch')
-            else:
-                st.warning('Picture Unavailable')
+            with st.container(horizontal=True):
+                # Tombol navigasi
+                st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1, count), on_click=set_prev_pic, width='stretch')
+                st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1, count), on_click=set_prev_pic, width='stretch')
         else:
             with st.container(horizontal_alignment='center'):
                 st.image(film['Picture'], width=200)
@@ -3200,11 +3199,6 @@ def complex_film(device):
                             time.sleep(.5)
                             st.rerun()
             
-            st.space('small')
-            with st.container(horizontal=True):
-                st.button('⬅️', width='stretch', key='prev_film_bottom', disabled=(st.session_state.filtered_data_position==0), on_click=set_film_data, args=(st.session_state.filtered_data_position-1,len(st.session_state.filtered_film_data)))
-                st.button('➡️', width='stretch', key='next_film_bottom', disabled=(st.session_state.filtered_data_position==len(st.session_state.filtered_film_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(st.session_state.filtered_film_data)))
-                    
         st.markdown('---')
         if film['Link'] == '--' :
             film_url = 'https://www.google.com/search?q='
