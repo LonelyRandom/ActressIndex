@@ -292,7 +292,7 @@ def display_film_card(df, tag_df):
         .tolist()
     )
 
-    ACTRESS_OPTS = ['All', 'Many', 'Not Listed'] + sorted(
+    ACTRESS_OPTS = ['All', 'Not Found', 'Many', 'Not Listed'] + sorted(
         actress_df['Name (Alphabet)']
         .dropna()
         .unique()
@@ -424,10 +424,20 @@ def display_film_card(df, tag_df):
                 search_name = '-'.join(search_name)
                 mask = filtered_df['Code'].str.contains(search_name, case=False, na=False)
             elif search_by == 'Actress':
-                if search_name != 'All':
-                    mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
-                else:
+                if search_name == 'All':
                     mask = [True] * len(filtered_df)
+                elif search_name == 'Not Found':
+                    mask = []
+                    for i in filtered_df.index:
+                        data = filtered_df.loc[i]
+                        flag = False
+                        actresses = data['Actress Name'].split(', ')
+                        for actress in actresses:
+                            if actress not in ACTRESS_OPTS:
+                                flag = True
+                        mask.append(flag)
+                else:
+                    mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
             else:
                 mask = filtered_df['Title'].str.contains(search_name, case=False, na=False)
 
