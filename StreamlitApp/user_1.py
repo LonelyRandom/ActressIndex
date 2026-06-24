@@ -121,10 +121,10 @@ SIZE_OPTS = [
 ]
 
 INFO_OPTS = [
-    "Not Watched",
-    "Watched",
-    "Great",
-    "Goat"
+    "🔴 Not Watched",
+    "🟢 Watched",
+    "🔵 Great",
+    "🟣 Goat"
 ]
 
 PASS_OPTS = [
@@ -2532,7 +2532,7 @@ def complex_home():
     dummy_container = st.container()
     with dummy_container:
         st.write('')
-    
+
     col1, col2 = st.columns(2)
     with col1:
         with st.container(key='ActressList'):
@@ -2965,6 +2965,8 @@ def complex_film(device):
 
         st.markdown('### Status')
         if st.session_state.simple_edit:
+            info_opt = [opt.split(' ',1)[1] for opt in INFO_OPTS]
+
             with st.container(horizontal=True, vertical_alignment='bottom'): 
                 if 'a_button' not in st.session_state:
                     st.session_state.a_button = None
@@ -2977,9 +2979,10 @@ def complex_film(device):
                     st.session_state.first_load_a = False
 
 
-                info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
+                info_index = info_opt.index(film['Info']) if film['Info'] in info_opt else 0
 
                 edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
+                edited_info = edited_info.split(' ',1)[1]
                 st.button('✨', type=st.session_state.a_button, on_click=set_a_button_type)
             
             if edited_info == 'Watched' or edited_info == 'Goat' or edited_info == 'Great':
@@ -3002,7 +3005,6 @@ def complex_film(device):
                 if film['A-Detector'] == 1:
                     st.badge(label='', icon='⭐', color='yellow')
         
- 
         st.markdown('### Tags')
         if st.session_state.simple_edit:
             if film['Tags'] == 'No Tags':
@@ -3294,7 +3296,8 @@ def complex_film(device):
                     st.rerun()
 
     def show_edit_film(film, index):
-        info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
+        info_opt = [opt.split(' ',1)[1] for opt in INFO_OPTS]
+        info_index = info_opt.index(film['Info']) if film['Info'] in info_opt else 0
         with st.container(horizontal_alignment='center'): 
             st.markdown(f"### ✏️ Editing: {film['Code']}")
 
@@ -3436,6 +3439,7 @@ def complex_film(device):
             edited_release_date = edited_release_date.strftime('%d/%m/%Y')
 
         edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
+        edited_info = edited_info.split(' ',1)[1]
 
         if edited_info == 'Watched' or edited_info == 'Goat' or edited_info == 'Great':
             if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
@@ -3742,6 +3746,7 @@ def complex_film(device):
                 new_tags = ', '.join(new_tags)
 
         new_info = st.selectbox('Info', key='new_info', options=INFO_OPTS)
+        new_info = new_info.split(' ',1)[1]
 
         new_a = st.toggle('✨')
 
@@ -5016,9 +5021,11 @@ def complex_actress(device):
             st.markdown('### Tags')
             st.write(film['Tags'])
         else:
-            info_index = INFO_OPTS.index(film['Info']) if film['Info'] in INFO_OPTS else 0
+            info_opt = [opt.split(' ',1)[1] for opt in INFO_OPTS]
+            info_index = info_opt.index(film['Info']) if film['Info'] in info_opt else 0
 
             edited_info = st.selectbox('Status', width='stretch',options=INFO_OPTS, index=info_index)
+            edited_info = edited_info.split(' ',1)[1]
 
             if film['Tags'] == 'No Tags':
                 tags = []
@@ -5383,7 +5390,7 @@ def complex_actress(device):
                                 release += datetime.strptime(film_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
                             
                             if film_watched_df['A-Detector'].iloc[idx] == True:
-                                release += ' 🟡'
+                                release += ' ⭐'
 
                             with st.container(width=img_width):
                                 st.markdown(f"""
@@ -5434,7 +5441,7 @@ def complex_actress(device):
                                 release = datetime.strptime(film_not_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
 
                             if film_not_watched_df['A-Detector'].iloc[idx] == True:
-                                release += ' 🟡'
+                                release += ' ⭐'
                             
                             if 'Downloaded' in film_not_watched_df['Tags'].iloc[idx]:
                                 release += ' ✅'
