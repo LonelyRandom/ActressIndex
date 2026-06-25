@@ -1230,6 +1230,18 @@ def display_film_calender(df):
                 tags = 'AV Debut'
             else:
                 tags = 'No Tags'
+            
+            if not data['Picture'] is None:
+                pic = data['Picture']
+            else:
+                pic = st.secrets.indicators.PLACEHOLDER_IMG_POSTER
+
+            today = pd.to_datetime(date.today())
+
+            if datetime.strptime(data['Month'], '%d/%m/%Y') <= today:
+                status = 1
+            else:
+                status = 0
 
 
             if data['Code'] not in df['Code'].values:
@@ -1237,12 +1249,12 @@ def display_film_calender(df):
                     'Not Listed',
                     data['Code'],
                     '--',
-                    '?',
-                    st.secrets.indicators.PLACEHOLDER_IMG_POSTER,
+                    data['Month'],
+                    pic,
                     tags,
                     'Not Watched',
-                    '?',
-                    '--',
+                    status,
+                    data['Link'],
                     '--',
                     bool(data['A-Detector'])
                 ])
@@ -1253,9 +1265,10 @@ def display_film_calender(df):
         st.session_state.film_df = final_df
         st.toast('✅ Succesfully sent data to database!')
         time.sleep(.5)        
-            
-    if st.button(f'Drop this month -- {dates.strftime("%B").upper()}', width='stretch', type='primary'):
-        set_this_drop(filtered_df, 'Month')
+
+    if st.toggle('Drop this month'):  
+        if st.button(f'Drop this month -- {dates.strftime("%B").upper()}', width='stretch', type='primary'):
+            set_this_drop(filtered_df, 'Month')
     if st.button(f'Drop this date -- {st.session_state.show_date.strftime("%d %B %Y").upper()}', width='stretch', type='primary'):
         set_this_drop(filtered_df, 'Date')
     with st.container(horizontal=True):
@@ -1548,7 +1561,7 @@ def display_film_grid(df, tag_df):
         with st.container(horizontal=True):
             filters = st.radio(
                     "Type :",
-                    ["🟢 Watched", "🔴 Not Watched"],
+                    ["🔴 Not Watched", "🟢 Watched"],
                     horizontal=True,
                     on_change=reset_page,
                     width='content'
@@ -1633,7 +1646,7 @@ def display_film_grid(df, tag_df):
             
         sort_type = st.selectbox(
             'Sort Type', 
-            options=['🔤 (A-Z)', '🔤 (Z-A)', '🗓️ Oldest', '🗓️ Newest'], 
+            options=['🗓️ Newest', '🗓️ Oldest', '🔤 (A-Z)', '🔤 (Z-A)'], 
             key='sort_type', 
             on_change=reset_page
         ).split(' ',1)[1]
