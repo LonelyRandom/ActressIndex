@@ -1251,7 +1251,7 @@ def display_film_calender(df):
                 new_rows.append([
                     'Not Listed',
                     data['Code'],
-                    '--',
+                    data['Title'],
                     data['Month'],
                     pic,
                     tags,
@@ -2095,6 +2095,7 @@ def display_film_grid(df, tag_df):
 
 @st.dialog('Scrap', width='small')
 def display_scrap_manual():
+    st.write(st.session_state.film_layout)
     df = init_dataframe_film()
     actress_df = init_dataframe_actress()
     def reset_scrap():
