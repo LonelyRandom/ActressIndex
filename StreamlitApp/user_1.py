@@ -983,19 +983,19 @@ def set_calender_flag(index):
     st.toast(f"{st.session_state.calender_data.at[index, 'Code']} Flag changed to {edit_flag}")
     st.session_state.calender_data.at[index, 'Flag'] = edit_flag
     row = index+2
-    calendar_worksheet().update(f'E{row}:E{row}', [[edit_flag]])
+    calendar_worksheet().update(f'F{row}:F{row}', [[edit_flag]])
 
 def set_calender_a(index):
     st.toast(f"✨️ {st.session_state.calender_data.at[index, 'Code']} A-Detector Flag changed to {st.session_state.get(f'{index}_a_toggle')}")
     st.session_state.calender_data.at[index, 'A-Detector'] = st.session_state.get(f'{index}_a_toggle')
     row = index+2
-    calendar_worksheet().update(f'F{row}:F{row}', [[st.session_state.get(f'{index}_a_toggle')]])
+    calendar_worksheet().update(f'G{row}:G{row}', [[st.session_state.get(f'{index}_a_toggle')]])
 
 def set_calender_debut(index):
     st.toast(f"🆕 {st.session_state.calender_data.at[index, 'Code']} Debut Flag changed to {st.session_state.get(f'{index}_debut_toggle')}")
     st.session_state.calender_data.at[index, 'is_Debut'] = st.session_state.get(f'{index}_debut_toggle')
     row = index+2
-    calendar_worksheet().update(f'G{row}:G{row}', [[st.session_state.get(f'{index}_debut_toggle')]])
+    calendar_worksheet().update(f'H{row}:H{row}', [[st.session_state.get(f'{index}_debut_toggle')]])
 
 def display_film_calender(df):
     if 'scroll_to_date' not in st.session_state:
