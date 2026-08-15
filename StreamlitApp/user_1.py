@@ -2417,29 +2417,10 @@ def display_scrap_manual():
                 if 'width_option' not in st.session_state:
                     st.session_state.width_option = 'Device 1'
 
-                st.markdown(
-                    """
-                    <style>
-                    [class*="st-key-film_edit_"] p {
-                        font-size: 13px !important;
-                    }
-                    </style>
-                    """,
-                    unsafe_allow_html=True
-                )
-
                 if st.session_state.width_option == 'Device 1':
-                    image_width = 181
-                    btn_width = 40
-                    btn_height = 45
-                    date_size = 14
-                    film_size = 9
+                    image_width = 150
                 else:
                     image_width = 144
-                    btn_width = 36
-                    btn_height = 35
-                    date_size = 10
-                    film_size = 7
 
                 films = soup.select("div.col-4.col-md-3.col-lg-2")
                 with st.container(horizontal=True):
@@ -2465,7 +2446,7 @@ def display_scrap_manual():
                                 st.checkbox('Append', key=f'checkbox_{code}', value=True)
                                 st.space('small')
 
-                            if not st.session_state[f'checkbox_{code}']:
+                            if st.session_state[f'checkbox_{code}']:
                                 scrap_new.append([
                                     'Not Listed',
                                     code,
@@ -2480,9 +2461,7 @@ def display_scrap_manual():
                                     False
                                 ])
 
-                    st.write(scrap_new)
                     st.session_state.scrap_new = scrap_new
-
             else: # Cast
                 def extract_field(field, text):
                     pattern = rf"{field}:\s*(.*?)\s*(?=\s*-\s*[A-Za-z ]+:|\n|$)"
@@ -2604,7 +2583,11 @@ def display_scrap_manual():
                     st.error('Actress not found in database! ❌')                        
         else:
             if soup.find():
-                st.info('ℹ️ Scrapping Film')
+                multiple = soup.select_one("div.col-4.col-md-3.col-lg-2")
+                if multiple:
+                    st.info('ℹ️ Scrapping Film Multiple')
+                else:
+                    st.info('ℹ️ Scrapping Film Single')
             else:
                 st.info('ℹ️ Scrapping Cast')
 
