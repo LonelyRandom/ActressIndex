@@ -2095,7 +2095,6 @@ def display_film_grid(df, tag_df):
 
 @st.dialog('Scrap', width='small')
 def display_scrap_manual():
-    st.write(st.session_state.film_layout)
     df = init_dataframe_film()
     actress_df = init_dataframe_actress()
     def reset_scrap():
@@ -2172,10 +2171,16 @@ def display_scrap_manual():
                 st.session_state.actress_df = final_df
 
         elif st.session_state.s_type == "film-multiple":
-            scrap_df = pd.DataFrame(st.session_state.scrap_new, columns=df.columns)
-            new_df = pd.concat([df,scrap_df], ignore_index=True)
-            st.session_state.film_df = new_df
-            film_worksheet().append_rows(st.session_state.scrap_new)
+            if st.session_state.film_layout not in 'Calendar':
+                scrap_df = pd.DataFrame(st.session_state.scrap_new, columns=df.columns)
+                new_df = pd.concat([df,scrap_df], ignore_index=True)
+                st.session_state.film_df = new_df
+                film_worksheet().append_rows(st.session_state.scrap_new)
+            else:
+                scrap_df = pd.DataFrame(st.session_state.scrap_new, columns=st.session_state.calender_data.columns)
+                new_df = pd.concat([st.session_state.calender_data,scrap_df], ignore_index=True)
+                st.session_state.calender_data = new_df
+                calendar_worksheet().append_rows(st.session_state.scrap_new)
         else: # Cast
             if st.session_state.scrap_new[3] in actress_df['Name (Kanji)'].values:
                 index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[3]].index
@@ -2440,27 +2445,47 @@ def display_scrap_manual():
                         link = film.select_one("a.video-link").get("href")
                         url = 'https://javtrailers.com' + link
 
-                        if code not in df['Code'].values:
-                            with st.container(width=image_width):
-                                st.image(img, caption=formatted_date)
-                                st.link_button(code, url, width='stretch', type='primary')
-                                st.checkbox('Append', key=f'checkbox_{code}', value=True)
-                                st.space('small')
+                        if st.session_state.film_layout not in 'Calendar':
+                            if code not in df['Code'].values:
+                                with st.container(width=image_width):
+                                    st.image(img, caption=formatted_date)
+                                    st.link_button(code, url, width='stretch', type='primary')
+                                    st.checkbox('Append', key=f'checkbox_{code}', value=True)
+                                    st.space('small')
 
-                            if st.session_state[f'checkbox_{code}']:
-                                scrap_new.append([
-                                    'Not Listed',
-                                    code,
-                                    title,
-                                    formatted_date,
-                                    img,
-                                    'No Tags',
-                                    'Not Watched',
-                                    status,
-                                    url,
-                                    '--',
-                                    False
-                                ])
+                                if st.session_state[f'checkbox_{code}']:
+                                    scrap_new.append([
+                                        'Not Listed',
+                                        code,
+                                        title,
+                                        formatted_date,
+                                        img,
+                                        'No Tags',
+                                        'Not Watched',
+                                        status,
+                                        url,
+                                        '--',
+                                        False
+                                    ])
+                        else:
+                            if code not in st.session_state.calender_data['Code'].values:
+                                with st.container(width=image_width):
+                                    st.image(img, caption=formatted_date)
+                                    st.link_button(code, url, width='stretch', type='primary')
+                                    st.checkbox('Append', key=f'checkbox_{code}', value=True)
+                                    st.space('small')
+
+                                if st.session_state[f'checkbox_{code}']:
+                                    scrap_new.append([
+                                        code,
+                                        title,
+                                        formatted_date,
+                                        img,
+                                        url,
+                                        'Not Checked',
+                                        False,
+                                        False
+                                    ])
 
                     st.session_state.scrap_new = scrap_new
             else: # Cast
