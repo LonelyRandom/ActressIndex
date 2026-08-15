@@ -2418,7 +2418,7 @@ def display_scrap_manual():
                     st.session_state.width_option = 'Device 1'
 
                 if st.session_state.width_option == 'Device 1':
-                    image_width = 150
+                    image_width = 155
                 else:
                     image_width = 144
 
