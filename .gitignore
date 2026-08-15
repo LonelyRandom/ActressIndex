@@ -20,3 +20,5 @@ secrets.toml
 # OS
 .DS_Store
 Thumbs.db
+
+old_user.py

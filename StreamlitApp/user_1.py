@@ -274,8 +274,9 @@ def reset_search_by():
 def reset_tag():
     st.session_state.tag_bar = []
     st.session_state.film_page = 1
-    
+            
 def display_film_card(df, tag_df):
+    st.session_state.data_detailed_index = []
     """
     Menampilkan DataFrame aktris dalam bentuk card yang menarik
     
@@ -311,6 +312,8 @@ def display_film_card(df, tag_df):
         st.session_state.show_date = date.today()
     if 'date_clicked' not in st.session_state:
         st.session_state.date_clicked = False
+    if 'data_detailed_index' not in st.session_state:
+        st.session_state.data_detailed_index = []
     
     if st.session_state.width_option == 'Device 1':
         btn_width = 40
@@ -611,7 +614,7 @@ def display_film_card(df, tag_df):
             text-align: center;
         ">
             <div style="font-size: 14px; color: gray;">
-                Total Film
+                🎬 Total Film
             </div>
             <div style="font-size: 28px; font-weight: bold;">
                 {len(filtered_df):,}
@@ -625,15 +628,15 @@ def display_film_card(df, tag_df):
         st.markdown(
         f"""
         <div style="
-            border: 1px solid rgba(49, 51, 63, 1);
+            border: 1px solid rgba(52, 199, 89, .5);
             border-radius: 10px;
             padding: 12px;
             text-align: center;
         ">
-            <div style="font-size: 14px; color: gray;">
-                Watched
+            <div style="font-size: 14px; color: rgba(52, 199, 89, .7);">
+                🟢 Watched
             </div>
-            <div style="font-size: 28px; font-weight: bold;">
+            <div style="font-size: 28px; font-weight: bold; color: rgba(52, 199, 89, 1);">
                 {watched_count:,}
             </div>
         </div>
@@ -643,15 +646,15 @@ def display_film_card(df, tag_df):
         st.markdown(
             f"""
             <div style="
-                border: 1px solid rgba(49, 51, 63, 1);
+                border: 1px solid rgba(0, 122, 255, .5);
                 border-radius: 10px;
                 padding: 12px;
                 text-align: center;
             ">
-                <div style="font-size: 14px; color: gray;">
-                    Great
+                <div style="font-size: 14px; color: rgba(0, 122, 255, .7);">
+                    🔵 Great
                 </div>
-                <div style="font-size: 28px; font-weight: bold;">
+                <div style="font-size: 28px; font-weight: bold; color: rgba(0, 122, 255, 1);">
                     {great_count:,}
                 </div>
             </div>
@@ -661,15 +664,15 @@ def display_film_card(df, tag_df):
         st.markdown(
             f"""
             <div style="
-                border: 1px solid rgba(49, 51, 63, 1);
+                border: 1px solid rgba(168, 85, 247, .5);
                 border-radius: 10px;
                 padding: 12px;
                 text-align: center;
             ">
-                <div style="font-size: 14px; color: gray;">
-                    Goat
+                <div style="font-size: 14px; color: rgba(168, 85, 247, .7);">
+                    🟣 Goat
                 </div>
-                <div style="font-size: 28px; font-weight: bold;">
+                <div style="font-size: 28px; font-weight: bold; color: rgba(168, 85, 247, 1);">
                     {goat_count:,}
                 </div>
             </div>
@@ -2146,7 +2149,7 @@ def display_scrap_manual():
     #         SAVE SCRAP
     # ==============================
     if st.session_state.save_scrap:
-        if st.session_state.s_type == "film": # Film
+        if st.session_state.s_type == "film-single": # Film
             if st.session_state.scrap_new[1] in df['Code'].values:
                 index = df.loc[df['Code'] == st.session_state.scrap_new[1]].index
                 df.loc[index] = st.session_state.scrap_new
@@ -2166,7 +2169,12 @@ def display_scrap_manual():
                 new_df = pd.DataFrame(st.session_state.actress_new, columns=actress_df.columns)
                 final_df = pd.concat([actress_df, new_df], ignore_index=True)
                 st.session_state.actress_df = final_df
-                
+
+        elif st.session_state.s_type == "film-multiple":
+            scrap_df = pd.DataFrame(st.session_state.scrap_new, columns=df.columns)
+            new_df = pd.concat([df,scrap_df], ignore_index=True)
+            st.session_state.film_df = new_df
+            film_worksheet().append_rows(st.session_state.scrap_new)
         else: # Cast
             if st.session_state.scrap_new[3] in actress_df['Name (Kanji)'].values:
                 index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[3]].index
@@ -2189,12 +2197,16 @@ def display_scrap_manual():
     # ========================
     elif st.session_state.show_scrap:
         st.session_state.start_scrap = False
-        if st.session_state.s_type == "film":
+        if st.session_state.s_type == "film-single":
             st.write("Isi Scrap Film")
             st.write(st.session_state.scrap_new)
             st.space("small")
             st.write("Actress New")
             st.write(st.session_state.actress_new)
+        elif st.session_state.s_type == "film-multiple":
+            st.write("Isi Scrap Film")
+            st.write(st.session_state.scrap_new)
+            st.space("small")
         else:
             st.write("Isi scrap Cast")
             st.write(st.session_state.scrap_new)
@@ -2205,12 +2217,16 @@ def display_scrap_manual():
     if st.session_state.html_bar:
         soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
         if soup.find():
-            st.session_state.s_type = 'film'
+            multiple = soup.select_one("div.col-4.col-md-3.col-lg-2")
+            if multiple:
+                st.session_state.s_type = 'film-multiple'
+            else:
+                st.session_state.s_type = 'film-single'
         else:
             st.session_state.s_type = 'cast'
-        
+
         if st.session_state.start_scrap:
-            if st.session_state.s_type == 'film':
+            if st.session_state.s_type == 'film-single':
                 film_title = soup.find('h1').get_text(strip=True)
 
                 section = soup.find("div", class_="col-md-9")
@@ -2396,6 +2412,76 @@ def display_scrap_manual():
 
                 st.session_state.actress_new = casts
                 st.session_state.scrap_new = scrap_new
+
+            elif st.session_state.s_type == 'film-multiple':
+                if 'width_option' not in st.session_state:
+                    st.session_state.width_option = 'Device 1'
+
+                st.markdown(
+                    """
+                    <style>
+                    [class*="st-key-film_edit_"] p {
+                        font-size: 13px !important;
+                    }
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                if st.session_state.width_option == 'Device 1':
+                    image_width = 181
+                    btn_width = 40
+                    btn_height = 45
+                    date_size = 14
+                    film_size = 9
+                else:
+                    image_width = 140
+                    btn_width = 36
+                    btn_height = 35
+                    date_size = 10
+                    film_size = 7
+
+                films = soup.select("div.col-4.col-md-3.col-lg-2")
+                with st.container(horizontal=True):
+                    for film in films:
+                        img = film.find("div", class_="card-img-container").find("img").get("src")
+                        title = film.select_one("p.vid-title").get_text(strip=True)
+                        code = title.split()[0]
+                        dates = film.select_one("small.text-muted").get_text(strip=True)
+                        formatted_date = datetime.strptime(dates, "%d %b %Y").strftime("%d/%m/%Y")
+
+                        status_date = datetime.strptime(dates, "%d %b %Y")
+                        if status_date.today().date() > date.today():
+                            status = 0
+                        else:
+                            status = 1
+                        link = film.select_one("a.video-link").get("href")
+                        url = 'https://javtrailers.com' + link
+
+                        if code not in df['Code'].values:
+                            with st.container():
+                                st.image(img, caption=formatted_date, width=image_width)
+                                st.link_button(code, url, width='stretch', type='primary')
+                                st.checkbox('Append', key=f'checkbox_{code}', value=True)
+                                st.space('small')
+
+                            if not st.session_state[f'checkbox_{code}']:
+                                scrap_new.append([
+                                    'Not Listed',
+                                    code,
+                                    title,
+                                    formatted_date,
+                                    img,
+                                    'No Tags',
+                                    'Not Watched',
+                                    status,
+                                    url,
+                                    '--',
+                                    False
+                                ])
+
+                    st.write(scrap_new)
+                    st.session_state.scrap_new = scrap_new
 
             else: # Cast
                 def extract_field(field, text):
@@ -4492,6 +4578,35 @@ def complex_film(device):
         if st.button('⬆️ Back to top', width='stretch'):
             st.session_state.scroll_to_top = True
     
+    if st.session_state.film_layout == 'Detailed': #cssnya
+        if st.session_state.width_option == 'Device 1': 
+            img_card_height = 215
+            img_card_width = 115
+            actress_width = 81
+        else:
+            img_card_height = 202
+            img_card_width = 106
+            actress_width = 76
+        st.write(st.session_state.data_detailed_index)
+        id = [x[1] for x in st.session_state.data_detailed_index]
+        color = [x[0] for x in st.session_state.data_detailed_index]
+        for i in range(len(st.session_state.data_detailed_index)):
+            st.write(id[i], color[i])
+            st.markdown(f"""<style>
+                [class*="st-key-card-single-{id[i]}"] {{
+                    border: 2px solid {color[i]}; 
+                    border-radius: 15px; 
+                    padding: 10px; 
+                    margin: 10px 0; 
+                    background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+                    transition: all 0.3s ease; 
+                    height: {img_card_height}px; 
+                    width: {img_card_width}px;
+                    display: flex; 
+                    flex-direction: column;
+                }}
+            </style>""", unsafe_allow_html=True)
     st.markdown("""
     <style>
     ul[data-testid="stSelectboxVirtualDropdown"] li:nth-child(odd){
