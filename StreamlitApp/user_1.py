@@ -2435,7 +2435,7 @@ def display_scrap_manual():
                     date_size = 14
                     film_size = 9
                 else:
-                    image_width = 168
+                    image_width = 140
                     btn_width = 36
                     btn_height = 35
                     date_size = 10
@@ -2459,8 +2459,8 @@ def display_scrap_manual():
                         url = 'https://javtrailers.com' + link
 
                         if code not in df['Code'].values:
-                            with st.container():
-                                st.image(img, caption=formatted_date, width=image_width)
+                            with st.container(width=image_width):
+                                st.image(img, caption=formatted_date)
                                 st.link_button(code, url, width='stretch', type='primary')
                                 st.checkbox('Append', key=f'checkbox_{code}', value=True)
                                 st.space('small')
