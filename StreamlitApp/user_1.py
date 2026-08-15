@@ -2435,7 +2435,7 @@ def display_scrap_manual():
                     date_size = 14
                     film_size = 9
                 else:
-                    image_width = 140
+                    image_width = 168
                     btn_width = 36
                     btn_height = 35
                     date_size = 10
