@@ -983,19 +983,19 @@ def set_calender_flag(index):
     st.toast(f"{st.session_state.calender_data.at[index, 'Code']} Flag changed to {edit_flag}")
     st.session_state.calender_data.at[index, 'Flag'] = edit_flag
     row = index+2
-    calendar_worksheet().update(f'E{row}:E{row}', [[edit_flag]])
+    calendar_worksheet().update(f'F{row}:F{row}', [[edit_flag]])
 
 def set_calender_a(index):
     st.toast(f"✨️ {st.session_state.calender_data.at[index, 'Code']} A-Detector Flag changed to {st.session_state.get(f'{index}_a_toggle')}")
     st.session_state.calender_data.at[index, 'A-Detector'] = st.session_state.get(f'{index}_a_toggle')
     row = index+2
-    calendar_worksheet().update(f'F{row}:F{row}', [[st.session_state.get(f'{index}_a_toggle')]])
+    calendar_worksheet().update(f'G{row}:G{row}', [[st.session_state.get(f'{index}_a_toggle')]])
 
 def set_calender_debut(index):
     st.toast(f"🆕 {st.session_state.calender_data.at[index, 'Code']} Debut Flag changed to {st.session_state.get(f'{index}_debut_toggle')}")
     st.session_state.calender_data.at[index, 'is_Debut'] = st.session_state.get(f'{index}_debut_toggle')
     row = index+2
-    calendar_worksheet().update(f'G{row}:G{row}', [[st.session_state.get(f'{index}_debut_toggle')]])
+    calendar_worksheet().update(f'H{row}:H{row}', [[st.session_state.get(f'{index}_debut_toggle')]])
 
 def display_film_calender(df):
     if 'scroll_to_date' not in st.session_state:
@@ -1158,7 +1158,7 @@ def display_film_calender(df):
         st.session_state.calender_data = calender_df
         batch_data = [
             {
-                "range": f"E{row+2}",
+                "range": f"F{row+2}",
                 "values": [['Drop']]
             }
             for row in calender_df[calender_df['Flag'] == 'Not Checked'].index.to_list()
@@ -1193,7 +1193,7 @@ def display_film_calender(df):
         st.session_state.calender_data = calender_df_copy
         batch_data = [
             {
-                "range": f"E{row+2}",
+                "range": f"F{row+2}",
                 "values": [['Drop']]
             }
             for row in index
@@ -1208,7 +1208,7 @@ def display_film_calender(df):
         calender_df.loc[calender_df['Code'].isin(df['Code'].values), 'Flag'] = 'Pass'
         start_row = 2
         end_row = start_row + len(calender_df)
-        calendar_worksheet().update(f'A{start_row}:G{end_row}', calender_df.values.tolist())
+        calendar_worksheet().update(f'A{start_row}:H{end_row}', calender_df.values.tolist())
         st.session_state.calender_data = calender_df
         st.toast('✅ Succesfully match data!')
         time.sleep(.5)
