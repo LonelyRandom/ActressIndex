@@ -919,7 +919,7 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
         <div>
             <div style="display: flex; justify-content: center; margin-bottom: 1px;">"""
     
-    if actress['A-Detector'] == 1:
+    if actress['A-Detector'] == 1 and st.session_state.a_pass == '110604':
         card_html += f"""<span style="
                         background: linear-gradient(90deg, {status_color}, #FFD700);
                         color: white;
@@ -1378,7 +1378,8 @@ def display_film_calender(df):
                     
                     st.image(url, caption=film['Code'], width=image_width)
                     with st.container(horizontal=True):
-                        st.toggle('✨', key=f'{real_index}_a_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
+                        if st.session_state.a_pass == '110604':
+                            st.toggle('✨', key=f'{real_index}_a_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
                         st.toggle('🆕', key=f'{real_index}_debut_toggle', value=film['is_Debut'], on_change=set_calender_debut, args=(real_index,))
                     st.radio('Flag', options=['🟢 P','🔴 D','⚪️ ?', '🟡 U'], index=flag_idx, key=f'{real_index}_radio', horizontal=True, on_change=set_calender_flag, args=(real_index,))
                     st.link_button('Preview', film['Link'], width='stretch', type='primary')
@@ -1892,7 +1893,7 @@ def display_film_grid(df, tag_df):
                         real_index = rows_to_display.index[i]
 
                         with st.container(horizontal_alignment='center', horizontal=True):
-                            if film['A-Detector'] == 1:
+                            if film['A-Detector'] == 1 and st.session_state.a_pass == '110604':
                                 film['badge_color'] = 'yellow'
                             
                             if film['Release Date'] == '?':
@@ -2072,7 +2073,7 @@ def display_film_grid(df, tag_df):
                             </div>
                         """, unsafe_allow_html=True)
 
-                        if film['A-Detector'] == 1:
+                        if film['A-Detector'] == 1 and st.session_state.a_pass == '110604':
                             if st.button(f'⭐ {film["Code"]}', key=f'recommend_film_{real_index}', width='stretch', type='primary'):
                                 st.session_state.viewing_film_index = real_index
                                 st.session_state.filtered_film_data = random_film
@@ -2309,7 +2310,13 @@ def display_scrap_manual():
                     a_index = False
                 
                 st.space('small')
-                input_a = st.toggle('✨ A-Detector', value=a_index)
+                if st.session_state.a_pass == '110604':
+                    input_a = st.toggle('✨ A-Detector', value=a_index)
+                else:
+                    if dvd_id in df["Code"].values:
+                        input_a = match_film_data["A-Detector"].iloc[0]
+                    else:
+                        input_a = False
                 
                 st.space('small')
                 background_text('Gallery:', 'yellow')
@@ -2633,6 +2640,8 @@ def complex_home():
         st.session_state.film_layout = 'Detailed'
     if 'display_actress' not in st.session_state:
         st.session_state.display_actress = 'Gallery' 
+    if 'a_pass' not in st.session_state:
+        st.session_state.a_pass = '1'
     
     st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
     df_actress = init_dataframe_actress()
@@ -3091,7 +3100,9 @@ def complex_film(device):
 
                 edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
                 edited_info = edited_info.split(' ',1)[1]
-                st.button('✨', type=st.session_state.a_button, on_click=set_a_button_type)
+
+                if st.session_state.a_pass == '110604':
+                    st.button('✨', type=st.session_state.a_button, on_click=set_a_button_type) #checkpoint
             
             if edited_info == 'Watched' or edited_info == 'Goat' or edited_info == 'Great':
                 if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
@@ -3110,7 +3121,7 @@ def complex_film(device):
         else: 
             with st.container(horizontal=True):   
                 st.badge(label=film['Info'], icon=icons, color=colors)
-                if film['A-Detector'] == 1:
+                if film['A-Detector'] == 1 and st.session_state.a_pass == '110604':
                     st.badge(label='', icon='⭐', color='yellow')
         
         st.markdown('### Tags')
@@ -3234,38 +3245,39 @@ def complex_film(device):
                 (btn for btn in a_btn if btn["Value"] == film["A-Detector"]),
                 None
             )
-            with st.container(horizontal=True, horizontal_alignment='left', width='content'):
-                with st.container(width='content'):
-                    st.markdown('### A-Detector : ')
-                if st.button(f':{a_film["Color"]}-background[{a_film["Label"]}]', width='content', type='tertiary'):
-                    a_text = a_film['Value']
-                    row = filtered_index + 2
-                    film_worksheet().update(f'K{row}:K{row}', [[a_text]])
-                    df.at[filtered_index, 'A-Detector'] = a_text   
-                    st.session_state.film_df = values_handling(df,'film')
-                    st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                    st.session_state.filtered_film_data.at[filtered_index, 'A-Detector'] = a_text
-                    st.toast(f'{a_film["Label"]} {film["Code"]} is :{a_film["Color"]}[{a_film["Value"]}]!')
-                    time.sleep(.5)
-                    st.rerun()
-                st.markdown(
-                    "<div style='text-align:center; font-size:24px;'>|</div>",
-                    unsafe_allow_html=True
-                )
-                for data in a_btn:
-                    label, value, color = data["Label"], data["Value"], data["Color"]
-                    if film['A-Detector'] != value:
-                        if st.button(f':{color}-background[{label}]', width='content', type='tertiary'):
-                            a_text = value
-                            row = filtered_index + 2
-                            film_worksheet().update(f'K{row}:K{row}', [[a_text]])
-                            df.at[filtered_index, 'A-Detector'] = a_text
-                            st.session_state.film_df = values_handling(df,'film')
-                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                            st.session_state.filtered_film_data.at[filtered_index, 'A-Detector'] = a_text
-                            st.toast(f'{label} {film["Code"]} is :{color}[{value}]!')
-                            time.sleep(.5)
-                            st.rerun()
+            if st.session_state.a_pass == '110604':
+                with st.container(horizontal=True, horizontal_alignment='left', width='content'):
+                    with st.container(width='content'):
+                        st.markdown('### A-Detector : ')
+                    if st.button(f':{a_film["Color"]}-background[{a_film["Label"]}]', width='content', type='tertiary'):
+                        a_text = a_film['Value']
+                        row = filtered_index + 2
+                        film_worksheet().update(f'K{row}:K{row}', [[a_text]])
+                        df.at[filtered_index, 'A-Detector'] = a_text   
+                        st.session_state.film_df = values_handling(df,'film')
+                        st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                        st.session_state.filtered_film_data.at[filtered_index, 'A-Detector'] = a_text
+                        st.toast(f'{a_film["Label"]} {film["Code"]} is :{a_film["Color"]}[{a_film["Value"]}]!')
+                        time.sleep(.5)
+                        st.rerun()
+                    st.markdown(
+                        "<div style='text-align:center; font-size:24px;'>|</div>",
+                        unsafe_allow_html=True
+                    )
+                    for data in a_btn:
+                        label, value, color = data["Label"], data["Value"], data["Color"]
+                        if film['A-Detector'] != value:
+                            if st.button(f':{color}-background[{label}]', width='content', type='tertiary'):
+                                a_text = value
+                                row = filtered_index + 2
+                                film_worksheet().update(f'K{row}:K{row}', [[a_text]])
+                                df.at[filtered_index, 'A-Detector'] = a_text
+                                st.session_state.film_df = values_handling(df,'film')
+                                st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                                st.session_state.filtered_film_data.at[filtered_index, 'A-Detector'] = a_text
+                                st.toast(f'{label} {film["Code"]} is :{color}[{value}]!')
+                                time.sleep(.5)
+                                st.rerun()
 
             with st.container(horizontal=True, width='stretch', horizontal_alignment='left'):
                 with st.container(width='content'):
@@ -3480,7 +3492,10 @@ def complex_film(device):
         
         st.subheader("Basic Information")
         with st.container(horizontal=True):
-            edited_a = st.toggle('✨', value=film['A-Detector'])
+            if st.session_state.a_pass == '110604':
+                edited_a = st.toggle('✨', value=film['A-Detector'])
+            else:
+                edited_a = film['A-Detector']
             
         
         film_link = film['Link']
@@ -3954,7 +3969,11 @@ def complex_film(device):
     if st.session_state.film_layout not in 'Calendar':
         with st.sidebar:
             st.subheader('⚙️ Page Option')
-            show_a = st.toggle('✨')
+            st.session_state.a_pass = st.text_input('✨', width='stretch')
+            if st.session_state.a_pass == '110604':
+                show_a = st.toggle('✨')
+            else:
+                show_a = False
     
     st.markdown(
         """
@@ -4031,7 +4050,7 @@ def complex_film(device):
                                         </div>
                                     </div>
                                 """, unsafe_allow_html=True)
-                                if random_row['A-Detector'].values[0] == True:
+                                if random_row['A-Detector'].values[0] == True and st.session_state.a_pass == '110604':
                                     st.markdown(f"<h3 style='text-align: center;'>⭐ {random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
                                 else:
                                     st.markdown(f"<h3 style='text-align: center;'>{random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
@@ -5152,7 +5171,7 @@ def complex_actress(device):
                 
             with st.container(horizontal=True):
                 st.badge(label=film['Info'], icon=icons, color=colors)
-                if film['A-Detector'] == 1:
+                if film['A-Detector'] == 1 and st.session_state.a_pass == '110604':
                     st.badge(label='', icon='⭐', color='yellow')
 
             st.markdown('### Tags')
@@ -5185,7 +5204,10 @@ def complex_actress(device):
 
             st.write(edited_tags)
 
-            edited_a = st.toggle('✨', value=film['A-Detector'])
+            if st.session_state.a_pass == '110604':
+                edited_a = st.toggle('✨', value=film['A-Detector'])
+            else:
+                edited_a = film['A-Detector']
 
             if edited_a:
                 edited_a = True
@@ -5526,7 +5548,7 @@ def complex_actress(device):
                             else:
                                 release += datetime.strptime(film_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
                             
-                            if film_watched_df['A-Detector'].iloc[idx] == True:
+                            if film_watched_df['A-Detector'].iloc[idx] == True and st.session_state.a_pass == '110604':
                                 release += ' ⭐'
 
                             with st.container(width=img_width):
@@ -5577,7 +5599,7 @@ def complex_actress(device):
                             else:
                                 release = datetime.strptime(film_not_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
 
-                            if film_not_watched_df['A-Detector'].iloc[idx] == True:
+                            if film_not_watched_df['A-Detector'].iloc[idx] == True and st.session_state.a_pass == '110604':
                                 release += ' ⭐'
                             
                             if 'Downloaded' in film_not_watched_df['Tags'].iloc[idx]:

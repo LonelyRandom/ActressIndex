@@ -9,6 +9,7 @@ coba_scrapping.py
 .venv/
 venv/
 complex_user.py
+before.py
 
 # Streamlit secrets
 secrets.toml
