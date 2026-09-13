@@ -858,7 +858,7 @@ def display_film_card(df, tag_df):
             display_single_card('recommend', img_card_height, img_card_width, actress, real_index, random_film, i, 0)
     st.markdown('---')
 
-    
+
 
 def display_single_card(keys, img_card_height, img_card_width, actress, card_id, filtered_df, i, start_idx):
     """
@@ -919,7 +919,7 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
         <div>
             <div style="display: flex; justify-content: center; margin-bottom: 1px;">"""
     
-    if actress['A-Detector'] == 1 and st.session_state.a_pass == '110604':
+    if actress['A-Detector'] == 1 and st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
         card_html += f"""<span style="
                         background: linear-gradient(90deg, {status_color}, #FFD700);
                         color: white;
@@ -951,6 +951,16 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
 
     with st.container(width=img_card_width):
         st.markdown(card_html, unsafe_allow_html=True)
+        if st.session_state.a_pass == st.secrets.indicators.USER_1_DEL_PASS:
+            if keys == 'main':
+                if st.checkbox('Delete', key=f'del_film_{card_id}', value=card_id in st.session_state.del_index):
+                    if card_id not in st.session_state.del_index:
+                        st.session_state.del_index.append(int(card_id))
+            else:
+                if st.checkbox('Delete', key=f'rec_del_film_{card_id}'):
+                    if card_id not in st.session_state.del_index:
+                        st.session_state.del_index.append(int(card_id))
+
         if keys == 'main':
             if st.button(actress['Code'],key=f'view_film_{card_id}',width='stretch', type='primary'):
                 st.session_state.viewing_film_index = card_id
@@ -965,6 +975,7 @@ def display_single_card(keys, img_card_height, img_card_width, actress, card_id,
                 st.session_state.filtered_data_position = start_idx + i
                 st.session_state.editing_film_index = None
                 st.rerun()
+
 def reset_calender_page():
     """Reset halaman ke 1"""
     st.session_state.calender_page = 1
@@ -1378,7 +1389,7 @@ def display_film_calender(df):
                     
                     st.image(url, caption=film['Code'], width=image_width)
                     with st.container(horizontal=True):
-                        if st.session_state.a_pass == '110604':
+                        if st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                             st.toggle('✨', key=f'{real_index}_a_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
                         st.toggle('🆕', key=f'{real_index}_debut_toggle', value=film['is_Debut'], on_change=set_calender_debut, args=(real_index,))
                     st.radio('Flag', options=['🟢 P','🔴 D','⚪️ ?', '🟡 U'], index=flag_idx, key=f'{real_index}_radio', horizontal=True, on_change=set_calender_flag, args=(real_index,))
@@ -1893,7 +1904,7 @@ def display_film_grid(df, tag_df):
                         real_index = rows_to_display.index[i]
 
                         with st.container(horizontal_alignment='center', horizontal=True):
-                            if film['A-Detector'] == 1 and st.session_state.a_pass == '110604':
+                            if film['A-Detector'] == 1 and st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                                 film['badge_color'] = 'yellow'
                             
                             if film['Release Date'] == '?':
@@ -1940,6 +1951,11 @@ def display_film_grid(df, tag_df):
                                 {release}
                             </div>
                         """, unsafe_allow_html=True)
+
+                        if st.session_state.a_pass == st.secrets.indicators.USER_1_DEL_PASS:
+                            if st.checkbox('Delete', key=f'del_film_{real_index}', value=real_index in st.session_state.del_index):
+                                if real_index not in st.session_state.del_index:
+                                    st.session_state.del_index.append(int(real_index))
 
                         if st.button(film['Code'], key=f'film_edit_{real_index}', width='stretch', type='primary'):
                             st.session_state.viewing_film_index = real_index
@@ -2027,7 +2043,6 @@ def display_film_grid(df, tag_df):
                                 ">
                         </div>
                     """, unsafe_allow_html=True)
-                    
                     # Button
                     if st.button(random_df['Name (Alphabet)'][idx], width='stretch', type='tertiary', key=f"recommend_{random_df['Name (Alphabet)'][idx]}_{idx}", on_click=reset_page):
                         st.session_state.search_text = random_df['Name (Alphabet)'][idx]
@@ -2073,7 +2088,12 @@ def display_film_grid(df, tag_df):
                             </div>
                         """, unsafe_allow_html=True)
 
-                        if film['A-Detector'] == 1 and st.session_state.a_pass == '110604':
+                        if st.session_state.a_pass == st.secrets.indicators.USER_1_DEL_PASS:
+                            if st.checkbox('Delete', key=f'rec_del_film_{real_index}'):
+                                if real_index not in st.session_state.del_index:
+                                    st.session_state.del_index.append(int(real_index))
+
+                        if film['A-Detector'] == 1 and st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                             if st.button(f'⭐ {film["Code"]}', key=f'recommend_film_{real_index}', width='stretch', type='primary'):
                                 st.session_state.viewing_film_index = real_index
                                 st.session_state.filtered_film_data = random_film
@@ -2088,7 +2108,8 @@ def display_film_grid(df, tag_df):
 
                         st.space('small')
 
-        st.markdown('---')            
+        st.markdown('---')   
+        st.write(st.session_state.del_index)         
     else:
         st.info('No film match the filter')
     if st.button('⬆️ Back to top', width='stretch'):
@@ -2310,7 +2331,7 @@ def display_scrap_manual():
                     a_index = False
                 
                 st.space('small')
-                if st.session_state.a_pass == '110604':
+                if st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                     input_a = st.toggle('✨ A-Detector', value=a_index)
                 else:
                     if dvd_id in df["Code"].values:
@@ -2743,6 +2764,8 @@ def complex_film(device):
         st.session_state.filtered_data_position = None
     if 'scrap_dialog' not in st.session_state:
         st.session_state.scrap_dialog = False
+    if 'quick_del_dialog' not in st.session_state:
+        st.session_state.quick_del_dialog = False
     if 'simple_edit' not in st.session_state:
         st.session_state.simple_edit = False
     if 'first_load_a' not in st.session_state:
@@ -3101,8 +3124,8 @@ def complex_film(device):
                 edited_info = st.selectbox('Info', options=INFO_OPTS, index= info_index)
                 edited_info = edited_info.split(' ',1)[1]
 
-                if st.session_state.a_pass == '110604':
-                    st.button('✨', type=st.session_state.a_button, on_click=set_a_button_type) #checkpoint
+                if st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
+                    st.button('✨', type=st.session_state.a_button, on_click=set_a_button_type)
             
             if edited_info == 'Watched' or edited_info == 'Goat' or edited_info == 'Great':
                 if 'Not Listed' not in selected_actress and 'Many' not in selected_actress:
@@ -3121,7 +3144,7 @@ def complex_film(device):
         else: 
             with st.container(horizontal=True):   
                 st.badge(label=film['Info'], icon=icons, color=colors)
-                if film['A-Detector'] == 1 and st.session_state.a_pass == '110604':
+                if film['A-Detector'] == 1 and st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                     st.badge(label='', icon='⭐', color='yellow')
         
         st.markdown('### Tags')
@@ -3245,7 +3268,7 @@ def complex_film(device):
                 (btn for btn in a_btn if btn["Value"] == film["A-Detector"]),
                 None
             )
-            if st.session_state.a_pass == '110604':
+            if st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                 with st.container(horizontal=True, horizontal_alignment='left', width='content'):
                     with st.container(width='content'):
                         st.markdown('### A-Detector : ')
@@ -3492,7 +3515,7 @@ def complex_film(device):
         
         st.subheader("Basic Information")
         with st.container(horizontal=True):
-            if st.session_state.a_pass == '110604':
+            if st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                 edited_a = st.toggle('✨', value=film['A-Detector'])
             else:
                 edited_a = film['A-Detector']
@@ -3966,13 +3989,67 @@ def complex_film(device):
             if st.button('Close', type='primary', width='stretch'):
                 st.rerun()
 
+    @st.dialog("📃 Delete List", width='small')
+    def deleted_list():
+        if st.session_state.del_index:
+            st.session_state.del_index.sort(reverse=True)
+            del_df = st.session_state.film_df
+            for i in range(len(st.session_state.del_index)):
+                index = st.session_state.del_index[i]
+                data = del_df.iloc[index]
+                st.write(f"{i+1}. {data['Code']}")
+                with st.container(horizontal=True):
+                    st.image(data['Picture'], width=150)
+                    with st.container():
+                        st.write(f'ID : {index}')
+                        if st.button('❌', key=f'cancel_{i}', width='stretch'):
+                            st.session_state.del_index.pop(i)
+                            st.session_state[f'del_film_{index}'] = False
+                            st.session_state[f'rec_del_film_{index}'] = False
+                            st.rerun()
+                st.divider()
+            if st.button('Delete Films', type='primary', width='stretch'):
+                new_df = del_df.drop(index=st.session_state.del_index).reset_index(drop=True)
+                start_row = 1
+                end_row = 1 + len(new_df)-1
+                film_worksheet().clear()
+                data = [new_df.columns.tolist()] + new_df.values.tolist()
+                film_worksheet().update(f'A{start_row}:K{end_row}', data)
+                st.session_state.film_df = values_handling(new_df, 'Film')
+                st.toast('✅ Film deleted successfully!')
+                time.sleep(.5)
+                st.session_state.quick_del_dialog = False
+                st.session_state.del_index = []
+                st.rerun()
+
+        else:
+            st.info('No Films in the list!')
+
+        if st.button('❌ Close List', width='stretch'):
+            st.session_state.quick_del_dialog = False
+            st.rerun()
+
+
     if st.session_state.film_layout not in 'Calendar':
         with st.sidebar:
             st.subheader('⚙️ Page Option')
             st.session_state.a_pass = st.text_input('✨', width='stretch')
-            if st.session_state.a_pass == '110604':
+            if st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                 show_a = st.toggle('✨')
+                st.session_state.del_index = []
+            elif st.session_state.a_pass == st.secrets.indicators.USER_1_DEL_PASS:
+                show_a = False
+                if st.session_state.del_index:
+                    if st.button('Delete List', width='stretch'):
+                        st.session_state.quick_del_dialog = True
+
+                if st.session_state.quick_del_dialog == True:
+                    deleted_list()
+                st.write(':red[\*\*DELETE MODE\*\*]')
             else:
+                if 'del_index' not in st.session_state:
+                    st.session_state.del_index = []
+                st.session_state.del_index = []
                 show_a = False
     
     st.markdown(
@@ -4050,7 +4127,7 @@ def complex_film(device):
                                         </div>
                                     </div>
                                 """, unsafe_allow_html=True)
-                                if random_row['A-Detector'].values[0] == True and st.session_state.a_pass == '110604':
+                                if random_row['A-Detector'].values[0] == True and st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                                     st.markdown(f"<h3 style='text-align: center;'>⭐ {random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
                                 else:
                                     st.markdown(f"<h3 style='text-align: center;'>{random_row['Code'].values[0]}</h3>", unsafe_allow_html=True)
@@ -4615,7 +4692,6 @@ def complex_film(device):
             img_card_height = 202
             img_card_width = 106
             actress_width = 76
-        st.write(st.session_state.data_detailed_index)
         id = [x[1] for x in st.session_state.data_detailed_index]
         color = [x[0] for x in st.session_state.data_detailed_index]
         for i in range(len(st.session_state.data_detailed_index)):
@@ -5171,7 +5247,7 @@ def complex_actress(device):
                 
             with st.container(horizontal=True):
                 st.badge(label=film['Info'], icon=icons, color=colors)
-                if film['A-Detector'] == 1 and st.session_state.a_pass == '110604':
+                if film['A-Detector'] == 1 and st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                     st.badge(label='', icon='⭐', color='yellow')
 
             st.markdown('### Tags')
@@ -5204,7 +5280,7 @@ def complex_actress(device):
 
             st.write(edited_tags)
 
-            if st.session_state.a_pass == '110604':
+            if st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                 edited_a = st.toggle('✨', value=film['A-Detector'])
             else:
                 edited_a = film['A-Detector']
@@ -5548,7 +5624,7 @@ def complex_actress(device):
                             else:
                                 release += datetime.strptime(film_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
                             
-                            if film_watched_df['A-Detector'].iloc[idx] == True and st.session_state.a_pass == '110604':
+                            if film_watched_df['A-Detector'].iloc[idx] == True and st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                                 release += ' ⭐'
 
                             with st.container(width=img_width):
@@ -5599,7 +5675,7 @@ def complex_actress(device):
                             else:
                                 release = datetime.strptime(film_not_watched_df['Release Date'].iloc[idx], "%d/%m/%Y").strftime("%d %b %Y")
 
-                            if film_not_watched_df['A-Detector'].iloc[idx] == True and st.session_state.a_pass == '110604':
+                            if film_not_watched_df['A-Detector'].iloc[idx] == True and st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                                 release += ' ⭐'
                             
                             if 'Downloaded' in film_not_watched_df['Tags'].iloc[idx]:
@@ -5989,7 +6065,6 @@ def complex_actress(device):
             
 
     def delete_actress(index):
-        # Hapus data dari DataFrame
         df = st.session_state.actress_df
         actress = df.loc[index]
         pic_filename = str(actress['Picture']).split('/')[-1]
