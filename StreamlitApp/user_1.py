@@ -442,7 +442,12 @@ def display_film_card(df, tag_df):
                 else:
                     mask = filtered_df['Actress Name'].str.contains(search_name, case=False, na=False)
             else:
-                mask = filtered_df['Title'].str.contains(search_name, case=False, na=False)
+                search_words = search_name.split()
+
+                mask = filtered_df['Title'].apply(
+                    lambda title: all(word.lower() in title.lower() for word in search_words)
+                    if isinstance(title, str) else False
+                )
 
             filtered_df = filtered_df[mask]
         
@@ -2933,6 +2938,53 @@ def complex_film(device):
             )
 
             edited_actress = ", ".join(selected_actress)
+
+            matched_selected = actress_df[actress_df['Name (Alphabet)'].isin(selected_actress)]
+            if "Not Listed" not in matched_selected['Name (Alphabet)'] and "Many" not in matched_selected['Name (Alphabet)']:
+                if len(matched_selected)>2:
+                    is_center = 'center'
+                else:
+                    is_center = 'left'
+                with st.container(horizontal=True, horizontal_alignment=is_center):
+                    for idx in matched_selected.index:
+                        actress_name = matched_selected['Name (Alphabet)'].loc[idx]
+                        container_key = f"{actress_name}_{st.session_state.filtered_data_position}_{idx}"
+                        status_color = "#FFD700" if matched_selected['Review'].loc[idx] == 'S-Tier' else "#9b59b6" if matched_selected['Review'].loc[idx] == 'A-Tier' else "#3498db" if matched_selected['Review'].loc[idx] == 'B-Tier' else "#2ecc71" if matched_selected['Review'].loc[idx] == 'C-Tier' else '#e67e22' if matched_selected['Review'].loc[idx] == 'D-Tier' else "#ff8c42" if matched_selected['Review'].loc[idx] == 'E-Tier' else "#e74c3c" if matched_selected['Review'].loc[idx] == 'F-Tier' else "#8b0000" if matched_selected['Review'].loc[idx] == 'Drop' else '#7f8c8d'
+
+                        with st.container(width=80, key=container_key):
+                            # Display image as circle using HTML
+                            st.markdown(f"""
+                                <div style="
+                                    width: 70px;
+                                    height: 70px;
+                                    border-radius: 50%;
+                                    overflow: hidden;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    margin: 0 auto 8px auto;
+                                    background: white;
+                                    border: 1.5px solid {status_color};
+                                ">
+                                    <img src="{matched_selected['Picture'][idx]}" 
+                                        style="
+                                            width: 100%;
+                                            height: 100%;
+                                            object-fit: cover;
+                                        ">
+                                </div>
+                                <div style="
+                                    color: #9B9EA8;
+                                    text-align: center;
+                                    font-size: 12px;
+                                    line-height: 1;
+                                    margin-bottom: 3px;
+                                    margin-top: 0px;
+                                ">
+                                    {matched_selected['Name (Alphabet)'][idx]}
+                                </div>
+                            """, unsafe_allow_html=True)
+                            
         
         else:
             if 'Not Listed' not in film['Actress Name'] and 'Many' not in film['Actress Name']:
