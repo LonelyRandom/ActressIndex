@@ -65,7 +65,7 @@ def log_in_auth():
         
         if login_button:
             if username and password:
-                pass_hash = hash_password(username+password)
+                pass_hash = hash_password(username+password+st.secrets['indicators']['private_key'])
                 st.session_state.login_error = None
                 
                 user = st.session_state.login_data[

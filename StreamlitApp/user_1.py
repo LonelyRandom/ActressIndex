@@ -501,88 +501,94 @@ def display_film_card(df, tag_df):
 
             calender_month = today_month
             calender_year = today_year
-            if calender_month and calender_year:
-                dates = date(calender_year, calender_month,1)
-                day_name = dates.replace(day=1).strftime("%a")
-                day_month = pd.to_datetime(dates).days_in_month
 
-                if day_name == 'Sun':
-                    index= 0
-                elif day_name == 'Mon':
-                    index = 1
-                elif day_name == 'Tue':
-                    index = 2
-                elif day_name == 'Wed':
-                    index = 3
-                elif day_name == 'Thu':
-                    index = 4
-                elif day_name == 'Fri':
-                    index = 5
-                elif day_name == 'Sat':
-                    index = 6
+            if select_date_type == 'Date':
+                if calender_month and calender_year:
+                    dates = date(calender_year, calender_month,1)
+                    day_name = dates.replace(day=1).strftime("%a")
+                    day_month = pd.to_datetime(dates).days_in_month
 
-            with st.container(horizontal=True, width='stretch'):
-                st.button('⬅️ Previous', width='stretch', on_click=set_month_year, args=(st.session_state.selected_date - relativedelta(months=1),))
-                st.button('➡️ Next', width='stretch', on_click=set_month_year, args=(st.session_state.selected_date + relativedelta(months=1),))
-            st.markdown(f"<h1 style='text-align: center; margin-bottom: 30px;'>{dates.strftime('%B')} {calender_year}</h1>", unsafe_allow_html=True)
-            with st.container(horizontal_alignment='center'):
-                with st.container(horizontal=True, width='stretch'):
-                    st.button('Sun', type='tertiary', width=btn_width)
-                    st.button('Mon', type='tertiary', width=btn_width)
-                    st.button('Tue', type='tertiary', width=btn_width)
-                    st.button('Wed', type='tertiary', width=btn_width)
-                    st.button('Thu', type='tertiary', width=btn_width)
-                    st.button('Fri', type='tertiary', width=btn_width)
-                    st.button('Sat', type='tertiary', width=btn_width)
+                    if day_name == 'Sun':
+                        index= 0
+                    elif day_name == 'Mon':
+                        index = 1
+                    elif day_name == 'Tue':
+                        index = 2
+                    elif day_name == 'Wed':
+                        index = 3
+                    elif day_name == 'Thu':
+                        index = 4
+                    elif day_name == 'Fri':
+                        index = 5
+                    elif day_name == 'Sat':
+                        index = 6
 
                 with st.container(horizontal=True, width='stretch'):
-                    if index != 0:
-                        for i in range(index):
-                            st.button(' ', width=btn_width, key=f'blank_{i}', type='tertiary', disabled=True)
+                    st.button('⬅️ Previous', width='stretch', on_click=set_month_year, args=(st.session_state.selected_date - relativedelta(months=1),))
+                    st.button('➡️ Next', width='stretch', on_click=set_month_year, args=(st.session_state.selected_date + relativedelta(months=1),))
+                st.markdown(f"<h1 style='text-align: center; margin-bottom: 30px;'>{dates.strftime('%B')} {calender_year}</h1>", unsafe_allow_html=True)
+                with st.container(horizontal_alignment='center'):
+                    with st.container(horizontal=True, width='stretch'):
+                        st.button('Sun', type='tertiary', width=btn_width)
+                        st.button('Mon', type='tertiary', width=btn_width)
+                        st.button('Tue', type='tertiary', width=btn_width)
+                        st.button('Wed', type='tertiary', width=btn_width)
+                        st.button('Thu', type='tertiary', width=btn_width)
+                        st.button('Fri', type='tertiary', width=btn_width)
+                        st.button('Sat', type='tertiary', width=btn_width)
 
-                    for i in range(1 ,day_month+1):
-                        selected_date = date(calender_year, calender_month, i)
-                        if len(filtered_df[filtered_df['release_date'].dt.date == selected_date]) > 0:
-                            film_date = len(filtered_df[filtered_df["release_date"].dt.date == selected_date])
-                            if selected_date == st.session_state.show_date:
-                                if st.button(f'{str(i)} :gray[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),), type='primary'):
-                                    st.session_state.date_clicked = True
+                    with st.container(horizontal=True, width='stretch'):
+                        if index != 0:
+                            for i in range(index):
+                                st.button(' ', width=btn_width, key=f'blank_{i}', type='tertiary', disabled=True)
+
+                        for i in range(1 ,day_month+1):
+                            selected_date = date(calender_year, calender_month, i)
+                            if len(filtered_df[filtered_df['release_date'].dt.date == selected_date]) > 0:
+                                film_date = len(filtered_df[filtered_df["release_date"].dt.date == selected_date])
+                                if selected_date == st.session_state.show_date:
+                                    if st.button(f'{str(i)} :gray[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),), type='primary'):
+                                        st.session_state.date_clicked = True
+                                else:
+                                    if st.button(f'{str(i)} :red[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),)):
+                                        st.session_state.date_clicked = True
                             else:
-                                if st.button(f'{str(i)} :red[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),)):
-                                    st.session_state.date_clicked = True
-                        else:
-                            st.button(str(i), width=btn_width, disabled=True, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),))
-                    for i in range(1 ,day_month+1):
-                        st.markdown(f"""<style>
-                        .st-key-calender_dates_{i} span.stMarkdownColoredText {{
-                            font-size: {film_size}px !important;
-                        }}
-                        .st-key-calender_dates_{i} p {{
-                            font-size:{date_size}px !important;
-                            height: {btn_height}px;
-                        }}
-                        </style>""", unsafe_allow_html=True)
-            
-            if st.session_state.date_clicked and select_date_type == 'Date':
-                if select_date_type == 'Date':
-                    filtered_df = filtered_df[filtered_df['release_date'].dt.date == st.session_state.show_date]
-                    with st.container(horizontal=True, vertical_alignment='bottom'):
-                        with st.container(width='content'):
-                            st.write(f'Filter by date : {st.session_state.show_date.strftime("%d %B %Y")} :green[({len(filtered_df)} Films)]')
+                                st.button(str(i), width=btn_width, disabled=True, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),))
+                        for i in range(1 ,day_month+1):
+                            st.markdown(f"""<style>
+                            .st-key-calender_dates_{i} span.stMarkdownColoredText {{
+                                font-size: {film_size}px !important;
+                            }}
+                            .st-key-calender_dates_{i} p {{
+                                font-size:{date_size}px !important;
+                                height: {btn_height}px;
+                            }}
+                            </style>""", unsafe_allow_html=True)
+                
+                if st.session_state.date_clicked and select_date_type == 'Date':
+                    if select_date_type == 'Date':
+                        filtered_df = filtered_df[filtered_df['release_date'].dt.date == st.session_state.show_date]
+                        with st.container(horizontal=True, vertical_alignment='bottom'):
+                            with st.container(width='content'):
+                                st.write(f'Filter by date : {st.session_state.show_date.strftime("%d %B %Y")} :green[({len(filtered_df)} Films)]')
             elif select_date_type == 'Month/Year':
+                with st.container(horizontal=True):
+                    st.number_input('Month', min_value=1, max_value=12, value=calender_month, key='filter_month')
+                    st.number_input('Year', min_value=2000, max_value=calender_year, value=calender_year, key='filter_year')
+                dates = date(st.session_state.filter_year, st.session_state.filter_month,1)
                 filtered_df = filtered_df[
-                    (filtered_df['release_date'].dt.month == st.session_state.selected_date.month) &
-                    (filtered_df['release_date'].dt.year == st.session_state.selected_date.year)
+                    (filtered_df['release_date'].dt.month == dates.month) &
+                    (filtered_df['release_date'].dt.year == dates.year)
                 ]
-                with st.container(horizontal=True, vertical_alignment='bottom'):
-                    with st.container(width='content'):
-                        st.write(f'Filter by Month : {st.session_state.selected_date.strftime("%B %Y")} :green[({len(filtered_df)} Films)]')
+                st.write(f'Filter by Month : {dates.strftime("%B %Y")} :green[({len(filtered_df)} Films)]')
             elif select_date_type == 'Year':
+                st.number_input('Year', min_value=2000, max_value=calender_year, value=calender_year, key='filter_year')
+                dates = date(st.session_state.filter_year, 1,1)
                 filtered_df = filtered_df[
-                        filtered_df['release_date'].dt.year == st.session_state.selected_date.year
-                    ]
-                st.write(f'Filter by Year : {st.session_state.selected_date.strftime("%B %Y")} :green[({len(filtered_df)} Films)]')
-        
+                    (filtered_df['release_date'].dt.year == dates.year)
+                ]
+                st.write(f'Filter by Year : {dates.strftime("%Y")} :green[({len(filtered_df)} Films)]')
+                
         if st.session_state.date_release:
             filtered_df['release_date'] = pd.to_datetime(
                 filtered_df['Release Date'],
@@ -2906,8 +2912,24 @@ def complex_film(device):
         
         with st.container(horizontal_alignment='center'):
             st.toggle('Gallery', on_change=reset_pic, key='show_gallery')
-        
-        st.markdown('### Title')
+
+        if st.session_state.show_gallery:
+            if film['Info'] == 'Watched':
+                sneak_info = '🟢'
+            elif film['Info'] == 'Great':
+                sneak_info = '🔵'
+            elif film['Info'] == 'Goat':
+                sneak_info = '🟣'
+            else:
+                sneak_info = '🔴'
+
+            if film['A-Detector'] == True:
+                sneak_info += ' ⭐'
+        else:
+            sneak_info = ''
+
+        st.markdown('### Title ' + sneak_info)
+
         st.write(film['Title'])
  
         st.markdown(
@@ -3388,7 +3410,36 @@ def complex_film(device):
                             st.session_state.film_df = values_handling(df,'film')
                             st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
                             st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                            st.toast(f'👁️ {film["Code"]} is listed to watch!')
+                            time.sleep(.5)
+                            st.rerun()
+                    if "AV Debut" not in film['Tags']:
+                        if st.button(':green-background[🆕]', width='content', type='tertiary'): # :download-quick
+                            row = filtered_index + 2
+                            if film['Tags'] == 'No Tags':
+                                tag_text = 'AV Debut'
+                            else:
+                                tag_text = film['Tags'] + ', AV Debut'
+                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                            df.at[filtered_index, 'Tags'] = tag_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
                             st.toast(f'📥 {film["Code"]} is listed to watch!')
+                            time.sleep(.5)
+                            st.rerun()
+                    if "AV Debut" in film['Tags']:
+                        if st.button(':red-background[🧹🆕]', width='content', type='tertiary'): # :download-quick
+                            row = filtered_index + 2
+                            tags = film['Tags'].split(', ')
+                            tag_text = ', '.join(tag for tag in tags if tag not in {'AV Debut'}) or 'No Tags'
+
+                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                            df.at[filtered_index, 'Tags'] = tag_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                            st.toast(f'🧹🆕 {film["Code"]} tags removed!')
                             time.sleep(.5)
                             st.rerun()
                     if film['Info'] == 'Not Watched' and ("Want to watch" in film['Tags'] or "Downloaded" in film['Tags']):
@@ -4082,10 +4133,10 @@ def complex_film(device):
             st.rerun()
 
 
-    if st.session_state.film_layout not in 'Calendar':
-        with st.sidebar:
-            st.subheader('⚙️ Page Option')
-            st.session_state.a_pass = st.text_input('✨', width='stretch')
+    with st.sidebar:
+        st.subheader('⚙️ Page Option')
+        st.session_state.a_pass = st.text_input('✨', width='stretch')
+        if st.session_state.film_layout not in 'Calendar':
             if st.session_state.a_pass == st.secrets.indicators.USER_1_A_PASS:
                 show_a = st.toggle('✨')
                 st.session_state.del_index = []
@@ -6325,7 +6376,9 @@ def complex_actress(device):
 
     # Sidebar
     with st.sidebar:
-        st.header(f'Actress Listed : {len(st.session_state.actress_df)}')
+        st.subheader('⚙️ Page Option')
+        st.session_state.a_pass = st.text_input('✨', width='stretch')
+        st.header(f'Actress Listed : {len(st.session_state.actress_df):,}')
         st.markdown("---")
         with st.container(key='filter_container', horizontal=True):
             with st.container(key='status_filter'):
