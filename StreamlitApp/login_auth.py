@@ -60,7 +60,6 @@ def log_in_auth():
         st.markdown("<h1 style='text-align: center; margin-bottom: 15px; font-weight:700'>Login</h1>", unsafe_allow_html=True)
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
-
         login_button = st.button("Login", width="stretch", type="primary")
         
         if login_button:

@@ -3,10 +3,12 @@ from streamlit_gsheets import GSheetsConnection
 from login_auth import log_in_auth
 from user_1 import complex_home, complex_actress, complex_film
 from user_2 import simple_home, simple_actress, simple_film
+from user_4 import guest_home, guest_actress, guest_film
 
 user_1 = st.secrets.indicators.USER_1
 user_2 = st.secrets.indicators.USER_2
 user_3 = st.secrets.indicators.USER_3
+user_4 = st.secrets.indicators.USER_4
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -35,10 +37,10 @@ elif st.session_state.page == 'home':
         page_title='ActressIndex - Home',
         page_icon='🏠'
     )
-    if st.session_state.usn == user_1:
+    if st.session_state.usn in [user_1, user_3]:
         page = complex_home()
-    elif st.session_state.usn == user_3:
-        page = complex_home()
+    elif st.session_state.usn == user_4:
+        page = guest_home()
     elif st.session_state.usn == user_2:
         page = simple_home()
 
@@ -56,6 +58,8 @@ elif st.session_state.page == 'film':
         page = complex_film('Device 1')
     elif st.session_state.usn == user_3:
         page = complex_film('Device 2')
+    elif st.session_state.usn == user_4:
+        page = guest_film('Device 2')
     elif st.session_state.usn == user_2:
         page = simple_film(conn)
 
@@ -73,6 +77,8 @@ elif st.session_state.page == 'actress':
         page = complex_actress('Device 1')
     elif st.session_state.usn == user_3:
         page = complex_actress('Device 2')
+    elif st.session_state.usn == user_4:
+        page = guest_actress('Device 2')
     elif st.session_state.usn == user_2:
         page = simple_actress(conn)
 
