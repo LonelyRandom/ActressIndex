@@ -1165,8 +1165,13 @@ def display_film_calender(df):
                 
     if calender_search:
         calender_search = calender_search.split(' ')
-        calender_search = '-'.join(calender_search)
-        mask = filtered_df['Code'].str.contains(calender_search, case=False, na=False)
+        mask = filtered_df.apply(
+            lambda row: all(
+                word.lower() in str(row['Code']).lower()
+                for word in calender_search
+            ),
+            axis=1
+        )
         filtered_df = filtered_df[mask].copy()
     
     if st.session_state.date_clicked:
@@ -3404,35 +3409,6 @@ def complex_film(device):
                             st.toast(f'👁️ {film["Code"]} is listed to watch!')
                             time.sleep(.5)
                             st.rerun()
-                    if "AV Debut" not in film['Tags']:
-                        if st.button(':green-background[🆕]', width='content', type='tertiary'): # :download-quick
-                            row = filtered_index + 2
-                            if film['Tags'] == 'No Tags':
-                                tag_text = 'AV Debut'
-                            else:
-                                tag_text = film['Tags'] + ', AV Debut'
-                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                            df.at[filtered_index, 'Tags'] = tag_text
-                            st.session_state.film_df = values_handling(df,'film')
-                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-                            st.toast(f'🆕 {film["Code"]} is listed to new debut!')
-                            time.sleep(.5)
-                            st.rerun()
-                    if "AV Debut" in film['Tags']:
-                        if st.button(':red-background[🧹🆕]', width='content', type='tertiary'): # :download-quick
-                            row = filtered_index + 2
-                            tags = film['Tags'].split(', ')
-                            tag_text = ', '.join(tag for tag in tags if tag not in {'AV Debut'}) or 'No Tags'
-
-                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                            df.at[filtered_index, 'Tags'] = tag_text
-                            st.session_state.film_df = values_handling(df,'film')
-                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-                            st.toast(f'🧹🆕 {film["Code"]} tags removed!')
-                            time.sleep(.5)
-                            st.rerun()
                     if film['Info'] == 'Not Watched' and ("Want to watch" in film['Tags'] or "Downloaded" in film['Tags']):
                         if st.button(':red-background[🧹]', width='content', type='tertiary'): # :download-quick
                             row = filtered_index + 2
@@ -3447,6 +3423,35 @@ def complex_film(device):
                             st.toast(f'📥 {film["Code"]} tags removed!')
                             time.sleep(.5)
                             st.rerun()
+                if "AV Debut" not in film['Tags']:
+                    if st.button(':green-background[🆕]', width='content', type='tertiary'): # :download-quick
+                        row = filtered_index + 2
+                        if film['Tags'] == 'No Tags':
+                            tag_text = 'AV Debut'
+                        else:
+                            tag_text = film['Tags'] + ', AV Debut'
+                        film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                        df.at[filtered_index, 'Tags'] = tag_text
+                        st.session_state.film_df = values_handling(df,'film')
+                        st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                        st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                        st.toast(f'🆕 {film["Code"]} is listed to new debut!')
+                        time.sleep(.5)
+                        st.rerun()
+                if "AV Debut" in film['Tags']:
+                    if st.button(':red-background[🧹🆕]', width='content', type='tertiary'): # :download-quick
+                        row = filtered_index + 2
+                        tags = film['Tags'].split(', ')
+                        tag_text = ', '.join(tag for tag in tags if tag not in {'AV Debut'}) or 'No Tags'
+
+                        film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                        df.at[filtered_index, 'Tags'] = tag_text
+                        st.session_state.film_df = values_handling(df,'film')
+                        st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                        st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                        st.toast(f'🧹🆕 {film["Code"]} tags removed!')
+                        time.sleep(.5)
+                        st.rerun()
             
         st.markdown('---')
         if film['Link'] == '--' :
@@ -4121,9 +4126,9 @@ def complex_film(device):
 
 
     with st.sidebar:
-        st.subheader('⚙️ Page Option')
-        st.session_state.a_pass = st.text_input('🔑', width='stretch')
         if st.session_state.film_layout not in 'Calendar':
+            st.subheader('⚙️ Page Option')
+            st.session_state.a_pass = st.text_input('🔑', width='stretch')
             show_a = st.toggle('✨')
             if st.session_state.a_pass == st.secrets.indicators.USER_1_DEL_PASS:
                 show_a = False
@@ -6358,7 +6363,6 @@ def complex_actress(device):
     # Sidebar
     with st.sidebar:
         st.subheader('⚙️ Page Option')
-        st.session_state.a_pass = st.text_input('✨', width='stretch')
         st.header(f'Actress Listed : {len(st.session_state.actress_df):,}')
         st.markdown("---")
         with st.container(key='filter_container', horizontal=True):
@@ -6533,9 +6537,13 @@ def complex_actress(device):
         filtered_df = filtered_df[final_mask]
         if search_query and not search_query.isspace() and not filtered_df.empty:
             search_lower = search_query.lower().strip().split()
-            search_mask = (
-                filtered_df['Name (Alphabet)'].fillna('').str.lower().apply(lambda x: all(word in x for word in search_lower)) |
-                filtered_df['Name (Kanji)'].fillna('').apply(lambda x: all(word in x for word in search_lower))
+            search_mask = filtered_df.apply(
+                lambda row: all(
+                    word.lower() in str(row['Name (Alphabet)']).lower()
+                    or word.lower() in str(row['Name (Kanji)']).lower()
+                    for word in search_lower
+                ),
+                axis=1
             )
             filtered_df = filtered_df[search_mask]
         filtered_df = filtered_df.sort_values('Name (Alphabet)', key=lambda col: col.str.lower(), ascending=True, ignore_index=False)
