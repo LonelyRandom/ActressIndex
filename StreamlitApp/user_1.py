@@ -461,6 +461,9 @@ def display_film_card(df, tag_df):
         if info_filter and 'Info' in filtered_df.columns and not filtered_df.empty:
             filtered_df = filtered_df[filtered_df['Info'].isin(info_filter)]
 
+        if (search_name != '' and search_name != 'All') or (not all(x in info_filter for x in ['Not Watched', 'Watched', 'Great', 'Goat'])) or tags_filter:
+            st.toast(f':green[{len(filtered_df)} films found!]', icon='🔍')
+
         if sort_type == '(A-Z)' and not filtered_df.empty:
             filtered_df = filtered_df.sort_values(by='Code', ascending=True)
 
@@ -1173,6 +1176,8 @@ def display_film_calender(df):
             axis=1
         )
         filtered_df = filtered_df[mask].copy()
+    if calender_search or selected_flag != 'All':
+        st.toast(f'{len(filtered_df)} films found!')
     
     if st.session_state.date_clicked:
         filtered_df = filtered_df[filtered_df['filtered_date'].dt.date == st.session_state.show_date]
@@ -1192,6 +1197,11 @@ def display_film_calender(df):
         ]
         calendar_worksheet().batch_update(batch_data)
         st.toast('✅ Succesfully drop all not checked data!')
+        time.sleep(.5)
+    
+    def set_unset_clicked():
+        st.session_state.date_clicked = False
+        st.toast('✅ Succesfully unclicked date!')
         time.sleep(.5)
     
     def set_this_drop(filtered_df, filter):
@@ -1302,8 +1312,9 @@ def display_film_calender(df):
     if st.button(f'Drop this date -- {st.session_state.show_date.strftime("%d %B %Y").upper()}', width='stretch', type='primary'):
         set_this_drop(filtered_df, 'Date')
     with st.container(horizontal=True):
-        st.button('Drop All', on_click=set_all_drop, width='stretch')
+        # st.button('Drop All', on_click=set_all_drop, width='stretch')
         st.button('Match', on_click=set_match, width='stretch')
+        st.button('Reset Clicked', on_click=set_unset_clicked, width='stretch')
     
     st.subheader('Sent "Pass" to database?')
     st.button('Send ⏭️', on_click=set_sent_data, width='stretch')
