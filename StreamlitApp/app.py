@@ -38,7 +38,12 @@ elif st.session_state.page == 'home':
         page_icon='🏠'
     )
     if st.session_state.usn in [user_1, user_3]:
-        page = complex_home()
+        if st.session_state.login_data['by_pass'].iloc[0] and st.session_state.usn == user_1:
+            page = complex_film('Device 1')
+        elif st.session_state.login_data['by_pass'].iloc[0] and st.session_state.usn == user_3:
+            page = complex_film('Device 2')
+        else:
+            page = complex_home()
     elif st.session_state.usn == user_4:
         page = guest_home()
     elif st.session_state.usn == user_2:

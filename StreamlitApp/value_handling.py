@@ -27,6 +27,14 @@ def values_handling(df, type):
             '1' : True,
             '0' : False
         })
+        df['is_WantToWatch'] = df['is_WantToWatch'].map({
+            1 : True,
+            0 : False,
+            'TRUE': True,
+            'FALSE' : False,
+            '1' : True,
+            '0' : False
+        })
         df['Month'] = df['Month'].astype(str)
     else:
         df['Release Date'] = df['Release Date'].astype(str)

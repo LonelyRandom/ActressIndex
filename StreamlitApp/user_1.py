@@ -314,6 +314,14 @@ def display_film_card(df, tag_df):
         st.session_state.date_clicked = False
     if 'data_detailed_index' not in st.session_state:
         st.session_state.data_detailed_index = []
+    if 'search_filter' not in st.session_state:
+        st.session_state.search_filter = ''
+    if 'info_filter' not in st.session_state:
+        st.session_state.info_filter = []
+    if 'tags_filter' not in st.session_state:
+        st.session_state.tags_filter = []
+    if 'filter_pop' not in st.session_state:
+        st.session_state.filter_pop = False
     
     if st.session_state.width_option == 'Device 1':
         btn_width = 40
@@ -461,8 +469,31 @@ def display_film_card(df, tag_df):
         if info_filter and 'Info' in filtered_df.columns and not filtered_df.empty:
             filtered_df = filtered_df[filtered_df['Info'].isin(info_filter)]
 
-        if (search_name != '' and search_name != 'All') or (not all(x in info_filter for x in ['Not Watched', 'Watched', 'Great', 'Goat'])) or tags_filter:
+        if st.session_state.search_filter == '' and search_name != '' and search_name != 'All':
+            st.session_state.search_filter = search_name
+            st.session_state.filter_pop = True
+        elif st.session_state.search_filter != '' and search_name != st.session_state.search_filter and search_name != '' and search_name != 'All':
+            st.session_state.search_filter = search_name
+            st.session_state.filter_pop = True
+
+        if st.session_state.info_filter == [] and set(info_filter) != set(['Not Watched', 'Watched', 'Great', 'Goat']):
+            st.session_state.info_filter = info_filter
+            st.session_state.filter_pop = True
+        elif st.session_state.info_filter != [] and set(info_filter) != set(st.session_state.info_filter):
+            st.session_state.info_filter = info_filter
+            st.session_state.filter_pop = True
+
+        if st.session_state.tags_filter == [] and tags_filter:
+            st.session_state.tags_filter = tags_filter
+            st.session_state.filter_pop = True
+        elif st.session_state.tags_filter != [] and set(st.session_state.tags_filter) != set(tags_filter):
+            st.session_state.tags_filter = tags_filter
+            st.session_state.filter_pop = True
+
+        if st.session_state.filter_pop:
             st.toast(f':green[{len(filtered_df)} films found!]', icon='🔍')
+            st.session_state.filter_pop = False
+
 
         if sort_type == '(A-Z)' and not filtered_df.empty:
             filtered_df = filtered_df.sort_values(by='Code', ascending=True)
@@ -1022,7 +1053,17 @@ def set_calender_debut(index):
     row = index+2
     calendar_worksheet().update(f'H{row}:H{row}', [[st.session_state.get(f'{index}_debut_toggle')]])
 
+def set_calender_wtw(index):
+    st.toast(f"👁️ {st.session_state.calender_data.at[index, 'Code']} WtW Flag changed to {st.session_state.get(f'{index}_wtw_toggle')}")
+    st.session_state.calender_data.at[index, 'is_WantToWatch'] = st.session_state.get(f'{index}_wtw_toggle')
+    row = index+2
+    calendar_worksheet().update(f'I{row}:I{row}', [[st.session_state.get(f'{index}_wtw_toggle')]])
+
 def display_film_calender(df):
+    if 'search_cal_filter' not in st.session_state:
+        st.session_state.search_cal_filter = ''
+    if 'flag_cal_filter' not in st.session_state:
+        st.session_state.flag_cal_filter = 'All'
     if 'scroll_to_date' not in st.session_state:
         st.session_state.scroll_to_date = False
     if 'calender_data' not in st.session_state:
@@ -1176,8 +1217,24 @@ def display_film_calender(df):
             axis=1
         )
         filtered_df = filtered_df[mask].copy()
-    if calender_search or selected_flag != 'All':
+
+    if st.session_state.search_cal_filter == [] and calender_search != '':
+        st.session_state.search_cal_filter = calender_search
+        st.session_state.filter_pop = True
+    elif st.session_state.search_cal_filter != [] and calender_search != st.session_state.search_cal_filter:
+        st.session_state.search_cal_filter = calender_search
+        st.session_state.filter_pop = True
+
+    if st.session_state.flag_cal_filter == 'All' and selected_flag != 'All':
+        st.session_state.flag_cal_filter = selected_flag
+        st.session_state.filter_pop = True
+    elif st.session_state.flag_cal_filter != 'All' and selected_flag != st.session_state.flag_cal_filter:
+        st.session_state.flag_cal_filter = selected_flag
+        st.session_state.filter_pop = True
+
+    if st.session_state.filter_pop:
         st.toast(f'{len(filtered_df)} films found!')
+        st.session_state.filter_pop = False
     
     if st.session_state.date_clicked:
         filtered_df = filtered_df[filtered_df['filtered_date'].dt.date == st.session_state.show_date]
@@ -1418,6 +1475,7 @@ def display_film_calender(df):
                     with st.container(horizontal=True):
                         st.toggle('✨', key=f'{real_index}_a_toggle', value=film['A-Detector'], on_change=set_calender_a, args=(real_index,))
                         st.toggle('🆕', key=f'{real_index}_debut_toggle', value=film['is_Debut'], on_change=set_calender_debut, args=(real_index,))
+                        st.toggle('👁️', key=f'{real_index}_wtw_toggle', value=film['is_WantToWatch'], on_change=set_calender_wtw, args=(real_index,))
                     st.radio('Flag', options=['🟢 P','🔴 D','⚪️ ?', '🟡 U'], index=flag_idx, key=f'{real_index}_radio', horizontal=True, on_change=set_calender_flag, args=(real_index,))
                     st.link_button('Preview', film['Link'], width='stretch', type='primary')
                     st.markdown('---')
@@ -2683,10 +2741,10 @@ def complex_home():
         st.session_state.display_actress = 'Gallery' 
     if 'a_pass' not in st.session_state:
         st.session_state.a_pass = '1'
-    
-    st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
     df_actress = init_dataframe_actress()
     df_film = init_dataframe_film()
+
+    st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Home Page</h1>", unsafe_allow_html=True)
     dummy_container = st.container()
     with dummy_container:
         st.write('')
@@ -2764,6 +2822,18 @@ def complex_home():
 
 def complex_film(device):
     # Inisialisasi variabel kontrol
+    if 'log_out_btn' not in st.session_state:
+        st.session_state.log_out_btn = False
+    if 'first_load_film' not in st.session_state:
+        st.session_state.first_load_film = True
+    if 'first_load_actress' not in st.session_state:
+        st.session_state.first_load_actress = True
+    if 'film_layout' not in st.session_state:
+        st.session_state.film_layout = 'Detailed'
+    if 'display_actress' not in st.session_state:
+        st.session_state.display_actress = 'Gallery' 
+    if 'a_pass' not in st.session_state:
+        st.session_state.a_pass = '1'
     if "editing_film_index" not in st.session_state:
         st.session_state.editing_film_index = None
     if "viewing_film_index" not in st.session_state:
