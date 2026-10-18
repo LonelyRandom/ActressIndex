@@ -21,6 +21,7 @@ if 'usn' not in st.session_state:
 if 'check_login' not in st.session_state:
     st.session_state.check_login = None
 
+
 if st.session_state.page == 'login':
     st.cache_data.clear()
     check_login, usn, page = log_in_auth()
@@ -37,11 +38,16 @@ elif st.session_state.page == 'home':
         page_title='ActressIndex - Home',
         page_icon='🏠'
     )
+    if 'check_by_pass' not in st.session_state:
+        st.session_state.check_by_pass = st.session_state.login_data['by_pass'].iloc[0]
+
     if st.session_state.usn in [user_1, user_3]:
-        if st.session_state.login_data['by_pass'].iloc[0] and st.session_state.usn == user_1:
+        if st.session_state.check_by_pass and st.session_state.usn == user_1:
             page = complex_film('Device 1')
-        elif st.session_state.login_data['by_pass'].iloc[0] and st.session_state.usn == user_3:
+            st.session_state.check_by_pass = False
+        elif st.session_state.check_by_pass and st.session_state.usn == user_3:
             page = complex_film('Device 2')
+            st.session_state.check_by_pass = False
         else:
             page = complex_home()
     elif st.session_state.usn == user_4:

@@ -1323,8 +1323,12 @@ def display_film_calender(df):
             if '-HZGD' in data['Code']:
                 data['Code'] = data['Code'][1:]
             
-            if data['is_Debut'] == True:
+            if data['is_Debut'] == True and data['is_WantToWatch'] == True:
+                tags = 'AV Debut, Want to Watch'
+            elif data['is_Debut'] == True:
                 tags = 'AV Debut'
+            elif data['is_WantToWatch'] == True:
+                tags = 'Want to Watch'
             else:
                 tags = 'No Tags'
             
@@ -2646,29 +2650,17 @@ def display_scrap_manual():
                         else:
                             debut_period = f'{period.years} Year {period.months} Month'
 
-                    row = idx + 2
-                    new_value = [
-                        match_data['Review'].iloc[0],
-                        match_data['Picture'].iloc[0],
-                        match_data['Name (Alphabet)'].iloc[0],
-                        match_data['Name (Kanji)'].iloc[0],
-                        data['DOB'],
-                        data['Debut'],
-                        data['Cup'],
-                        measurement,
-                        data['Height'],
-                        match_data['Notes'].iloc[0],
-                        age,
-                        debut_period,
-                        match_data['Retire Date'].iloc[0],
-                        match_data['Status'].iloc[0],
-                        match_data['Page'].iloc[0],
-                    ]
 
 
                     st.markdown("## Picture")
+                    new_pic = st.text_input('New Pic Url', width='stretch', placeholder='Input pic url...')
                     with st.container(horizontal_alignment='center'):
-                        st.image(match_data['Picture'].iloc[0], width=120)
+                        if new_pic != '':
+                            st.image(new_pic, width=120)
+                        else:
+                            new_pic = match_data['Picture'].iloc[0]
+                            st.image(match_data['Picture'].iloc[0], width=120)
+
 
                     st.markdown("## Comparison Table")
                     after_data = {
@@ -2706,6 +2698,25 @@ def display_scrap_manual():
                             data['Height']
                         ]
                     }
+
+                    row = idx + 2
+                    new_value = [
+                        match_data['Review'].iloc[0],
+                        new_pic,
+                        match_data['Name (Alphabet)'].iloc[0],
+                        match_data['Name (Kanji)'].iloc[0],
+                        data['DOB'],
+                        data['Debut'],
+                        data['Cup'],
+                        measurement,
+                        data['Height'],
+                        match_data['Notes'].iloc[0],
+                        age,
+                        debut_period,
+                        match_data['Retire Date'].iloc[0],
+                        match_data['Status'].iloc[0],
+                        match_data['Page'].iloc[0],
+                    ]
 
                     df_compare = pd.DataFrame(after_data)
                     st.dataframe(df_compare, hide_index=True)
@@ -5926,14 +5937,42 @@ def complex_actress(device):
                     st.image(actress['Picture'], width=200)
                 else:
                     st.write("No picture available")
+
+                st.radio('Upload Picture', options=['Local', 'Online'], horizontal=True, key='upload_pic')
             
             # Image uploader
-            new_pic = st.file_uploader("Change Image", type=['png', 'jpg', 'jpeg'], key=f"uploader_{index}")
-            if new_pic is not None:
-                with st.container(horizontal_alignment='center'):
-                    st.subheader('New Image')
-                    st.image(new_pic, width=200)
-            
+            if st.session_state.upload_pic == 'Local':
+                new_pic = st.file_uploader("Change Image", type=['png', 'jpg', 'jpeg'], key=f"uploader_{index}")
+            else:
+                new_pic = st.text_input("Url Image", placeholder='Input image url link....')
+
+            if new_pic is not None and new_pic != '':
+                st.subheader('New Image')
+                with st.container(horizontal=True):
+                # with st.container(horizontal_alignment='center'):
+                    st.markdown(f"""
+                        <div class="review-avatar review-{'-'.join(actress['Review'].lower().split(' '))}" style="
+                            width: 100px;
+                            height: 100px;
+                            border-radius: 50%;
+                            overflow: hidden;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            margin: 0 auto 8px auto;
+                            background: white;
+                        ">
+                            <img src="{new_pic}" 
+                                style="
+                                    width: 100%;
+                                    height: 100%;
+                                    object-fit: cover;
+                                ">
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                    st.image(new_pic, width=150)
+
             # Tombol aksi
             if st.button("← Back to View", width='stretch', key=f"back_{index}"):
                 st.session_state.editing_index = None
@@ -6143,10 +6182,13 @@ def complex_actress(device):
         st.subheader("Additional Notes")
         edited_notes = st.text_area(
             "Notes", 
-            value=actress['Notes'] if pd.notna(actress['Notes']) else "",
+            value=actress['Notes'] if pd.notna(actress['Notes']) and actress['Notes'] != '--' else "",
             placeholder="Enter any additional notes...",
             key=f"notes_{index}"
         )
+
+        if edited_notes == '':
+            edited_notes = '--'
         
         # Save changes
         if st.button("💾 Save Changes", width='stretch', type="primary", key=f"save_{index}"):
@@ -6160,23 +6202,9 @@ def complex_actress(device):
 
             old_filename = str(actress['Picture']).split('/')[-1]
             old_public_id = old_filename.split('.')[0]
-            if new_pic and (edited_kanji == actress['Name (Kanji)']):
-                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
-                    try:
-                        delete_cloudinary_image(old_public_id)
-                    except Exception as e:
-                        st.warning(f"Could not delete old image: {e}")
-                        st.stop()
-                
-                final_picture_url = upload_to_database(new_pic, clean_name)
-                if not final_picture_url:
-                    st.error("Failed to upload new image")
-                    st.stop()
-                    return
-            # kalau ganti foto dan code
-            elif new_pic and (edited_kanji != actress['Name (Kanji)']):
-                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
-                    if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
+            if st.session_state.upload_pic == 'Local':
+                if new_pic and (edited_kanji == actress['Name (Kanji)']):
+                    if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower() and 'devooeuej' in str(actress['Picture']):
                         try:
                             delete_cloudinary_image(old_public_id)
                         except Exception as e:
@@ -6188,21 +6216,38 @@ def complex_actress(device):
                         st.error("Failed to upload new image")
                         st.stop()
                         return
-            # kalau cuma ganti code
-            elif not new_pic and (edited_kanji != actress['Name (Kanji)']):
-                if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower():
+                # kalau ganti foto dan code
+                elif new_pic and (edited_kanji != actress['Name (Kanji)']):
+                    if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower() and 'devooeuej' in str(actress['Picture']):
+                        if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower() and 'devooeuej' in str(actress['Picture']):
+                            try:
+                                delete_cloudinary_image(old_public_id)
+                            except Exception as e:
+                                st.warning(f"Could not delete old image: {e}")
+                                st.stop()
+                        
+                        final_picture_url = upload_to_database(new_pic, clean_name)
+                        if not final_picture_url:
+                            st.error("Failed to upload new image")
+                            st.stop()
+                            return
+                # kalau cuma ganti code
+                elif not new_pic and (edited_kanji != actress['Name (Kanji)']):
+                    if pd.notna(actress['Picture']) and actress['Picture'] and "placeholder" not in str(actress['Picture']).lower() and 'devooeuej' in str(actress['Picture']):
+                        try:
+                            final_picture_url = rename_cloudinary_image(old_public_id, clean_name)
+                        except Exception as e:
+                            st.warning(f'Could not rename old image: {e}')
+                            st.stop()
+                
+                elif not new_pic and (edited_kanji == actress['Name (Kanji)']):
                     try:
-                        final_picture_url = rename_cloudinary_image(old_public_id, clean_name)
+                        final_picture_url = actress['Picture']
                     except Exception as e:
                         st.warning(f'Could not rename old image: {e}')
                         st.stop()
-            
-            elif not new_pic and (edited_kanji == actress['Name (Kanji)']):
-                try:
-                    final_picture_url = actress['Picture']
-                except Exception as e:
-                    st.warning(f'Could not rename old image: {e}')
-                    st.stop()
+            else:
+                final_picture_url = new_pic
 
             new_values = [
                 edited_review,
