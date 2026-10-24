@@ -669,61 +669,49 @@ def display_film_card(df, tag_df):
         unsafe_allow_html=True
     )
     st.space('small')
-    with st.container(horizontal=True):
-        st.markdown(
-        f"""
-        <div style="
-            border: 1px solid rgba(52, 199, 89, .5);
+    def stat_cards(items):
+        cards = ""
+        for label, value, rgb in items:
+            cards += f"""<div class="stat-card" style="border-color: rgba({rgb}, .5);">
+                <div class="stat-label" style="color: rgba({rgb}, .7);">{label}</div>
+                <div class="stat-value" style="color: rgba({rgb}, 1);">{value:,}</div>
+            </div>"""
+
+        st.markdown(f"""
+        <style>
+        .stat-row {{
+            display: grid;
+            grid-template-columns: repeat({len(items)}, minmax(0, 1fr));
+            gap: clamp(6px, 2vw, 16px);
+        }}
+        .stat-card {{
+            border: 1px solid;
             border-radius: 10px;
-            padding: 12px;
+            padding: clamp(6px, 2vw, 12px);
             text-align: center;
-        ">
-            <div style="font-size: 14px; color: rgba(52, 199, 89, .7);">
-                🟢 Watched
-            </div>
-            <div style="font-size: 28px; font-weight: bold; color: rgba(52, 199, 89, 1);">
-                {watched_count:,}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-        )
-        st.markdown(
-            f"""
-            <div style="
-                border: 1px solid rgba(0, 122, 255, .5);
-                border-radius: 10px;
-                padding: 12px;
-                text-align: center;
-            ">
-                <div style="font-size: 14px; color: rgba(0, 122, 255, .7);">
-                    🔵 Great
-                </div>
-                <div style="font-size: 28px; font-weight: bold; color: rgba(0, 122, 255, 1);">
-                    {great_count:,}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            f"""
-            <div style="
-                border: 1px solid rgba(168, 85, 247, .5);
-                border-radius: 10px;
-                padding: 12px;
-                text-align: center;
-            ">
-                <div style="font-size: 14px; color: rgba(168, 85, 247, .7);">
-                    🟣 Goat
-                </div>
-                <div style="font-size: 28px; font-weight: bold; color: rgba(168, 85, 247, 1);">
-                    {goat_count:,}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+            min-width: 0;
+        }}
+        .stat-label {{
+            font-size: clamp(11px, 3vw, 14px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }}
+        .stat-value {{
+            font-size: clamp(18px, 5.5vw, 28px);
+            font-weight: bold;
+            line-height: 1.2;
+        }}
+        </style>
+        <div class="stat-row">{cards}</div>
+        """, unsafe_allow_html=True)
+
+
+    stat_cards([
+        ("🟢 Watched", watched_count, "52, 199, 89"),
+        ("🔵 Great",   great_count,   "0, 122, 255"),
+        ("🟣 Goat",    goat_count,    "168, 85, 247"),
+    ])
     st.space('small')
     st.write(f':blue-background[ℹ️ Search : {st.session_state.search_bar if st.session_state.search_bar else "-"}]')
     st.write(f':blue-background[ℹ️ Tags : {", ".join(st.session_state.tag_bar) if st.session_state.tag_bar else "-"}]')
@@ -1092,7 +1080,7 @@ def display_film_calender(df):
         btn_width = 36
         btn_height = 35
         date_size = 10
-        film_size = 7
+        film_size = 6.7
     
     if 'selected_date' not in st.session_state:
         st.session_state.selected_date = date.today()
@@ -1189,10 +1177,10 @@ def display_film_calender(df):
                 if len(filtered_df[filtered_df['filtered_date'].dt.date == selected_date]) > 0:
                     film_date = len(filtered_df[filtered_df["filtered_date"].dt.date == selected_date])
                     if selected_date == st.session_state.show_date:
-                        if st.button(f'{str(i)} :gray[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),), type='primary'):
+                        if st.button(f'{str(i)} \\\n:gray[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),), type='primary', wrap=True):
                             st.session_state.date_clicked = True
                     else:
-                        if st.button(f'{str(i)} :red[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),)):
+                        if st.button(f'{str(i)}\\\n:red[{film_date}]', width=btn_width, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),), wrap=True):
                             st.session_state.date_clicked = True
                 else:
                     st.button(str(i), width=btn_width, disabled=True, key=f'calender_dates_{i}', on_click=set_date, args=(date(calender_year, calender_month, i),))
@@ -1580,6 +1568,14 @@ def reset_check():
     st.session_state.show_review_e = True
     st.session_state.show_review_f = True
     st.session_state.show_review_drop = False
+
+def close_dialog():
+    st.session_state.scrap_dialog = False
+    st.session_state.viewing_film_index = None
+    st.session_state.editing_film_index = None
+    st.session_state.first_load_a = True
+    st.session_state.quick_del_dialog = False
+    st.session_state.simple_edit = False
 
 # --- FUNGSI ALTERNATIF: Grid Layout tanpa Pagination ---
 def display_film_grid(df, tag_df):
@@ -2203,7 +2199,7 @@ def display_film_grid(df, tag_df):
     if st.button('⬆️ Back to top', width='stretch'):
         st.session_state.scroll_to_here = True                   
 
-@st.dialog('Scrap', width='small')
+@st.dialog('Scrap', width='small', on_dismiss=close_dialog)
 def display_scrap_manual():
     df = init_dataframe_film()
     actress_df = init_dataframe_actress()
@@ -2248,8 +2244,6 @@ def display_scrap_manual():
         st.rerun()
 
     st.markdown('---')
-    if st.button('Scrap', width='stretch'):
-        st.session_state.start_scrap = True
     with st.container(horizontal=True):
         st.button('Show Scrap', width='stretch', key='show_scrap')
         st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
@@ -2331,17 +2325,17 @@ def display_scrap_manual():
     #    START SCRAPPING
     # =======================
     if st.session_state.html_bar:
-        soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
-        if soup.find():
-            multiple = soup.select_one("div.col-4.col-md-3.col-lg-2")
-            if multiple:
-                st.session_state.s_type = 'film-multiple'
+        try:
+            soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
+            if soup.find():
+                multiple = soup.select_one("div.col-4.col-md-3.col-lg-2")
+                if multiple:
+                    st.session_state.s_type = 'film-multiple'
+                else:
+                    st.session_state.s_type = 'film-single'
             else:
-                st.session_state.s_type = 'film-single'
-        else:
-            st.session_state.s_type = 'cast'
+                st.session_state.s_type = 'cast'
 
-        if st.session_state.start_scrap:
             if st.session_state.s_type == 'film-single':
                 film_title = soup.find('h1').get_text(strip=True)
 
@@ -2723,21 +2717,20 @@ def display_scrap_manual():
 
                     st.session_state.scrap_new = new_value
                 else:
-                    st.error('Actress not found in database! ❌')                        
-        else:
-            if soup.find():
-                multiple = soup.select_one("div.col-4.col-md-3.col-lg-2")
-                if multiple:
-                    st.info('ℹ️ Scrapping Film Multiple')
-                else:
-                    st.info('ℹ️ Scrapping Film Single')
-            else:
-                st.info('ℹ️ Scrapping Cast')
-
-            st.success('✅ HTML Detected! (Ready to scrap)')
+                    st.error('Actress not found in database! ❌')    
+        except Exception as e:
+            st.error('Error HTML not readable!')                    
     else:
         st.warning('⚠️ HTML Empty')
 
+def set_tags():
+    tag_bar = st.session_state.tag_bar
+    if st.session_state.pill_tag not in tag_bar:
+        tag_bar.append(st.session_state.pill_tag)
+        st.session_state.tag_bar = tag_bar
+    st.session_state.viewing_film_index = None
+    st.rerun()
+    
 
 def complex_home():
     if 'log_out_btn' not in st.session_state:
@@ -2914,7 +2907,7 @@ def complex_film(device):
         else:
             st.session_state.a_button = 'primary'
 
-    @st.dialog("🎬 Film Details", width='small')
+    @st.dialog("🎬 Film Details", width='small', on_dismiss=close_dialog)
     def show_film_details():
         index = st.session_state.viewing_film_index
         
@@ -3015,6 +3008,14 @@ def complex_film(device):
 
             if film['A-Detector'] == True:
                 sneak_info += ' ⭐'
+
+            if 'AV Debut' in film['Tags']:
+                sneak_info += ' 🆕'
+            if 'Want to watch' in film['Tags']:
+                sneak_info += ' 👁️'
+            if 'Downloaded' in film['Tags']:
+                sneak_info += ' 📥'
+
         else:
             sneak_info = ''
 
@@ -3336,20 +3337,7 @@ def complex_film(device):
         else:
             tags = film['Tags'].split(', ')
 
-            with st.container(horizontal=True):
-                for tag in tags:
-                    if tag == 'No Tags':
-                        dis_values = True
-                    else:
-                        dis_values = False
-
-                    if st.button(f':gray-background[{tag}]', width='content', type='tertiary', disabled=dis_values):
-                        tag_bar = st.session_state.tag_bar
-                        if tag not in tag_bar:
-                            tag_bar.append(tag)
-                            st.session_state.tag_bar = tag_bar
-                        st.session_state.viewing_film_index = None
-                        st.rerun()
+            st.pills("Tags", tags, label_visibility='collapsed', disabled=(True if 'No Tags' in tags else False), on_change=set_tags, key='pill_tag')
 
         if st.session_state.show_gallery:
             st.markdown('---')
@@ -3990,7 +3978,7 @@ def complex_film(device):
         time.sleep(.5)
         st.rerun()
 
-    @st.dialog("➕ Add New Film", width='small')
+    @st.dialog("➕ Add New Film", width='small', on_dismiss=close_dialog)
     def add_new_film():
         with st.container(horizontal=True):
             st.session_state.film_simple_edit = st.toggle('Simple Input', value=st.session_state.film_simple_edit)
@@ -4176,7 +4164,7 @@ def complex_film(device):
             if st.button('Close', type='primary', width='stretch'):
                 st.rerun()
 
-    @st.dialog("📃 Delete List", width='small')
+    @st.dialog("📃 Delete List", width='small', on_dismiss=close_dialog)
     def deleted_list():
         if st.session_state.del_index:
             st.session_state.del_index.sort(reverse=True)
@@ -4404,24 +4392,28 @@ def complex_film(device):
             
             if st.button('💻', width='content'):
                 st.session_state.scrap_dialog = True
-            
-            if st.button('👁️ Display', width='content'):
-                @st.dialog('Display', width='small') #viewmode
-                def display_setting():
-                    layout_index = ["Detailed", "Simple", "Calendar"].index(st.session_state.film_layout) if st.session_state.film_layout in ["Detailed", "Simple", "Calendar"] else 0
-                    with st.container(horizontal=True):
-                        st.session_state.film_layout = st.radio(
-                            "View Mode",
-                            ["Detailed", "Simple", "Calendar"],
-                            index= layout_index,
-                            key='film_display_mode',
-                            on_change=reset_page,
-                            horizontal=True,
-                        )
-                    if st.button('Set', width='stretch'):
-                        st.rerun()
+
+            display_button = st.menu_button('👁️ Display', options=["Detailed", "Simple", "Calendar"], width='content')
+            if display_button:
+                st.session_state.film_layout = display_button
+                st.rerun()
+            # if st.button('👁️ Display', width='content'):
+            #     @st.dialog('Display', width='small') #viewmode
+            #     def display_setting():
+            #         layout_index = ["Detailed", "Simple", "Calendar"].index(st.session_state.film_layout) if st.session_state.film_layout in ["Detailed", "Simple", "Calendar"] else 0
+            #         with st.container(horizontal=True):
+            #             st.session_state.film_layout = st.radio(
+            #                 "View Mode",
+            #                 ["Detailed", "Simple", "Calendar"],
+            #                 index= layout_index,
+            #                 key='film_display_mode',
+            #                 on_change=reset_page,
+            #                 horizontal=True,
+            #             )
+            #         if st.button('Set', width='stretch'):
+            #             st.rerun()
                 
-                display_setting()
+            #     display_setting()
         
     film_navbar.float("top: 50px;z-index: 999990;")
 
@@ -4453,399 +4445,6 @@ def complex_film(device):
     elif st.session_state.film_layout == "Calendar":
         st.markdown("<h1 style='text-align: center;'>Calendar Scrap</h1>", unsafe_allow_html=True)
         display_film_calender(df)
-
-        # def reset_scrap():
-        #     st.session_state.start_scrap = False
-        #     st.session_state.input_info = 'Not Watched'
-        #     st.session_state.input_a = False
-        #     st.session_state.prev_pic = 0
-
-        # def background_text(text, color):
-        #     st.write(f':{color}-background[{text}]')
-
-        # if 'scrap_new' not in st.session_state:
-        #     st.session_state.scrap_new = []
-        
-        # if 'actress_new' not in st.session_state:
-        #     st.session_state.actress_new = []
-        
-        # if 'start_scrap' not in st.session_state:
-        #     st.session_state.start_scrap = False
-
-        # if 's_type' not in st.session_state:
-        #     st.session_state.s_type = None
-
-        # scrap_new = []
-        # if st.session_state.get('html_reset', False):
-        #     st.session_state.html_reset = False
-        #     st.session_state.html_bar = ''
-        #     st.session_state.input_info = 'Not Watched'
-        #     st.session_state.input_a = False
-        #     st.session_state.prev_pic = 0
-        #     st.session_state.start_scrap = False
-
-        # st.markdown("<h1 style='text-align: center; margin-bottom: 30px;'>Scrap Manual</h1>", unsafe_allow_html=True)
-        # st.text_area("HTML TEXT", placeholder="Paste your html here...", key='html_bar', on_change=reset_scrap)
-        # if st.button('Clear HTML', width='stretch', type='primary'):
-        #     st.session_state.html_reset = True
-        #     st.rerun()
-        # if st.button('Scrap', width='stretch'):
-        #     st.session_state.start_scrap = True
-    
-        # st.markdown('---')
-        # with st.container(horizontal=True):
-        #     st.button('Show Scrap', width='stretch', key='show_scrap')
-        #     st.button('Save Scrap', width='stretch', type='primary', key='save_scrap')
-        # st.markdown('---')
-
-        # # ==============================
-        # #         SAVE SCRAP
-        # # ==============================
-        # if st.session_state.save_scrap:
-        #     if st.session_state.s_type == "film": # Film
-        #         if st.session_state.scrap_new[1] in df['Code'].values:
-        #             index = df.loc[df['Code'] == st.session_state.scrap_new[1]].index
-        #             df.loc[index] = st.session_state.scrap_new
-                    
-        #             row = index[0] + 2
-        #             film_worksheet().update(f'A{row}:K{row}', [st.session_state.scrap_new])
-        #             st.toast('ℹ️ Existing Film')
-        #         else:
-        #             film_worksheet().append_row(st.session_state.scrap_new)
-        #             df.loc[len(df)] = st.session_state.scrap_new
-        #             st.toast('ℹ️ New Film')
-
-        #         st.session_state.film_df = df
-                
-        #         if st.session_state.actress_new:
-        #             actress_worksheet().append_rows(st.session_state.actress_new)
-        #             new_df = pd.DataFrame(st.session_state.actress_new, columns=actress_df.columns)
-        #             final_df = pd.concat([actress_df, new_df], ignore_index=True)
-        #             st.session_state.actress_df = final_df
-                    
-        #     else: # Cast
-        #         if st.session_state.scrap_new[3] in actress_df['Name (Kanji)'].values:
-        #             index = actress_df.loc[actress_df['Name (Kanji)'] == st.session_state.scrap_new[3]].index
-        #             actress_df.loc[index[0]] = st.session_state.scrap_new
-        #             row = index[0] + 2
-        #             actress_worksheet().update(f'A{row}:O{row}', [st.session_state.scrap_new])
-        #         else:
-        #             actress_df.loc[len(actress_df)] = st.session_state.scrap_new
-        #             actress_worksheet().append_row(st.session_state.scrap_new)
-
-        #         st.session_state.actress_df = actress_df
-
-        #     st.session_state.html_reset = True
-        #     st.toast("✅ Scrap Saved Successfully!")
-        #     time.sleep(.5)
-        #     st.rerun()
-        
-        # # ========================
-        # #      SHOW SCRAPPING
-        # # ========================
-        # elif st.session_state.show_scrap:
-        #     st.session_state.start_scrap = False
-        #     if st.session_state.s_type == "film":
-        #         st.write("Isi Scrap Film")
-        #         st.write(st.session_state.scrap_new)
-        #         st.space("small")
-        #         st.write("Actress New")
-        #         st.write(st.session_state.actress_new)
-        #     else:
-        #         st.write("Isi scrap Cast")
-        #         st.write(st.session_state.scrap_new)
-
-        # # =======================
-        # #    START SCRAPPING
-        # # =======================
-        # if st.session_state.html_bar:
-        #     soup = BeautifulSoup(st.session_state.html_bar, "html.parser")
-        #     if soup.find():
-        #         st.session_state.s_type = 'film'
-        #     else:
-        #         st.session_state.s_type = 'cast'
-            
-        #     if st.session_state.start_scrap:
-        #         if st.session_state.s_type == 'film':
-        #             film_title = soup.find('h1').get_text(strip=True)
-
-        #             section = soup.find("div", class_="col-md-9")
-        #             all_p = section.find_all("p")
-
-        #             casts = []
-        #             actress_list = []
-        #             for p in all_p:
-        #                 span = p.find("span")
-
-        #                 if span and "DVD ID:" in span.text:
-        #                     dvd_id = p.get_text(strip=True).replace(span.get_text(strip=True), "").strip()
-        #                     st.markdown(f"# :orange-background[{dvd_id}]")
-                        
-        #                 if span and "Release Date" in span.text:
-        #                     release_date = datetime.strptime(p.get_text(strip=True).replace(span.get_text(strip=True), "").strip(), "%d %b %Y")
-        #                     formatted_date = release_date.strftime("%d/%m/%Y")
-        #                     if release_date.date() <= datetime.today().date():
-        #                         release_status = 1
-        #                     else:
-        #                         release_status = 0
-
-        #                 if span and "Cast(s):" in span.text:
-
-        #                     for a in p.find_all("a"):
-        #                         cast = a.get_text(strip=True)
-        #                         kanji = re.findall(r'[\u3005\u3040-\u30FF\u4E00-\u9FFF]+', cast)
-        #                         latins = re.findall(r'[A-Za-z ]+', cast)
-        #                         latins = latins[0].split(' ')
-        #                         latin = latins[1] + ' ' + latins[0]
-
-        #                         if kanji not in actress_df['Name (Kanji)'].values:
-        #                             casts.append([
-        #                                 'Not Checked',
-        #                                 st.secrets.indicators.PLACEHOLDER_IMG,
-        #                                 latin.strip(),
-        #                                 kanji[0].strip(),
-        #                                 '?',
-        #                                 '?',
-        #                                 '?',
-        #                                 '?',
-        #                                 '? cm',
-        #                                 '--',
-        #                                 '?',
-        #                                 '?',
-        #                                 '?',
-        #                                 'Active',
-        #                                 "https://javtrailers.com" + a.get("href")
-        #                             ])
-
-        #                         actress_list.append(latin.strip())
-                    
-        #             if actress_list:
-        #                 actress_name = ', '.join(actress_list)
-        #             else:
-        #                 actress_name = 'Not Listed'
-
-        #             thumbnail = soup.find("div", id="thumbnailContainer").find("img").get("src")
-        #             film_link = soup.find("link", rel="canonical")
-        #             film_ref = film_link.get("href") if film_link else '--'
-
-        #             if dvd_id in df["Code"].values:
-        #                 st.write(':blue-background[ℹ️ Film exist in database!]')
-        #                 match_film_data = df[df["Code"] == dvd_id]
-
-        #                 tags = match_film_data["Tags"].iloc[0]
-        #                 info_index = INFO_OPTS.index(match_film_data['Info'].iloc[0]) if match_film_data['Info'].iloc[0] in ['Not Watched', 'Watched', 'Great', 'Goat'] else 0
-                
-        #                 a_index = match_film_data["A-Detector"].iloc[0]
-        #             else:
-        #                 st.write(':blue-background[ℹ️ New Film!]')
-        #                 info_index = 0
-        #                 tags = 'No Tags'
-        #                 a_index = False
-                    
-        #             st.space('small')
-        #             input_info = st.selectbox(':yellow-background[Info:]', options=['🔴 Not Watched', '🟢 Watched', '🔵 Great', '🟣 Goat'], key='input_info', index=info_index)
-        #             input_info = input_info.split(' ',1)[1]
-        #             st.space('small')
-        #             input_a = st.toggle('✨ A-Detector', value=a_index)
-                    
-        #             st.space('small')
-        #             background_text('Gallery:', 'yellow')
-        #             try:
-        #                 gallery = soup.find("div", id="gallery-wrapper")
-        #                 # ambil semua img di dalamnya
-        #                 img_tags = gallery.find_all("img")
-
-        #                 # ambil src
-        #                 img_srcs = ', '.join([img.get("src") for img in img_tags])
-        #                 if img_srcs:
-        #                     if 'prev_pic' not in st.session_state:  
-        #                         st.session_state.prev_pic = 0
-                            
-        #                     pics = [img.get("src") for img in img_tags]
-        #                     count = len(pics)
-
-        #                     st.markdown(
-        #                         """
-        #                         <style>
-        #                         div[data-testid="stVerticalBlock"] { padding-top: 0rem; padding-bottom: 0rem; }
-
-        #                         .img-fit {
-        #                             margin-top: -13px; 
-        #                             padding-top: 0; 
-        #                             display: flex;             /* gunakan flexbox */
-        #                             justify-content: center;   /* horizontal center */
-        #                             align-items: center;       /* vertical center jika container tinggi ditentukan */
-        #                             background-color: #ffffff;
-        #                             border-radius: 5px;
-        #                             margin-bottom: 15px;
-        #                         }
-
-        #                         .img-fit img {
-        #                             max-width: 100%;
-        #                             height: 400px;
-        #                             width: auto;
-        #                             object-fit: contain;
-        #                             display: none;  /* default hidden semua gambar */
-        #                         }
-
-        #                         .img-fit img.active {
-        #                             display: block; /* hanya gambar active yang terlihat */
-        #                         }
-        #                         </style>
-        #                         """,
-        #                         unsafe_allow_html=True
-        #                     )
-
-        #                     # HTML untuk semua gambar, preload semuanya
-        #                     img_html = '<div class="img-fit">'
-        #                     for i, pic in enumerate(pics):
-        #                         active_class = 'active' if i == st.session_state.prev_pic else ''
-        #                         img_html += f'<img src="{pic}" class="{active_class}" id="img_{i}">'
-        #                     img_html += '</div>'
-
-        #                     st.markdown(img_html, unsafe_allow_html=True)
-
-        #                     with st.container(horizontal=True):
-        #                         # Tombol navigasi
-        #                         st.button('⬅️ Previous', disabled=(st.session_state.prev_pic == 0), args=(st.session_state.prev_pic - 1,count), on_click=set_prev_pic, width='stretch')
-        #                         st.button('➡️ Next', disabled=(st.session_state.prev_pic == count-1), args=(st.session_state.prev_pic + 1,count), on_click=set_prev_pic, width='stretch')
-        #             except Exception as e:
-        #                 st.error('Gallery Not Found! ❌')
-        #                 img_srcs = 'No Picture'
-
-        #             st.space('small')
-        #             background_text('Thumbnail:', 'yellow')
-        #             with st.container(horizontal_alignment='center'):
-        #                 st.image(thumbnail, width=180)
-        #             st.space('small')
-        #             background_text('Release Date:', 'yellow')
-        #             st.write(f"{formatted_date} ({release_date.date()})")
-        #             st.space('small')
-        #             background_text('Link:', 'yellow')
-        #             st.write(film_ref)
-        #             st.space('small')
-        #             background_text('Title:', 'yellow')
-        #             st.write(film_title)
-        #             st.space('small')
-        #             background_text('Preview Image:', 'yellow')
-        #             if img_srcs != 'No Picture':
-        #                 st.write(img_srcs)
-        #             else:
-        #                 st.error('Gallery Not Found! ❌')
-        #             st.space('small')
-        #             background_text('Actress Name:', 'yellow')
-        #             st.write(actress_name)
-        #             st.space('small')
-        #             st.markdown('### :orange-background[New Actress:]')
-        #             st.write(casts)
-                        
-        #             scrap_new = [
-        #                 actress_name,
-        #                 dvd_id,
-        #                 film_title,
-        #                 formatted_date,
-        #                 thumbnail,
-        #                 tags,
-        #                 input_info,
-        #                 release_status,
-        #                 film_ref,
-        #                 img_srcs,
-        #                 input_a
-        #             ]
-
-        #             st.session_state.actress_new = casts
-        #             st.session_state.scrap_new = scrap_new
-
-        #         else: # Cast
-        #             def extract_field(field, text):
-        #                 pattern = rf"{field}:\s*(.*?)\s*(?=\s*-\s*[A-Za-z ]+:|\n|$)"
-        #                 match = re.search(pattern, text)
-        #                 return match.group(1).strip() if match else None
-                    
-        #             dob = extract_field("DOB", st.session_state.html_bar)
-        #             debut = extract_field("Debut", st.session_state.html_bar)
-        #             if debut != '?':
-        #                 debut = datetime.strptime(debut, "%Y-%m-%d")
-        #                 debut_date = debut.strftime("%d/%m/%Y")
-        #                 period = relativedelta(date.today(), debut.date())
-
-        #                 if period.months == 0:
-        #                     debut_period = f'{period.years} Year'
-        #                 else:
-        #                     debut_period = f'{period.years} Year {period.months} Month'
-        #             else:
-        #                 debut_date = '?'
-        #                 debut_period = '?'
-
-        #             data = {
-        #                 "DOB": datetime.strptime(dob, "%Y-%m-%d").strftime("%d/%m/%Y") if dob != '?' else '?',
-        #                 "Debut": debut_date,
-        #                 "Measurements": extract_field("Measurements", st.session_state.html_bar),
-        #                 "Cup": extract_field("Cup", st.session_state.html_bar),
-        #                 "Height": extract_field("Height", st.session_state.html_bar),
-        #                 "JP": extract_field("JP", st.session_state.html_bar)
-        #             }
-
-        #             age = calculate_age(data['DOB'])
-        #             size_char = ['B','W','H']
-        #             measurement = ' / '.join([f"{size_char[i]}{num}" for i, num in enumerate(data["Measurements"].split("-"))])
-
-        #             if data['JP'] in actress_df['Name (Kanji)'].values:
-        #                 st.write(':blue-background[ℹ️ Actress found in database!]')
-        #                 match_data = actress_df.loc[actress_df['Name (Kanji)'] == data['JP']]
-        #                 idx = match_data.index
-
-        #                 if match_data['Retire Date'].iloc[0] != '?' and debut != '?':
-        #                     retire = datetime.strptime(match_data['Retire Date'].iloc[0], "%d/%m/%Y")
-        #                     period = relativedelta(retire.date(), debut.date())
-
-        #                     if period.months == 0:
-        #                         debut_period = f'{period.years} Year'
-        #                     else:
-        #                         debut_period = f'{period.years} Year {period.months} Month'
-
-        #                 row = idx + 2
-        #                 new_value = [
-        #                     match_data['Review'].iloc[0],
-        #                     match_data['Picture'].iloc[0],
-        #                     match_data['Name (Alphabet)'].iloc[0],
-        #                     match_data['Name (Kanji)'].iloc[0],
-        #                     data['DOB'],
-        #                     data['Debut'],
-        #                     data['Cup'],
-        #                     measurement,
-        #                     data['Height'],
-        #                     match_data['Notes'].iloc[0],
-        #                     age,
-        #                     debut_period,
-        #                     match_data['Retire Date'].iloc[0],
-        #                     match_data['Status'].iloc[0],
-        #                     match_data['Page'].iloc[0],
-        #                 ]
-
-        #                 with st.container(horizontal_alignment='center'):
-        #                     st.image(match_data['Picture'].iloc[0], width=120)
-        #                 st.write(f"Review : {match_data['Review'].iloc[0]}" )
-        #                 st.write(f"Latin : {match_data['Name (Alphabet)'].iloc[0]}" )
-        #                 st.write(f"Kanji : {match_data['Name (Kanji)'].iloc[0]}" )
-        #                 st.write(f"Birthdate : {data['DOB']}" )
-        #                 st.write(f"Debut Date : {data['Debut']}" )
-        #                 st.write(f"Debut Period : {debut_period}")
-        #                 st.write(f"Cup : {data['Cup']}" )
-        #                 st.write(f"Measurement : {measurement}" )
-        #                 st.write(f"Height : {data['Height']}" )
-        #                 st.session_state.scrap_new = new_value
-        #             else:
-        #                 st.error('Actress not found in database! ❌')                        
-        #     else:
-        #         if soup.find():
-        #             st.info('ℹ️ Scrapping Film')
-        #         else:
-        #             st.info('ℹ️ Scrapping Cast')
-
-        #         st.success('✅ HTML Detected! (Ready to scrap)')
-        # else:
-        #     st.warning('⚠️ HTML Empty')
 
     with st.sidebar:
         if st.button('➕ Add New Film', width='stretch'):
@@ -4961,122 +4560,29 @@ def complex_film(device):
         border: 1px solid #EAB308;
     }
                 
-    /* ================= DESKTOP ================= */
-    @media (min-width: 768px) {
-        section[data-testid="stSidebar"] {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            height: 100% !important;
-            width: 300px !important;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            z-index: 999999 !important;
-            box-shadow: 2px 0 20px rgba(0,0,0,0.2) !important;
-        }
-
-        section[data-testid="stSidebar"][aria-expanded="true"] {
-            transform: translateX(0) !important;
-        }
-
-        .main .block-container {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            max-width: 100% !important;
-        }
+    /* Sidebar jadi overlay satu layar penuh */
+    section[data-testid="stSidebar"] {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100vh !important;
+        z-index: 999999 !important;
     }
 
-    /* ================= MOBILE ================= */
-    @media (max-width: 767px) {
-        section[data-testid="stSidebar"] {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            height: 100vh !important;
-            width: 100vw !important;
-            max-width: 100vw !important;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            z-index: 999999 !important;
-        }
-
-        section[data-testid="stSidebar"][aria-expanded="true"] {
-            transform: translateX(0) !important;
-        }
-
-        .stSidebarCollapseButton button {
-            position: fixed !important;
-            top: 10px !important;
-            right: 10px !important;
-            z-index: 1000000 !important;
-            font-size: 24px !important;
-            padding: 14px !important;
-            background: rgba(0,0,0,0.1) !important;
-            border-radius: 50% !important;
-        }
-
-        .main .block-container {
-            padding: 1rem !important;
-        }
+    /* Isi dalam sidebar juga harus ikut lebar penuh */
+    section[data-testid="stSidebar"] > div {
+        width: 100vw !important;
     }
 
-    /* ================= OVERLAY ================= */
-    .sidebar-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.5);
-        z-index: 999998;
-        backdrop-filter: blur(2px);
-    }
-
-    /* Hide default arrow */
-    [data-testid="collapsedControl"] {
+    /* Matikan handle resize di desktop */
+    [data-testid="stSidebarResizeHandle"],
+    div[data-testid="stSidebar"] .resize-handle {
         display: none !important;
     }
-    </style>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-
-        const waitForSidebar = setInterval(() => {
-            const sidebar = document.querySelector('section[data-testid="stSidebar"]');
-            const closeBtn = sidebar?.querySelector('button[kind="header"]');
-
-            if (sidebar && closeBtn) {
-                clearInterval(waitForSidebar);
-
-                /* ===== AUTO CLOSE ON FIRST LOAD ===== */
-                if (sidebar.getAttribute('aria-expanded') === 'true') {
-                    closeBtn.click();
-                }
-
-                /* ===== CREATE OVERLAY ===== */
-                const overlay = document.createElement('div');
-                overlay.className = 'sidebar-overlay';
-                document.body.appendChild(overlay);
-
-                /* ===== OBSERVE SIDEBAR STATE ===== */
-                const observer = new MutationObserver(() => {
-                    const expanded = sidebar.getAttribute('aria-expanded') === 'true';
-                    overlay.style.display = expanded ? 'block' : 'none';
-                    document.body.style.overflow = expanded ? 'hidden' : 'auto';
-                });
-
-                observer.observe(sidebar, { attributes: true });
-
-                /* ===== CLICK OVERLAY TO CLOSE ===== */
-                overlay.addEventListener('click', () => closeBtn.click());
-
-                /* ===== ESC KEY TO CLOSE ===== */
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && overlay.style.display === 'block') {
-                        closeBtn.click();
-                    }
-                });
-            }
-        }, 100);
-    });
     </script>
     """, unsafe_allow_html=True)
 
@@ -7148,121 +6654,28 @@ def complex_actress(device):
 
     st.markdown("""
     <style>
-    /* ================= DESKTOP ================= */
-    @media (min-width: 768px) {
-        section[data-testid="stSidebar"] {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            height: 100% !important;
-            width: 400px !important;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            z-index: 999999 !important;
-            box-shadow: 2px 0 20px rgba(0,0,0,0.2) !important;
-        }
-
-        section[data-testid="stSidebar"][aria-expanded="true"] {
-            transform: translateX(0) !important;
-        }
-
-        .main .block-container {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            max-width: 100% !important;
-        }
+       
+    /* Sidebar jadi overlay satu layar penuh */
+    section[data-testid="stSidebar"] {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100vh !important;
+        z-index: 999999 !important;
     }
 
-    /* ================= MOBILE ================= */
-    @media (max-width: 767px) {
-        section[data-testid="stSidebar"] {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            height: 100vh !important;
-            width: 100vw !important;
-            max-width: 100vw !important;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            z-index: 999999 !important;
-        }
-
-        section[data-testid="stSidebar"][aria-expanded="true"] {
-            transform: translateX(0) !important;
-        }
-
-        .stSidebarCollapseButton button {
-            position: fixed !important;
-            top: 10px !important;
-            right: 10px !important;
-            z-index: 1000000 !important;
-            font-size: 24px !important;
-            padding: 14px !important;
-            background: rgba(0,0,0,0.1) !important;
-            border-radius: 50% !important;
-        }
-
-        .main .block-container {
-            padding: 1rem !important;
-        }
+    /* Isi dalam sidebar juga harus ikut lebar penuh */
+    section[data-testid="stSidebar"] > div {
+        width: 100vw !important;
     }
 
-    /* ================= OVERLAY ================= */
-    .sidebar-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.5);
-        z-index: 999998;
-        backdrop-filter: blur(2px);
-    }
-
-    /* Hide default arrow */
-    [data-testid="collapsedControl"] {
+    /* Matikan handle resize di desktop */
+    [data-testid="stSidebarResizeHandle"],
+    div[data-testid="stSidebar"] .resize-handle {
         display: none !important;
     }
-    </style>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-
-        const waitForSidebar = setInterval(() => {
-            const sidebar = document.querySelector('section[data-testid="stSidebar"]');
-            const closeBtn = sidebar?.querySelector('button[kind="header"]');
-
-            if (sidebar && closeBtn) {
-                clearInterval(waitForSidebar);
-
-                /* ===== AUTO CLOSE ON FIRST LOAD ===== */
-                if (sidebar.getAttribute('aria-expanded') === 'true') {
-                    closeBtn.click();
-                }
-
-                /* ===== CREATE OVERLAY ===== */
-                const overlay = document.createElement('div');
-                overlay.className = 'sidebar-overlay';
-                document.body.appendChild(overlay);
-
-                /* ===== OBSERVE SIDEBAR STATE ===== */
-                const observer = new MutationObserver(() => {
-                    const expanded = sidebar.getAttribute('aria-expanded') === 'true';
-                    overlay.style.display = expanded ? 'block' : 'none';
-                    document.body.style.overflow = expanded ? 'hidden' : 'auto';
-                });
-
-                observer.observe(sidebar, { attributes: true });
-
-                /* ===== CLICK OVERLAY TO CLOSE ===== */
-                overlay.addEventListener('click', () => closeBtn.click());
-
-                /* ===== ESC KEY TO CLOSE ===== */
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && overlay.style.display === 'block') {
-                        closeBtn.click();
-                    }
-                });
-            }
-        }, 100);
-    });
     </script>
     """, unsafe_allow_html=True)
