@@ -3225,12 +3225,13 @@ def complex_film(device):
 
         filtered_data = st.session_state.filtered_film_data
         pos = st.session_state.filtered_data_position
-        with st.container(horizontal=True):
-            st.button('⬅️', width='stretch', disabled=(st.session_state.filtered_data_position==0), on_click=set_film_data, args=(st.session_state.filtered_data_position-1,len(filtered_data)))
-            st.button('➡️', width='stretch', disabled=(st.session_state.filtered_data_position==len(filtered_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(filtered_data)))
 
         film = filtered_data.iloc[pos]
         idx = filtered_data.index[pos]
+        st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
+        with st.container(horizontal=True):
+            st.button('⬅️', width='stretch', disabled=(st.session_state.filtered_data_position==0), on_click=set_film_data, args=(st.session_state.filtered_data_position-1,len(filtered_data)))
+            st.button('➡️', width='stretch', disabled=(st.session_state.filtered_data_position==len(filtered_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(filtered_data)))
    
         if index is None or index >= len(df):
             st.warning("No film selected")
@@ -3242,7 +3243,6 @@ def complex_film(device):
             show_view_film(film, idx)
 
     def show_view_film(film, filtered_index):
-        st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
         if st.session_state.show_gallery:
             if 'prev_pic' not in st.session_state:  
                 st.session_state.prev_pic = 0
