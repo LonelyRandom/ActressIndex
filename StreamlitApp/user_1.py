@@ -2600,6 +2600,8 @@ def display_scrap_manual():
                 
                 dob = extract_field("DOB", st.session_state.html_bar)
                 debut = extract_field("Debut", st.session_state.html_bar)
+                name_alpha_temp = st.session_state.html_bar.split('-')[0].split(' ')
+                name_alpha = name_alpha_temp[1] + ' ' + name_alpha_temp[0]
                 if debut != '?':
                     debut = datetime.strptime(debut, "%Y-%m-%d")
                     debut_date = debut.strftime("%d/%m/%Y")
@@ -2623,12 +2625,25 @@ def display_scrap_manual():
                     "Measurements": extract_field("Measurements", st.session_state.html_bar),
                     "Cup": extract_field("Cup", st.session_state.html_bar),
                     "Height": height,
-                    "JP": extract_field("JP", st.session_state.html_bar)
+                    "JP": extract_field("JP", st.session_state.html_bar),
+                    "Alphabet": name_alpha
                 }
 
                 age = calculate_age(data['DOB'])
                 size_char = ['B','W','H']
                 measurement = ' / '.join([f"{size_char[i]}{num}" for i, num in enumerate(data["Measurements"].split("-"))]) if '?' not in data['Measurements'] else '?'
+
+                st.markdown("## Picture")
+                new_pic = st.text_input('New Pic Url', width='stretch', placeholder='Input pic url...')
+                with st.container(horizontal_alignment='center'):
+                    if new_pic != '':
+                        st.image(new_pic, width=120)
+                    elif data['JP'] in actress_df['Name (Kanji)'].values:
+                        new_pic = match_data['Picture'].iloc[0]
+                        st.image(match_data['Picture'].iloc[0], width=120)
+                    else:
+                        new_pic = st.secrets.indicators.PLACEHOLDER_IMG
+                        st.image(new_pic, width=120)
 
                 if data['JP'] in actress_df['Name (Kanji)'].values:
                     st.write(':blue-background[ℹ️ Actress found in database!]')
@@ -2643,18 +2658,6 @@ def display_scrap_manual():
                             debut_period = f'{period.years} Year'
                         else:
                             debut_period = f'{period.years} Year {period.months} Month'
-
-
-
-                    st.markdown("## Picture")
-                    new_pic = st.text_input('New Pic Url', width='stretch', placeholder='Input pic url...')
-                    with st.container(horizontal_alignment='center'):
-                        if new_pic != '':
-                            st.image(new_pic, width=120)
-                        else:
-                            new_pic = match_data['Picture'].iloc[0]
-                            st.image(match_data['Picture'].iloc[0], width=120)
-
 
                     st.markdown("## Comparison Table")
                     after_data = {
@@ -2717,7 +2720,68 @@ def display_scrap_manual():
 
                     st.session_state.scrap_new = new_value
                 else:
-                    st.error('Actress not found in database! ❌')    
+                    st.error('Actress not found in database! ❌')  
+                    act_page = st.text_input('Actress Page URL', placeholder='Input Trailer URL...', width='stretch')
+                    if act_page == '':
+                        act_page = '--' 
+                    st.markdown("## Comparison Table")
+                    after_data = {
+                        "Field": [
+                            "Review",
+                            "Latin",
+                            "Kanji",
+                            "Birthdate",
+                            "Debut Date",
+                            "Debut Period",
+                            "Cup",
+                            "Measurement",
+                            "Height (cm)"
+                        ],
+                        "Before": [
+                            '-',
+                            '-',
+                            '-',
+                            '-',
+                            '-',
+                            '-',
+                            '-',
+                            '-',
+                            '-'
+                        ],
+                        "After": [
+                            'Not Checked',
+                            data['Alphabet'],
+                            data['JP'],
+                            data['DOB'],
+                            data['Debut'],
+                            debut_period,
+                            data['Cup'],
+                            measurement,
+                            data['Height']
+                        ]
+                    } 
+
+                    new_value = [
+                        'Not Checked',
+                        new_pic,
+                        data['Alphabet'],
+                        data['JP'],
+                        data['DOB'],
+                        data['Debut'],
+                        data['Cup'],
+                        measurement,
+                        data['Height'],
+                        '--',
+                        age,
+                        debut_period,
+                        '?',
+                        'Active',
+                        act_page,
+                    ]
+
+                    df_compare = pd.DataFrame(after_data)
+                    st.dataframe(df_compare, hide_index=True)
+                    st.session_state.scrap_new = new_value
         except Exception as e:
             st.error('Error HTML not readable!')                    
     else:
@@ -4368,26 +4432,6 @@ def complex_film(device):
                         if st.button('Set', width='stretch'):
                             st.rerun()
 
-                        if st.button('Fix Gallery', width='stretch', type='primary'):
-                            for i in range(len(df)):
-                                results = []
-
-                                links = df['Preview Picture'][i].split(', ')
-                                for link in links:
-                                    results.append(check_domain(link))
-                                
-                                if len(links) > 1:
-                                    result = ', '.join(results)
-                                else:
-                                    result = results[0]
-                                
-                                df.at[i, 'Preview Picture'] = result
-                            
-                            start_row = 2
-                            end_row = start_row + len(df)-1
-                            film_worksheet().update(f'J{start_row}:J{end_row}', df[['Preview Picture']].values.tolist())
-                            st.session_state.film_df = values_handling(df, 'Film')
-                
                     features(tag_df)
             
             if st.button('💻', width='content'):
