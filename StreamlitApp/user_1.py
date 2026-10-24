@@ -32,7 +32,7 @@ radial_menu = st.components.v2.component(
     """,
     css="""
     .radial-menu {
-    --scale: 0.8;
+    --scale: 0.7;
     position: relative;
     display: inline-block;
     font-family: var(--st-font);
