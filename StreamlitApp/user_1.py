@@ -881,7 +881,7 @@ def display_film_card(df, tag_df):
         img_card_width = 115
         actress_width = 81
     else:
-        img_card_height = 202
+        img_card_height = 162
         img_card_width = 106
         actress_width = 76
         
@@ -1136,123 +1136,156 @@ def display_film_card(df, tag_df):
             display_single_card('recommend', img_card_height, img_card_width, actress, real_index, random_film, i, 0)
     st.markdown('---')
 
+STATUS_COLORS = {
+    'Watched': '#4CAF50',
+    'Not Watched': '#F44336',
+    'Drop': '#9E9E9E',
+    'Goat': '#9b59b6',
+}
+
+CARD_CSS = """
+<style>
+.fc-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+    background: #1a1a1a;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25);
+    transition: transform .2s ease, box-shadow .2s ease;
+    margin-bottom: 10px;
+}
+
+.fc-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    transition: transform .35s ease;
+}
+.fc-overlay {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 36px 10px 12px;
+    background: linear-gradient(to top, rgba(0,0,0,.88) 0%, rgba(0,0,0,.55) 55%, transparent 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.fc-code {
+    color: #fff;
+    padding: 2px 12px;
+    border-radius: 12px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .5px;
+}
+.fc-date {
+    color: rgba(255,255,255,.75);
+    font-size: 11px;
+    transform: translateY(7px);
+}
+.fc-tag {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: rgba(0,0,0,.45);
+    backdrop-filter: blur(4px);
+    font-size: 14px;
+}
+.fc-bar {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 4px;
+}
+</style>
+"""
+
+def format_release_date(value):
+    if pd.isna(value) or value == '?':
+        return '?' if value == '?' else 'Unknown'
+    try:
+        return datetime.strptime(value, '%d/%m/%Y').strftime('%b %d, %Y')
+    except ValueError:
+        return str(value)
+
+
+def build_card_html(actress, img_card_height, img_card_width):
+    release_date = format_release_date(actress['Release Date'])
+
+    # tag badge (pojok kanan atas)
+    tags = actress['Tags']
+    tag_html = ''
+    if 'Downloaded' in tags:
+        tag_html = '<div class="fc-tag">📥</div>'
+    elif 'Want to Watch' in tags:
+        tag_html = '<div class="fc-tag">👁️</div>'
+
+    # jangan ada baris kosong / indentasi dalam, biar tidak dianggap markdown code block
+    return (
+        f'<div class="fc-card" style="width:{img_card_width}px;height:{img_card_height}px;">'
+        f'<img src="{actress["Picture"]}">'
+        f'{tag_html}'
+        f'<div class="fc-overlay">'
+        f'<span class="fc-date">{release_date}</span>'
+        f'</div>'
+        f'</div>'
+    )
 
 
 def display_single_card(keys, img_card_height, img_card_width, actress, card_id, filtered_df, i, start_idx):
-    """
-    Menampilkan single card untuk satu aktris
-    """
+    """Menampilkan single card untuk satu aktris"""
 
-    # st.write(actress['Code'])
-    status_color = "#4CAF50" if actress['Info'] == 'Watched' else "#F44336" if actress['Info'] == 'Not Watched' else "#9E9E9E" if actress['Info'] == 'Drop' else "#9b59b6" if actress['Info'] == 'Goat' else "#3498db"
-    card_html = ''
-    if actress['Release Date'] == '?':
-        release_date = '?'
-    else:
-        release_date = datetime.strptime(actress['Release Date'], '%d/%m/%Y').strftime('%b, %d %Y') if pd.notna(actress['Release Date']) else "Unknown"
-    
-    card_html += f"""<div class="actress-card" id="card_{card_id}" 
-        style="border: 2px solid {status_color}; border-radius: 15px; padding: 10px; 
-        margin: 10px 0; background: linear-gradient(135deg, #ffffff 0%, #EDE8D0 100%); 
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease; 
-        height: {img_card_height}px; width: {img_card_width}px;display: flex; flex-direction: column;">
-        <!-- Image Container -->
-        <div style="
-            height: 100%;  /* Atur tinggi tetap */
-            width: 100%;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 10px;
-            border-radius: 10px;
-            border : 2px solid {status_color};
-        ">"""
-    if 'Downloaded' in actress['Tags'] or 'Want to Watch' in actress['Tags']:
-        if 'Downloaded' in actress['Tags']:
-            tag_text = '📥'
-            tag_tier = 'download'
-        else:
-            tag_text = '👁️'
-            tag_tier = 'wtw'
-
-        card_html += f"""<div class="badge-stack">
-                <div class="tag-badge {tag_tier}-tier">
-                    {tag_text}
-                </div>
-            </div>"""
-        
-    card_html += f"""<img src="{actress['Picture']}" 
-                style="
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                    object-position: center;
-                ">
-        </div>
-        <!-- Separator -->
-        <div style="width: {50}px; height: {3}px; background: linear-gradient(90deg, {status_color}, #FFD166); 
-                margin: 0 auto 10px auto; border-radius: 2px;"></div>
-        <!-- Code and Date -->
-        <div>
-            <div style="display: flex; justify-content: center; margin-bottom: 1px;">"""
-    
+    card_html = build_card_html(actress, img_card_height, img_card_width)
+    status_color = STATUS_COLORS.get(actress['Info'], '#3498db')
     if actress['A-Detector'] == 1:
-        card_html += f"""<span style="
-                        background: linear-gradient(90deg, {status_color}, #FFD700);
-                        color: white;
-                        padding: 2px 10px;
-                        border-radius: 12px;
-                        font-size: 9px;
-                        font-weight: bold;
-                    ">
-                        {actress['Code']}
-                    </span>"""
+        code_bg = f'linear-gradient(90deg, {status_color}, #FFD700)'
     else:
-        card_html += f"""<span style="
-                        background: {status_color};
-                        color: white;
-                        padding: 2px 10px;
-                        border-radius: 12px;
-                        font-size: 9px;
-                        font-weight: bold;
-                    ">
-                        {actress['Code']}
-                    </span>"""
-
-    card_html += f"""</div>
-            <div style="display: flex; justify-content: center;">
-                <span style="color: #3498db; font-size:11px;">{release_date}</span>
-            </div>
-        </div>
-    </div>"""
-
+        code_bg = status_color
     with st.container(width=img_card_width):
-        st.markdown(card_html, unsafe_allow_html=True)
-        if st.session_state.a_pass == st.secrets.indicators.USER_1_DEL_PASS:
-            if keys == 'main':
-                if st.checkbox('Delete', key=f'del_film_{card_id}', value=card_id in st.session_state.del_index):
-                    if card_id not in st.session_state.del_index:
-                        st.session_state.del_index.append(int(card_id))
-            else:
-                if st.checkbox('Delete', key=f'rec_del_film_{card_id}', value=card_id in st.session_state.del_index):
-                    if card_id not in st.session_state.del_index:
-                        st.session_state.del_index.append(int(card_id))
+        st.markdown(CARD_CSS + card_html, unsafe_allow_html=True)
 
-        if keys == 'main':
-            if st.button(actress['Code'],key=f'view_film_{card_id}',width='stretch', type='primary'):
-                st.session_state.viewing_film_index = card_id
-                st.session_state.filtered_film_data = filtered_df
-                st.session_state.filtered_data_position = start_idx + i
-                st.session_state.editing_film_index = None
-                st.rerun()
-        else:
-            if st.button(actress['Code'],key=f'recommend_film_{card_id}',width='stretch', type='primary'):
-                st.session_state.viewing_film_index = card_id
-                st.session_state.filtered_film_data = filtered_df
-                st.session_state.filtered_data_position = start_idx + i
-                st.session_state.editing_film_index = None
-                st.rerun()
+        if st.session_state.a_pass == st.secrets.indicators.USER_1_DEL_PASS:
+            prefix = 'del_film_' if keys == 'main' else 'rec_del_film_'
+            if st.checkbox('Delete', key=f'{prefix}{card_id}', value=card_id in st.session_state.del_index):
+                if card_id not in st.session_state.del_index:
+                    st.session_state.del_index.append(int(card_id))
+
+        btn_prefix = 'view_film_' if keys == 'main' else 'recommend_film_'
+        btn_key = f'{btn_prefix}{card_id}'
+
+        st.html(f"""
+        <style>
+        .st-key-{btn_key} button {{
+            background: {code_bg};
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            transition: filter .15s, transform .15s;
+            margin-bottom: 10px;
+        }}
+        .st-key-{btn_key} button p {{ color: #fff; }}
+        .st-key-{btn_key} button:hover {{
+            filter: brightness(1.12);
+            transform: translateY(-1px);
+            color: #fff;
+        }}
+        .st-key-{btn_key} button:active {{
+            filter: brightness(.95);
+            color: #fff;
+        }}
+        </style>
+        """)
+
+        if st.button(actress['Code'], key=btn_key, width='stretch', type='secondary'):
+            st.session_state.viewing_film_index = card_id
+            st.session_state.filtered_film_data = filtered_df
+            st.session_state.filtered_data_position = start_idx + i
+            st.session_state.editing_film_index = None
+            st.rerun()
 
 def reset_calender_page():
     """Reset halaman ke 1"""
@@ -3305,31 +3338,7 @@ def complex_film(device):
         with st.container(horizontal_alignment='center'):
             st.toggle('Gallery', on_change=reset_pic, key='show_gallery')
 
-        # if st.session_state.show_gallery:
-        #     if film['Info'] == 'Watched':
-        #         sneak_info = '🟢'
-        #     elif film['Info'] == 'Great':
-        #         sneak_info = '🔵'
-        #     elif film['Info'] == 'Goat':
-        #         sneak_info = '🟣'
-        #     else:
-        #         sneak_info = '🔴'
-
-        #     if film['A-Detector'] == True:
-        #         sneak_info += ' ⭐'
-
-        #     if 'AV Debut' in film['Tags']:
-        #         sneak_info += ' 🆕'
-        #     if 'Want to watch' in film['Tags']:
-        #         sneak_info += ' 👁️'
-        #     if 'Downloaded' in film['Tags']:
-        #         sneak_info += ' 📥'
-
-        # else:
-        #     sneak_info = ''
-
         with st.container(horizontal=True):
-            # st.markdown('### Title ' + sneak_info)
             st.markdown('### Title ')
             if st.session_state.show_gallery:
                 info_options = {
@@ -3492,7 +3501,7 @@ def complex_film(device):
                         st.toast(f'📥 {film["Code"]} is listed to Downloaded!')
                         time.sleep(.5)
                         st.rerun()
-                    elif flag_result.selection == 'Delete Both' and ( "Want to watch" in film['Tags'] or "Downloaded" in film['Tags']):
+                    elif flag_result.selection == 'Delete Both' and ( "Want to Watch" in film['Tags'] or "Downloaded" in film['Tags']):
                         tags = film['Tags'].split(', ')
                         tag_text = ', '.join(tag for tag in tags if tag not in {'Downloaded', 'Want to Watch'}) or 'No Tags'
                         film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
@@ -3504,9 +3513,6 @@ def complex_film(device):
                         time.sleep(.5)
                         st.rerun()
                     
-
-
-
         st.write(film['Title'])
  
         st.markdown(
@@ -4669,23 +4675,6 @@ def complex_film(device):
             if display_button:
                 st.session_state.film_layout = display_button
                 st.rerun()
-            # if st.button('👁️ Display', width='content'):
-            #     @st.dialog('Display', width='small') #viewmode
-            #     def display_setting():
-            #         layout_index = ["Detailed", "Simple", "Calendar"].index(st.session_state.film_layout) if st.session_state.film_layout in ["Detailed", "Simple", "Calendar"] else 0
-            #         with st.container(horizontal=True):
-            #             st.session_state.film_layout = st.radio(
-            #                 "View Mode",
-            #                 ["Detailed", "Simple", "Calendar"],
-            #                 index= layout_index,
-            #                 key='film_display_mode',
-            #                 on_change=reset_page,
-            #                 horizontal=True,
-            #             )
-            #         if st.button('Set', width='stretch'):
-            #             st.rerun()
-                
-            #     display_setting()
         
     film_navbar.float("top: 50px;z-index: 999990;")
 
