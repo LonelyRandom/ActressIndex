@@ -1166,7 +1166,7 @@ CARD_CSS = """
 .fc-overlay {
     position: absolute;
     left: 0; right: 0; bottom: 0;
-    padding: 36px 10px 12px;
+    padding: 10px 10px 12px;
     background: linear-gradient(to top, rgba(0,0,0,.88) 0%, rgba(0,0,0,.55) 55%, transparent 100%);
     display: flex;
     flex-direction: column;
@@ -3515,21 +3515,6 @@ def complex_film(device):
                     
         st.write(film['Title'])
  
-        st.markdown(
-            """
-            <style>
-            [class*="st-key-actress_matched_"] p {
-                color: #d6cfc7 !important;
-                font-size: 14px !important;
-            }
-            [class*="st-key-actress_unmatched_"] p {
-                color: #d6cfc7 !important;
-                font-size: 14px !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
 
         st.markdown('### Actress')
         if st.session_state.simple_edit:
@@ -4757,6 +4742,14 @@ def complex_film(device):
             </style>""", unsafe_allow_html=True)
     st.markdown("""
     <style>
+    [class*="st-key-actress_matched_"] p {
+        color: #d6cfc7 !important;
+        font-size: 14px !important;
+    }
+    [class*="st-key-actress_unmatched_"] p {
+        color: #d6cfc7 !important;
+        font-size: 14px !important;
+    }
     ul[data-testid="stSelectboxVirtualDropdown"] li:nth-child(odd){
         background-color:#202124 !important;
     }
