@@ -877,11 +877,11 @@ def display_film_card(df, tag_df):
             filtered_df = filtered_df[filtered_df['release_date'].dt.date <= date.today()]
 
     if st.session_state.width_option == 'Device 1': 
-        img_card_height = 215
+        img_card_height = 164
         img_card_width = 115
         actress_width = 81
     else:
-        img_card_height = 162
+        img_card_height = 151
         img_card_width = 106
         actress_width = 76
         
