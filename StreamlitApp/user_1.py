@@ -3727,6 +3727,7 @@ def complex_film(device):
         else:
             release_date_text = '?'
         
+        st.write('hello')
         st.markdown('### Release Date')
         st.write(release_date_text)
 
