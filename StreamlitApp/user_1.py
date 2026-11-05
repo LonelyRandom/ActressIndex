@@ -3341,177 +3341,178 @@ def complex_film(device):
         with st.container(horizontal=True):
             st.markdown('### Title ')
             if st.session_state.show_gallery:
-                info_options = {
-                    "Goat": "🟣",
-                    "Great": "🔵",
-                    "Watched": "🟢",
-                    "Not Watched": "🔴"
-                }
-
-                a_options = {
-                    "a_true": "✨",
-                    "a_false": "🚫"
-                }
-
-                debut_options = {
-                    "AV Debut": "🆕",
-                    "Not Debut": "❎"
-                }
-
-                if 'Want to Watch' in film['Tags'] or 'Downloaded' in film['Tags']:
-                    flag_options = {
-                        "Downloaded": "📥",
-                        "Want to Watch": "👁️",
-                        "Delete Both": "🧹"
-                    }
-                else:
-                    flag_options = {
-                        "Downloaded": "📥",
-                        "Want to Watch": "👁️",
-                        "Not Both": "❌"
+                if not st.session_state.simple_edit:
+                    info_options = {
+                        "Goat": "🟣",
+                        "Great": "🔵",
+                        "Watched": "🟢",
+                        "Not Watched": "🔴"
                     }
 
-                info_result = radial_menu(
-                    data={"options": info_options, "selection": film['Info']},
-                    default={"selection": film['Info']},
-                    on_selection_change=lambda: None,
-                    key="info_menu",
-                )
+                    a_options = {
+                        "a_true": "✨",
+                        "a_false": "🚫"
+                    }
 
-                if film['A-Detector']:
-                    a_select = 'a_true'
-                else:
-                    a_select = 'a_false'
-                a_result = radial_menu(
-                    data={"options": a_options, "selection": a_select},
-                    default={"selection": a_select},
-                    on_selection_change=lambda: None,
-                    key="a_menu",
-                )
+                    debut_options = {
+                        "AV Debut": "🆕",
+                        "Not Debut": "❎"
+                    }
 
-                if 'AV Debut' in film['Tags']:
-                    debut_select = 'AV Debut'
-                else:
-                    debut_select = 'Not Debut'
-                debut_result = radial_menu(
-                    data={"options": debut_options, "selection": debut_select},
-                    default={"selection": debut_select},
-                    on_selection_change=lambda: None,
-                    key="debut_menu",
-                )
-
-                if 'Want to Watch' in film['Tags']:
-                    flag_select = 'Want to Watch'
-                elif 'Downloaded' in film['Tags']:
-                    flag_select = 'Downloaded'
-                else:
-                    flag_select = 'Not Both'
-                flag_result = radial_menu(
-                    data={"options": flag_options, "selection": flag_select},
-                    default={"selection": flag_select},
-                    on_selection_change=lambda: None,
-                    key="flag_menu",
-                )
-
-                if info_result.selection:
-                    if info_result.selection != film['Info']:
-                        row = filtered_index + 2
-                        film_worksheet().update(f'G{row}:G{row}', [[info_result.selection.title()]])
-                        df.at[filtered_index, 'Info'] = info_result.selection.title()   
-                        st.session_state.film_df = values_handling(df,'film')
-                        st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                        st.session_state.filtered_film_data.at[filtered_index, 'Info'] = info_result.selection.title()
-                        st.toast(f'{info_options.get(info_result.selection, "")} {film["Code"]} is {info_result.selection.title()}!')
-                        time.sleep(.5)
-                        st.rerun()
-
-                if a_result.selection:
-                    if a_result.selection == 'a_true':
-                        a_value = True
+                    if 'Want to Watch' in film['Tags'] or 'Downloaded' in film['Tags']:
+                        flag_options = {
+                            "Downloaded": "📥",
+                            "Want to Watch": "👁️",
+                            "Delete Both": "🧹"
+                        }
                     else:
-                        a_value = False
-                    if a_value != film['A-Detector']:
-                        row = filtered_index + 2
-                        film_worksheet().update(f'K{row}:K{row}', [[a_value]])
-                        df.at[filtered_index, 'A-Detector'] = a_value   
-                        st.session_state.film_df = values_handling(df,'film')
-                        st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                        st.session_state.filtered_film_data.at[filtered_index, 'A-Detector'] = a_value
-                        st.toast(f'✨ {film["Code"]} is {a_value}!')
-                        time.sleep(.5)
-                        st.rerun()
-                        
-                if debut_result.selection:
-                    row = filtered_index + 2
-                    if debut_result.selection == 'AV Debut' and 'AV Debut' not in film['Tags']:
-                        if film['Tags'] == 'No Tags':
-                            tag_text = 'AV Debut'
-                        else:
-                            tag_text = film['Tags'] + ', AV Debut'
-                        film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                        df.at[filtered_index, 'Tags'] = tag_text
-                        st.session_state.film_df = values_handling(df,'film')
-                        st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                        st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-                        st.toast(f'👁️ {film["Code"]} is listed to watch!')
-                        time.sleep(.5)
-                        st.rerun()
-                    elif debut_result.selection == 'Not Debut' and 'AV Debut' in film['Tags']:
-                        tags = film['Tags'].split(', ')
-                        tag_text = ', '.join(tag for tag in tags if tag not in {'AV Debut'}) or 'No Tags'
+                        flag_options = {
+                            "Downloaded": "📥",
+                            "Want to Watch": "👁️",
+                            "Not Both": "❌"
+                        }
 
-                        film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                        df.at[filtered_index, 'Tags'] = tag_text
-                        st.session_state.film_df = values_handling(df,'film')
-                        st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                        st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-                        st.toast(f'🧹🆕 {film["Code"]} tags removed!')
-                        time.sleep(.5)
-                        st.rerun()
-                
-                if flag_result.selection:
-                    row = filtered_index + 2
-                    if flag_result.selection == 'Want to Watch' and "Want to Watch" not in film['Tags']:
-                        if film['Tags'] == 'No Tags':
-                            tag_text = 'Want to Watch'
-                        elif 'Downloaded' in film['Tags']:
-                            tag_text = film['Tags'].replace('Downloaded', 'Want to Watch')
+                    info_result = radial_menu(
+                        data={"options": info_options, "selection": film['Info']},
+                        default={"selection": film['Info']},
+                        on_selection_change=lambda: None,
+                        key="info_menu",
+                    )
+
+                    if film['A-Detector']:
+                        a_select = 'a_true'
+                    else:
+                        a_select = 'a_false'
+                    a_result = radial_menu(
+                        data={"options": a_options, "selection": a_select},
+                        default={"selection": a_select},
+                        on_selection_change=lambda: None,
+                        key="a_menu",
+                    )
+
+                    if 'AV Debut' in film['Tags']:
+                        debut_select = 'AV Debut'
+                    else:
+                        debut_select = 'Not Debut'
+                    debut_result = radial_menu(
+                        data={"options": debut_options, "selection": debut_select},
+                        default={"selection": debut_select},
+                        on_selection_change=lambda: None,
+                        key="debut_menu",
+                    )
+
+                    if 'Want to Watch' in film['Tags']:
+                        flag_select = 'Want to Watch'
+                    elif 'Downloaded' in film['Tags']:
+                        flag_select = 'Downloaded'
+                    else:
+                        flag_select = 'Not Both'
+                    flag_result = radial_menu(
+                        data={"options": flag_options, "selection": flag_select},
+                        default={"selection": flag_select},
+                        on_selection_change=lambda: None,
+                        key="flag_menu",
+                    )
+
+                    if info_result.selection:
+                        if info_result.selection != film['Info']:
+                            row = filtered_index + 2
+                            film_worksheet().update(f'G{row}:G{row}', [[info_result.selection.title()]])
+                            df.at[filtered_index, 'Info'] = info_result.selection.title()   
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Info'] = info_result.selection.title()
+                            st.toast(f'{info_options.get(info_result.selection, "")} {film["Code"]} is {info_result.selection.title()}!')
+                            time.sleep(.5)
+                            st.rerun()
+
+                    if a_result.selection:
+                        if a_result.selection == 'a_true':
+                            a_value = True
                         else:
-                            tag_text = film['Tags'] + ', Want to Watch'
-                        film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                        df.at[filtered_index, 'Tags'] = tag_text
-                        st.session_state.film_df = values_handling(df,'film')
-                        st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                        st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-                        st.toast(f'👁️ {film["Code"]} is listed to Want to watch!')
-                        time.sleep(.5)
-                        st.rerun()
-                    elif flag_result.selection == 'Downloaded' and "Downloaded" not in film['Tags']:
-                        if film['Tags'] == 'No Tags':
-                            tag_text = 'Downloaded'
-                        elif 'Want to Watch' in film['Tags']:
-                            tag_text = film['Tags'].replace('Want to Watch', 'Downloaded')
-                        else:
-                            tag_text = film['Tags'] + ', Downloaded'
-                        film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                        df.at[filtered_index, 'Tags'] = tag_text
-                        st.session_state.film_df = values_handling(df,'film')
-                        st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                        st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-                        st.toast(f'📥 {film["Code"]} is listed to Downloaded!')
-                        time.sleep(.5)
-                        st.rerun()
-                    elif flag_result.selection == 'Delete Both' and ( "Want to Watch" in film['Tags'] or "Downloaded" in film['Tags']):
-                        tags = film['Tags'].split(', ')
-                        tag_text = ', '.join(tag for tag in tags if tag not in {'Downloaded', 'Want to Watch'}) or 'No Tags'
-                        film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
-                        df.at[filtered_index, 'Tags'] = tag_text
-                        st.session_state.film_df = values_handling(df,'film')
-                        st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
-                        st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
-                        st.toast(f'🧹📥👁️ {film["Code"]} tags removed!')
-                        time.sleep(.5)
-                        st.rerun()
+                            a_value = False
+                        if a_value != film['A-Detector']:
+                            row = filtered_index + 2
+                            film_worksheet().update(f'K{row}:K{row}', [[a_value]])
+                            df.at[filtered_index, 'A-Detector'] = a_value   
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'A-Detector'] = a_value
+                            st.toast(f'✨ {film["Code"]} is {a_value}!')
+                            time.sleep(.5)
+                            st.rerun()
+                            
+                    if debut_result.selection:
+                        row = filtered_index + 2
+                        if debut_result.selection == 'AV Debut' and 'AV Debut' not in film['Tags']:
+                            if film['Tags'] == 'No Tags':
+                                tag_text = 'AV Debut'
+                            else:
+                                tag_text = film['Tags'] + ', AV Debut'
+                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                            df.at[filtered_index, 'Tags'] = tag_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                            st.toast(f'👁️ {film["Code"]} is listed to watch!')
+                            time.sleep(.5)
+                            st.rerun()
+                        elif debut_result.selection == 'Not Debut' and 'AV Debut' in film['Tags']:
+                            tags = film['Tags'].split(', ')
+                            tag_text = ', '.join(tag for tag in tags if tag not in {'AV Debut'}) or 'No Tags'
+
+                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                            df.at[filtered_index, 'Tags'] = tag_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                            st.toast(f'🧹🆕 {film["Code"]} tags removed!')
+                            time.sleep(.5)
+                            st.rerun()
+                    
+                    if flag_result.selection:
+                        row = filtered_index + 2
+                        if flag_result.selection == 'Want to Watch' and "Want to Watch" not in film['Tags']:
+                            if film['Tags'] == 'No Tags':
+                                tag_text = 'Want to Watch'
+                            elif 'Downloaded' in film['Tags']:
+                                tag_text = film['Tags'].replace('Downloaded', 'Want to Watch')
+                            else:
+                                tag_text = film['Tags'] + ', Want to Watch'
+                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                            df.at[filtered_index, 'Tags'] = tag_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                            st.toast(f'👁️ {film["Code"]} is listed to Want to watch!')
+                            time.sleep(.5)
+                            st.rerun()
+                        elif flag_result.selection == 'Downloaded' and "Downloaded" not in film['Tags']:
+                            if film['Tags'] == 'No Tags':
+                                tag_text = 'Downloaded'
+                            elif 'Want to Watch' in film['Tags']:
+                                tag_text = film['Tags'].replace('Want to Watch', 'Downloaded')
+                            else:
+                                tag_text = film['Tags'] + ', Downloaded'
+                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                            df.at[filtered_index, 'Tags'] = tag_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                            st.toast(f'📥 {film["Code"]} is listed to Downloaded!')
+                            time.sleep(.5)
+                            st.rerun()
+                        elif flag_result.selection == 'Delete Both' and ( "Want to Watch" in film['Tags'] or "Downloaded" in film['Tags']):
+                            tags = film['Tags'].split(', ')
+                            tag_text = ', '.join(tag for tag in tags if tag not in {'Downloaded', 'Want to Watch'}) or 'No Tags'
+                            film_worksheet().update(f'F{row}:F{row}', [[tag_text]])
+                            df.at[filtered_index, 'Tags'] = tag_text
+                            st.session_state.film_df = values_handling(df,'film')
+                            st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
+                            st.session_state.filtered_film_data.at[filtered_index, 'Tags'] = tag_text
+                            st.toast(f'🧹📥👁️ {film["Code"]} tags removed!')
+                            time.sleep(.5)
+                            st.rerun()
                     
         st.write(film['Title'])
  
