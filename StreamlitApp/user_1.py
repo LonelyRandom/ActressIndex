@@ -3376,7 +3376,7 @@ def complex_film(device):
                         data={"options": info_options, "selection": film['Info']},
                         default={"selection": film['Info']},
                         on_selection_change=lambda: None,
-                        key="info_menu",
+                        key=f"info_menu_{filtered_index}",
                     )
 
                     if film['A-Detector']:
@@ -3387,7 +3387,7 @@ def complex_film(device):
                         data={"options": a_options, "selection": a_select},
                         default={"selection": a_select},
                         on_selection_change=lambda: None,
-                        key="a_menu",
+                        key=f"a_menu_{filtered_index}",
                     )
 
                     if 'AV Debut' in film['Tags']:
@@ -3398,7 +3398,7 @@ def complex_film(device):
                         data={"options": debut_options, "selection": debut_select},
                         default={"selection": debut_select},
                         on_selection_change=lambda: None,
-                        key="debut_menu",
+                        key=f"debut_menu_{filtered_index}",
                     )
 
                     if 'Want to Watch' in film['Tags']:
@@ -3411,7 +3411,7 @@ def complex_film(device):
                         data={"options": flag_options, "selection": flag_select},
                         default={"selection": flag_select},
                         on_selection_change=lambda: None,
-                        key="flag_menu",
+                        key=f"flag_menu_{filtered_index}",
                     )
 
                     if info_result.selection:
@@ -3728,7 +3728,6 @@ def complex_film(device):
         else:
             release_date_text = '?'
         
-        st.write('hello')
         st.markdown('### Release Date')
         st.write(release_date_text)
 
