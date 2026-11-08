@@ -514,11 +514,16 @@ def reset_search_by():
         st.session_state.search_bar = ''
     else:
         st.session_state.search_bar = 'All'
+    reset_page()
+
+def reset_status_filter():
+    st.session_state.status_pills = ["Not Watched", "Watched", "Great", "Goat"]
+    reset_page()
     
 
 def reset_tag():
     st.session_state.tag_bar = []
-    st.session_state.film_page = 1
+    reset_page()
             
 def display_film_card(df, tag_df):
     st.session_state.data_detailed_index = []
@@ -629,16 +634,14 @@ def display_film_card(df, tag_df):
         )
         with st.container(horizontal=True, vertical_alignment='bottom'):
             if search_by != 'Actress':
-                search_name = st.text_input("🔍 Search Bar", placeholder="Name or Code...", key='search_bar', on_change=reset_page)
+                search_name = st.text_input("🔍 Search Bar:", placeholder="Title or Code...", key='search_bar', on_change=reset_page)
             else:
-                search_name = st.selectbox('🔍 Search Bar', options=ACTRESS_OPTS, key='search_bar', on_change=reset_page)
+                search_name = st.selectbox('🔍 Search Bar:', options=ACTRESS_OPTS, key='search_bar', on_change=reset_page)
             st.button('Clear', on_click=reset_search_by)
 
-        info_filter = st.multiselect(
-            "📊 Status Filter:",
-            options=df['Info'].unique().tolist() if 'Info' in df.columns else [],
-            default=['Not Watched', 'Watched', 'Great', 'Goat']
-        )
+        with st.container(horizontal=True, vertical_alignment='bottom'):
+            info_filter = st.pills('📊 Status Filter:', options=df['Info'].unique().tolist() if 'Info' in df.columns else [], default=['Not Watched', 'Watched', 'Great', 'Goat'], selection_mode='multi', on_change=reset_page, key='status_pills')
+            st.button('🔃', on_click=reset_status_filter)
         with st.container(horizontal=True, vertical_alignment='bottom'):
             tags_filter = st.multiselect("Tags:", options=TAGS_OPTS, on_change=reset_page, key='tag_bar')
             st.button('Clear', on_click=reset_tag, key='tag_clear')
@@ -1988,7 +1991,7 @@ def display_film_grid(df, tag_df):
                                     placeholder="Name or Code...", 
                                     key='search_bar', on_change=reset_page)
             else:
-                search_name = st.selectbox('🔍 Search Bar', options=ACTRESS_OPTS, key='search_bar', on_change=reset_page)
+                search_name = st.selectbox('🔍 Search Bar:', options=ACTRESS_OPTS, key='search_bar', on_change=reset_page)
             st.button('Clear', on_click=reset_search_by)
 
         with st.container(horizontal=True, vertical_alignment='bottom'):
