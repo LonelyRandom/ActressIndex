@@ -3076,8 +3076,8 @@ def display_scrap_manual():
 
         actress_list = []
         st.session_state.actress_new = []
-        SCRAP_ACTRESS_OPTS = ['Many', 'Not Listed'] + sorted(
-            actress_df['Name (Alphabet)']
+        KANJI_ACTRESS_OPTS = sorted(
+            actress_df['Name (Kanji)']
             .dropna()
             .unique()
             .tolist()
@@ -3186,6 +3186,7 @@ def display_scrap_manual():
 
                 for actress in actresses:
                     name_alpha = actress['romaji']
+                    check_kanji = actress['name'].replace('（',' ').replace('）','').split(' ')
                     name_kanji = actress['name']
 
                     last_name = name_alpha.split(' ')[1]
@@ -3193,10 +3194,11 @@ def display_scrap_manual():
 
                     database_name = last_name + ' ' + first_name
 
-                    if database_name in SCRAP_ACTRESS_OPTS:
-                        match_actress = actress_df[actress_df['Name (Alphabet)'] == database_name]
-                        st.write(f'- :green[{database_name} Found in database!]')
+                    if any(n.strip() in KANJI_ACTRESS_OPTS for n in check_kanji):
+                        match_actress = actress_df[actress_df['Name (Kanji)'].isin(check_kanji)]
+                        st.write(f'- :green[{match_actress["Name (Alphabet)"].iloc[0]} Found in database!]')
                         st.image(match_actress['Picture'].iloc[0], width=80)
+                        st.session_state.fill_scrap.append(match_actress["Name (Alphabet)"].iloc[0])
                     else:
                         st.write(f'- :red[{database_name} Not Found in database!]')
                         if actress['image']:
@@ -3208,16 +3210,12 @@ def display_scrap_manual():
                             'name' : database_name,
                             'picture' : actress['image'] if actress['image'] else st.secrets.indicators.PLACEHOLDER_IMG
                         })
+                        st.session_state.fill_scrap.append(database_name)
 
-                    st.session_state.fill_scrap.append(database_name)
             except Exception as e:
                 st.warning('Film not found in database!', e)
 
         if st.session_state.save_scrap:
-            st.write(st.session_state.actress_new)
-            st.write(st.session_state.fill_scrap)
-
-
             if st.session_state.actress_new:
                 actress_new_row = []
                 for actress in st.session_state.actress_new:
@@ -3252,6 +3250,12 @@ def display_scrap_manual():
                 st.session_state.film_df = values_handling(df,'film')
                 st.session_state.filtered_film_data = st.session_state.filtered_film_data.drop(columns=['release_date','filtered_date'], errors='ignore')
                 st.session_state.filtered_film_data.at[match_df_index, 'Actress Name'] = actress_list
+
+            st.session_state.html_reset = True
+            st.toast("✅ Scrap Saved Successfully!")
+            time.sleep(.5)
+            st.rerun()
+
 
 
 def set_tags():
