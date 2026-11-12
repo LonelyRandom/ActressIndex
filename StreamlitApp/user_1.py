@@ -3456,8 +3456,8 @@ def complex_film(device):
         idx = filtered_data.index[pos]
         st.markdown(f"<h1 style='text-align: center;'>{film['Code']}</h1>", unsafe_allow_html=True)
         with st.container(horizontal=True):
-            st.button('⬅️', width='stretch', disabled=(st.session_state.filtered_data_position==0), on_click=set_film_data, args=(st.session_state.filtered_data_position-1,len(filtered_data)))
-            st.button('➡️', width='stretch', disabled=(st.session_state.filtered_data_position==len(filtered_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(filtered_data)))
+            st.button('◀', width='stretch', disabled=(st.session_state.filtered_data_position==0), on_click=set_film_data, args=(st.session_state.filtered_data_position-1,len(filtered_data)))
+            st.button('▶', width='stretch', disabled=(st.session_state.filtered_data_position==len(filtered_data)-1), on_click=set_film_data, args=(st.session_state.filtered_data_position+1,len(filtered_data)))
    
         if index is None or index >= len(df):
             st.warning("No film selected")
